@@ -159,5 +159,7 @@ Thumbs.db
 # Crash dumps
 *.stackdump
 
-# Unity autotest
-/TestResults/
+# Unity builds
+/PlayTest/
+*_Data/
+*.exe
