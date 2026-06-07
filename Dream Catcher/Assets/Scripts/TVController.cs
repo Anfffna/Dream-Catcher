@@ -27,6 +27,7 @@ public class TVController : MonoBehaviour
     public float newsVolume = 0.6f;
 
     private Coroutine noiseFadeCoroutine;
+    private bool newsAlreadyStarted = false;
 
     void Start()
     {
@@ -55,6 +56,9 @@ public class TVController : MonoBehaviour
     public void PlayNewsVideo()
     {
         if (videoPlayer == null) return;
+
+        if (newsAlreadyStarted) return;
+        newsAlreadyStarted = true;
 
         if (noiseFadeCoroutine != null)
             StopCoroutine(noiseFadeCoroutine);

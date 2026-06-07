@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Video;
 using System.Collections;
 
 public class StartDay : MonoBehaviour
@@ -6,47 +7,80 @@ public class StartDay : MonoBehaviour
     [Header("Player & Camera")]
     public Transform playerTransform;
     public Transform cameraTransform;
+    public Camera playerCamera;
     public PlayerController playerController;
 
     [Header("Pivots")]
-    public Transform bedPivot;          // лежачее положение
-    public Transform sitPivot;          // сидячее положение
+    public Transform bedPivot;
+    public Transform sitPivot;
+    public Transform standPivot;
 
     [Header("Lying Camera Tilt")]
     [Range(0f, 90f)]
-    public float lyingTiltZ = 45f;      // наклон камеры на бок когда лежит
+    public float lyingTiltZ = 45f;
 
     [Header("Timing")]
     public float lyingDuration = 1f;
     public float sittingUpSpeed = 1.5f;
 
+    [Header("ScreenSaver Audio")]
+    public AudioSource screenSaverAudioSource;
+
+    [Header("Stand Up")]
+    public float standMoveDuration = 2f;
+
+    [Tooltip("Во время вставания камера будет возвращаться к обычному FOV")]
+    public float restoreFOVDuration = 1f;
+
     [Header("TV")]
     public TVController tvController;
 
+    [Header("TV Zoom")]
+    public bool zoomToTVAfterSitting = true;
+    public Transform tvLookTarget;
+
+    [Tooltip("Чем меньше FOV, тем сильнее приближение. Обычно 25-40.")]
+    public float tvZoomFOV = 35f;
+
+    [Tooltip("Сколько секунд длится приближение к телевизору.")]
+    public float tvZoomDuration = 1.5f;
+
+    [Tooltip("Насколько сильно камера примагничивается к телевизору, пока идут новости.")]
+    public float tvLookMagnetStrength = 6f;
+
     private bool sequenceStarted = false;
+    private bool standUpStarted = false;
+    private bool controlEnabled = false;
+    private bool stopTVMagnet = false;
+
     private CharacterController charController;
+    private Coroutine tvZoomRoutine;
+    private float defaultFOV;
 
     void Start()
     {
+        if (playerCamera == null && cameraTransform != null)
+            playerCamera = cameraTransform.GetComponent<Camera>();
+
+        if (playerCamera != null)
+            defaultFOV = playerCamera.fieldOfView;
+
         charController = playerController != null
             ? playerController.GetComponent<CharacterController>()
             : null;
 
-        // Отключаем CharacterController
         if (charController != null)
             charController.enabled = false;
 
-        // Перемещаем игрока в bedPivot
-        if (bedPivot != null)
+        if (bedPivot != null && playerTransform != null)
         {
             playerTransform.position = bedPivot.position;
             playerTransform.rotation = bedPivot.rotation;
         }
 
-        // Камера смотрит туда же куда тело + наклонена на бок
-        cameraTransform.localRotation = Quaternion.Euler(0f, 0f, lyingTiltZ);
+        if (cameraTransform != null)
+            cameraTransform.localRotation = Quaternion.Euler(0f, 0f, lyingTiltZ);
 
-        // Блокируем управление
         if (playerController != null)
             playerController.canControl = false;
 
@@ -59,6 +93,12 @@ public class StartDay : MonoBehaviour
         if (!sequenceStarted)
         {
             sequenceStarted = true;
+
+            if (screenSaverAudioSource != null)
+            {
+                screenSaverAudioSource.Play();
+            }
+
             StartCoroutine(WakeUpSequence());
         }
     }
@@ -67,7 +107,6 @@ public class StartDay : MonoBehaviour
     {
         yield return new WaitForSeconds(lyingDuration);
 
-        // В этот момент ГГ НАЧИНАЕТ вставать
         if (tvController != null)
             tvController.PlayNewsVideo();
 
@@ -78,35 +117,123 @@ public class StartDay : MonoBehaviour
         Quaternion targetRot = sitPivot.rotation;
 
         float progress = 0f;
+
         while (progress < 1f)
         {
             progress += Time.deltaTime * sittingUpSpeed;
             progress = Mathf.Clamp01(progress);
+
             float t = 1f - (1f - progress) * (1f - progress);
 
-            // Двигаем игрока
             playerTransform.position = Vector3.Lerp(startPos, targetPos, t);
             playerTransform.rotation = Quaternion.Slerp(startRot, targetRot, t);
 
-            // Выравниваем камеру: Z от lyingTiltZ до 0
             float currentZ = Mathf.Lerp(lyingTiltZ, 0f, t);
             cameraTransform.localRotation = Quaternion.Euler(0f, 0f, currentZ);
 
             yield return null;
         }
 
-        // Финал — игрок в sitPivot
         playerTransform.position = targetPos;
         playerTransform.rotation = targetRot;
         cameraTransform.localRotation = Quaternion.identity;
 
-        yield return null;
+        if (zoomToTVAfterSitting && playerCamera != null && tvLookTarget != null)
+            tvZoomRoutine = StartCoroutine(ZoomAndMagnetToTVUntilNewsEnd());
+    }
 
-        //// Включаем CharacterController прямо здесь
-        //if (charController != null)
-        //    charController.enabled = true;
+    public void BeginStandUp()
+    {
+        if (standUpStarted) return;
 
-        // Включаем управление
+        standUpStarted = true;
+
+        stopTVMagnet = true;
+
+        if (tvZoomRoutine != null)
+        {
+            StopCoroutine(tvZoomRoutine);
+            tvZoomRoutine = null;
+        }
+
+        StartCoroutine(MoveToStandPosition());
+    }
+
+    IEnumerator MoveToStandPosition()
+    {
+        if (standPivot == null)
+        {
+            EnableCharacterControllerAndControl();
+            yield break;
+        }
+
+        Vector3 startPosition = playerTransform.position;
+        Vector3 targetPosition = standPivot.position;
+
+        float startY = playerTransform.eulerAngles.y;
+        float targetY = standPivot.eulerAngles.y;
+
+        float startFOV = playerCamera != null ? playerCamera.fieldOfView : defaultFOV;
+
+        cameraTransform.localRotation = Quaternion.identity;
+
+        float timer = 0f;
+
+        while (timer < standMoveDuration)
+        {
+            timer += Time.deltaTime;
+
+            float t = standMoveDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(timer / standMoveDuration);
+
+            float smoothT = t * t * (3f - 2f * t);
+
+            playerTransform.position = Vector3.Lerp(startPosition, targetPosition, smoothT);
+
+            float y = Mathf.LerpAngle(startY, targetY, smoothT);
+            playerTransform.rotation = Quaternion.Euler(0f, y, 0f);
+
+            cameraTransform.localRotation = Quaternion.identity;
+
+            if (playerCamera != null)
+            {
+                float fovT = restoreFOVDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(timer / restoreFOVDuration);
+
+                float smoothFovT = fovT * fovT * (3f - 2f * fovT);
+                playerCamera.fieldOfView = Mathf.Lerp(startFOV, defaultFOV, smoothFovT);
+            }
+
+            yield return null;
+        }
+
+        playerTransform.position = targetPosition;
+
+        float finalY = standPivot.eulerAngles.y;
+        playerTransform.rotation = Quaternion.Euler(0f, finalY, 0f);
+
+        cameraTransform.localRotation = Quaternion.identity;
+
+        if (playerCamera != null)
+            playerCamera.fieldOfView = defaultFOV;
+
+        EnableCharacterControllerAndControl();
+    }
+
+    void EnableCharacterControllerAndControl()
+    {
+        if (controlEnabled) return;
+
+        controlEnabled = true;
+
+        if (charController != null && !charController.enabled)
+        {
+            charController.enabled = true;
+            charController.Move(Vector3.zero);
+        }
+
         if (playerController != null)
             playerController.EnableControlSmooth();
 
@@ -114,6 +241,78 @@ public class StartDay : MonoBehaviour
         Cursor.visible = false;
 
         Debug.Log("Проснулся! Можно идти.");
+    }
+
+    IEnumerator ZoomAndMagnetToTVUntilNewsEnd()
+    {
+        stopTVMagnet = false;
+
+        float startFOV = playerCamera.fieldOfView;
+        Quaternion startCameraWorldRotation = cameraTransform.rotation;
+        Quaternion targetCameraWorldRotation = GetLookRotationToTV();
+
+        float t = 0f;
+
+        while (t < tvZoomDuration)
+        {
+            if (stopTVMagnet) yield break;
+
+            t += Time.deltaTime;
+
+            float k = tvZoomDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(t / tvZoomDuration);
+
+            float smoothK = 1f - (1f - k) * (1f - k);
+
+            playerCamera.fieldOfView = Mathf.Lerp(startFOV, tvZoomFOV, smoothK);
+            cameraTransform.rotation = Quaternion.Slerp(startCameraWorldRotation, targetCameraWorldRotation, smoothK);
+
+            yield return null;
+        }
+
+        playerCamera.fieldOfView = tvZoomFOV;
+
+        while (IsNewsStillActive())
+        {
+            if (stopTVMagnet) yield break;
+
+            Quaternion desiredRotation = GetLookRotationToTV();
+
+            cameraTransform.rotation = Quaternion.Slerp(
+                cameraTransform.rotation,
+                desiredRotation,
+                Time.deltaTime * tvLookMagnetStrength
+            );
+
+            yield return null;
+        }
+    }
+
+    bool IsNewsStillActive()
+    {
+        if (tvController == null) return false;
+        if (tvController.videoPlayer == null) return false;
+
+        VideoPlayer videoPlayer = tvController.videoPlayer;
+
+        if (videoPlayer.isPlaying)
+            return true;
+
+        if (videoPlayer.isPaused)
+            return true;
+
+        return false;
+    }
+
+    Quaternion GetLookRotationToTV()
+    {
+        Vector3 direction = tvLookTarget.position - cameraTransform.position;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return cameraTransform.rotation;
+
+        return Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
     void OnDrawGizmos()
@@ -134,10 +333,30 @@ public class StartDay : MonoBehaviour
             Gizmos.DrawRay(sitPivot.position, sitPivot.forward * 0.5f);
         }
 
+        if (standPivot != null)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(standPivot.position, 0.15f);
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawRay(standPivot.position, standPivot.forward * 0.5f);
+        }
+
         if (bedPivot != null && sitPivot != null)
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(bedPivot.position, sitPivot.position);
+        }
+
+        if (sitPivot != null && standPivot != null)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(sitPivot.position, standPivot.position);
+        }
+
+        if (tvLookTarget != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(tvLookTarget.position, 0.1f);
         }
     }
 }
