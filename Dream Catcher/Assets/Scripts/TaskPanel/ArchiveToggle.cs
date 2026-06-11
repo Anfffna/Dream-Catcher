@@ -5,6 +5,9 @@ public class ArchiveToggle : MonoBehaviour
     [Header("Archive")]
     public GameObject archiveScrollView;
 
+    [Header("Quest UI")]
+    public QuestUIManager questUIManager;
+
     [Header("Arrow")]
     public RectTransform arrowTransform;
 
@@ -34,6 +37,9 @@ public class ArchiveToggle : MonoBehaviour
 
         if (archiveScrollView != null)
             archiveScrollView.SetActive(isOpen);
+
+        if (!isOpen && questUIManager != null)
+            questUIManager.ClearSummaryIfFromArchive();
 
         if (arrowTransform != null)
         {

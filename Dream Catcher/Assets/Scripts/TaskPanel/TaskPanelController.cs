@@ -1,10 +1,27 @@
 using UnityEngine;
+using System.Collections;
+using UnityEngine.Rendering;
 
 public class TaskPanelController : MonoBehaviour
 {
     [Header("Panel")]
     public GameObject taskPanel;
     public CanvasGroup taskPanelCanvasGroup;
+
+    [Header("Fade")]
+    public float fadeDuration = 0.25f;
+
+    [Header("Blur / Post Process")]
+    public Volume blurVolume;
+    [Range(0f, 1f)] public float blurOpenWeight = 1f;
+    public bool disableBlurWhenClosed = true;
+
+    [Header("Task Update Toast")]
+    public TaskUpdateToast taskUpdateToast;
+
+    [Header("UI Blockers")]
+    public CanvasGroup[] blockingCanvasGroups;
+    public GameObject[] blockingObjects;
 
     [Header("Player")]
     public PlayerController playerController;
@@ -21,6 +38,11 @@ public class TaskPanelController : MonoBehaviour
     private bool cursorIsDefault = false;
     private bool cursorIsInteract = false;
 
+    private Coroutine fadeCoroutine;
+
+    [Header("Unlock")]
+    public bool panelUnlocked = false;
+
     void Start()
     {
         if (taskPanel != null)
@@ -32,27 +54,84 @@ public class TaskPanelController : MonoBehaviour
         if (taskPanelCanvasGroup == null && taskPanel != null)
             taskPanelCanvasGroup = taskPanel.AddComponent<CanvasGroup>();
 
-        ClosePanel();
+        if (blurVolume != null)
+        {
+            blurVolume.weight = 0f;
+
+            if (disableBlurWhenClosed)
+                blurVolume.gameObject.SetActive(false);
+        }
+
+        ClosePanelInstant();
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
+        if (panelUnlocked && Input.GetKeyDown(KeyCode.Tab))
         {
             if (isPanelOpen)
+            {
                 ClosePanel();
-            else
-                OpenPanel();
+                return;
+            }
+
+            if (IsOtherUIBlockingTaskPanel())
+                return;
+
+            if (taskUpdateToast != null && taskUpdateToast.IsShowing)
+                taskUpdateToast.HideToastNow();
+
+            OpenPanel();
         }
+    }
+
+    bool IsOtherUIBlockingTaskPanel()
+    {
+        if (blockingCanvasGroups != null)
+        {
+            for (int i = 0; i < blockingCanvasGroups.Length; i++)
+            {
+                CanvasGroup group = blockingCanvasGroups[i];
+
+                if (group == null) continue;
+
+                if (group.gameObject == taskPanel) continue;
+
+                if (group.gameObject.activeInHierarchy && group.alpha > 0.01f)
+                    return true;
+            }
+        }
+
+        if (blockingObjects != null)
+        {
+            for (int i = 0; i < blockingObjects.Length; i++)
+            {
+                GameObject obj = blockingObjects[i];
+
+                if (obj == null) continue;
+
+                if (obj == taskPanel) continue;
+
+                if (taskUpdateToast != null && obj == taskUpdateToast.gameObject)
+                    continue;
+
+                if (obj.activeInHierarchy)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     public void OpenPanel()
     {
         isPanelOpen = true;
 
+        if (taskPanel != null)
+            taskPanel.SetActive(true);
+
         if (taskPanelCanvasGroup != null)
         {
-            taskPanelCanvasGroup.alpha = 1f;
             taskPanelCanvasGroup.interactable = true;
             taskPanelCanvasGroup.blocksRaycasts = true;
         }
@@ -64,9 +143,41 @@ public class TaskPanelController : MonoBehaviour
 
         if (playerController != null)
             playerController.canControl = false;
+
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadePanelAndBlur(1f, blurOpenWeight));
     }
 
     public void ClosePanel()
+    {
+        isPanelOpen = false;
+
+        if (taskPanelCanvasGroup != null)
+        {
+            taskPanelCanvasGroup.interactable = false;
+            taskPanelCanvasGroup.blocksRaycasts = false;
+        }
+
+        Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
+
+        cursorIsDefault = false;
+        cursorIsInteract = false;
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        if (playerController != null)
+            playerController.canControl = true;
+
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadePanelAndBlur(0f, 0f));
+    }
+
+    private void ClosePanelInstant()
     {
         isPanelOpen = false;
 
@@ -77,7 +188,7 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+        Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
 
         cursorIsDefault = false;
         cursorIsInteract = false;
@@ -89,12 +200,59 @@ public class TaskPanelController : MonoBehaviour
             playerController.canControl = true;
     }
 
+    private IEnumerator FadePanelAndBlur(float targetPanelAlpha, float targetBlurWeight)
+    {
+        float startPanelAlpha = taskPanelCanvasGroup != null ? taskPanelCanvasGroup.alpha : 0f;
+
+        float startBlurWeight = 0f;
+
+        if (blurVolume != null)
+        {
+            blurVolume.gameObject.SetActive(true);
+            startBlurWeight = blurVolume.weight;
+        }
+
+        float timer = 0f;
+
+        while (timer < fadeDuration)
+        {
+            timer += Time.deltaTime;
+
+            float t = fadeDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(timer / fadeDuration);
+
+            float smoothT = t * t * (3f - 2f * t);
+
+            if (taskPanelCanvasGroup != null)
+                taskPanelCanvasGroup.alpha = Mathf.Lerp(startPanelAlpha, targetPanelAlpha, smoothT);
+
+            if (blurVolume != null)
+                blurVolume.weight = Mathf.Lerp(startBlurWeight, targetBlurWeight, smoothT);
+
+            yield return null;
+        }
+
+        if (taskPanelCanvasGroup != null)
+            taskPanelCanvasGroup.alpha = targetPanelAlpha;
+
+        if (blurVolume != null)
+        {
+            blurVolume.weight = targetBlurWeight;
+
+            if (targetBlurWeight <= 0f && disableBlurWhenClosed)
+                blurVolume.gameObject.SetActive(false);
+        }
+
+        fadeCoroutine = null;
+    }
+
     public void SetDefaultCursor()
     {
         if (!isPanelOpen) return;
         if (cursorIsDefault) return;
 
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.Auto);
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
 
         cursorIsDefault = true;
         cursorIsInteract = false;
@@ -105,7 +263,7 @@ public class TaskPanelController : MonoBehaviour
         if (!isPanelOpen) return;
         if (cursorIsInteract) return;
 
-        Cursor.SetCursor(interactCursor, interactCursorHotspot, CursorMode.Auto);
+        Cursor.SetCursor(interactCursor, interactCursorHotspot, CursorMode.ForceSoftware);
 
         cursorIsInteract = true;
         cursorIsDefault = false;

@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7475418746471639894}
   - component: {fileID: -4814826591938458395}
   - component: {fileID: 9097614552140164673}
+  - component: {fileID: -7800826116955481953}
   m_Layer: 5
   m_Name: TaskEntry
   m_TagString: Untagged
@@ -181,7 +182,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7475418746471639894}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: -7800826116955481953}
+        m_TargetAssemblyTypeName: QuestTaskEntry, Assembly-CSharp
+        m_MethodName: OnClick
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &9097614552140164673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -194,4 +207,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc29fa93b02bf794f9f7d4ac90a23472, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UICursorHover
-  taskPanelController: {fileID: 0}
+--- !u!114 &-7800826116955481953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235307879506699613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8c2d763e2192bf4cb2b985d920b1bfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestTaskEntry

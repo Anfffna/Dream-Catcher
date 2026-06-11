@@ -35,6 +35,12 @@ public class NewsDialogue : MonoBehaviour
     public List<DialogueLine> standDialogueLines = new List<DialogueLine>();
     public string standDialogueColorHex = "#A997C9";
 
+    [Header("Quest")]
+    public QuestUIManager questUIManager;
+
+    [Header("Task Panel")]
+    public TaskPanelController taskPanelController;
+
     [Header("Typewriter")]
     public float lettersPerSecond = 35f;
     public bool hidePanelOnStart = true;
@@ -129,6 +135,13 @@ public class NewsDialogue : MonoBehaviour
             {
                 EndDialogue();
                 allDialoguesFinished = true;
+
+                if (taskPanelController != null)
+                    taskPanelController.panelUnlocked = true;
+
+                if (questUIManager != null)
+                    questUIManager.AddQuest("turn_on_light");
+
                 return;
             }
         }
