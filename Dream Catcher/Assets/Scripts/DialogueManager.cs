@@ -10,11 +10,15 @@ public class DialogueManager : MonoBehaviour
     {
         [TextArea(2, 5)]
         public string text;
+
+        [Header("Color")]
+        public bool useCustomColor = false;
+        public string colorHex = "#A997C9";
     }
 
     [Header("UI Elements")]
-    public GameObject dialoguePanel;           // Ваша плашка PNG
-    public TextMeshProUGUI dialogueText;       // Текст внутри плашки
+    public GameObject dialoguePanel;
+    public TextMeshProUGUI dialogueText;
 
     [Header("Dialogue Settings")]
     public List<DialogueLine> dialogueLines = new List<DialogueLine>();
@@ -26,6 +30,8 @@ public class DialogueManager : MonoBehaviour
     private bool isTyping = false;
     private bool dialogueActive = false;
     private Coroutine typingCoroutine;
+
+    public bool DialogueActive => dialogueActive;
 
     void Start()
     {
@@ -53,9 +59,6 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Запускает диалог из инспектора
-    /// </summary>
     public void StartDialogue()
     {
         if (dialogueLines == null || dialogueLines.Count == 0) return;
@@ -66,12 +69,9 @@ public class DialogueManager : MonoBehaviour
         if (dialoguePanel != null)
             dialoguePanel.SetActive(true);
 
-        ShowLine(dialogueLines[currentLineIndex].text);
+        ShowLine(dialogueLines[currentLineIndex]);
     }
 
-    /// <summary>
-    /// Запуск диалога с новым списком реплик
-    /// </summary>
     public void StartDialogue(List<DialogueLine> lines)
     {
         dialogueLines = lines;
@@ -88,27 +88,41 @@ public class DialogueManager : MonoBehaviour
             return;
         }
 
-        ShowLine(dialogueLines[currentLineIndex].text);
+        ShowLine(dialogueLines[currentLineIndex]);
     }
 
-    private void ShowLine(string line)
+    private void ShowLine(DialogueLine line)
     {
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
 
-        typingCoroutine = StartCoroutine(TypeLine(line));
+        string finalText = GetFinalText(line);
+        typingCoroutine = StartCoroutine(TypeLine(finalText));
+    }
+
+    private string GetFinalText(DialogueLine line)
+    {
+        if (line == null) return "";
+
+        if (line.useCustomColor)
+            return "<color=" + line.colorHex + ">" + line.text + "</color>";
+
+        return line.text;
     }
 
     private IEnumerator TypeLine(string line)
     {
         isTyping = true;
-        dialogueText.text = "";
+
+        dialogueText.text = line;
+        dialogueText.maxVisibleCharacters = 0;
 
         float delay = lettersPerSecond <= 0f ? 0f : 1f / lettersPerSecond;
 
-        for (int i = 0; i < line.Length; i++)
+        for (int i = 1; i <= line.Length; i++)
         {
-            dialogueText.text += line[i];
+            dialogueText.maxVisibleCharacters = i;
+
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
             else
@@ -124,7 +138,13 @@ public class DialogueManager : MonoBehaviour
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
 
-        dialogueText.text = dialogueLines[currentLineIndex].text;
+        if (dialogueText != null && dialogueLines != null && dialogueLines.Count > currentLineIndex)
+        {
+            string fullText = GetFinalText(dialogueLines[currentLineIndex]);
+            dialogueText.text = fullText;
+            dialogueText.maxVisibleCharacters = fullText.Length;
+        }
+
         isTyping = false;
         typingCoroutine = null;
     }
@@ -140,7 +160,10 @@ public class DialogueManager : MonoBehaviour
         typingCoroutine = null;
 
         if (dialogueText != null)
+        {
             dialogueText.text = "";
+            dialogueText.maxVisibleCharacters = 99999;
+        }
 
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);

@@ -15,6 +15,11 @@ public class PlayerController : MonoBehaviour
     [Header("Control")]
     public bool canControl = false;
 
+    [Header("Footsteps")]
+    public AudioSource footstepSource;
+    public AudioClip walkClip;
+    public AudioClip runClip;
+
     private CharacterController controller;
     private Vector3 velocity;
     private float xRotation = 0f;
@@ -29,6 +34,9 @@ public class PlayerController : MonoBehaviour
     {
         if (!canControl)
         {
+            if (footstepSource != null && footstepSource.isPlaying)
+                footstepSource.Stop();
+
             Input.GetAxis("Mouse X");
             Input.GetAxis("Mouse Y");
             return;
@@ -58,6 +66,8 @@ public class PlayerController : MonoBehaviour
         {
             Move();
         }
+
+        HandleFootsteps();
     }
 
     public void EnableControlSmooth()
@@ -106,5 +116,42 @@ public class PlayerController : MonoBehaviour
             velocity.y = -2f;
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void HandleFootsteps()
+    {
+        if (footstepSource == null)
+            return;
+
+        bool isMoving =
+            Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f ||
+            Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.1f;
+
+        bool isRunning =
+            isMoving &&
+            Input.GetKey(KeyCode.LeftShift);
+
+        if (!isMoving)
+        {
+            if (footstepSource.isPlaying)
+                footstepSource.Stop();
+
+            return;
+        }
+
+        AudioClip targetClip = isRunning ? runClip : walkClip;
+
+        if (footstepSource.clip != targetClip)
+        {
+            footstepSource.Stop();
+            footstepSource.clip = targetClip;
+            footstepSource.loop = true;
+            footstepSource.Play();
+        }
+        else if (!footstepSource.isPlaying)
+        {
+            footstepSource.loop = true;
+            footstepSource.Play();
+        }
     }
 }

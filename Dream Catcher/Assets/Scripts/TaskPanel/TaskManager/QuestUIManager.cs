@@ -78,6 +78,8 @@ public class QuestUIManager : MonoBehaviour
 
         activeQuestObjects.Add(questId, newTask);
 
+        SetQuestOutlines(quest, true);
+
         if (taskUpdateToast != null)
             taskUpdateToast.ShowToast();
     }
@@ -102,14 +104,17 @@ public class QuestUIManager : MonoBehaviour
 
         activeQuestObjects.Remove(questId);
 
+        if (quest != null)
+            SetQuestOutlines(quest, false);
+
         ClearSummary();
 
-        if (quest != null && quest.showInArchive)
+        if (quest != null && quest.tag == QuestTag.ׁ‏זוע)
         {
             AddQuestToArchive(quest);
         }
 
-        if (taskUpdateToast != null)
+        if (taskUpdateToast != null && quest != null && quest.tag == QuestTag.ׁ‏זוע)
             taskUpdateToast.ShowToast();
     }
 
@@ -170,5 +175,23 @@ public class QuestUIManager : MonoBehaviour
             return;
 
         ClearSummary();
+    }
+
+    private void SetQuestOutlines(QuestData quest, bool state)
+    {
+        if (quest == null) return;
+        if (quest.outlines == null) return;
+
+        for (int i = 0; i < quest.outlines.Length; i++)
+        {
+            InteractionOutline outline = quest.outlines[i];
+
+            if (outline == null) continue;
+
+            if (state)
+                outline.ShowOutline();
+            else
+                outline.HideOutline();
+        }
     }
 }

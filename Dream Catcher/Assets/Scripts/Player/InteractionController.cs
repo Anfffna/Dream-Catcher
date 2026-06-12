@@ -10,6 +10,9 @@ public class InteractionController : MonoBehaviour
     public float interactionDistance = 1f;
     public KeyCode interactionKey = KeyCode.E;
 
+    [Header("Interactable Layers")]
+    public LayerMask interactableLayers;
+
     [Header("UI")]
     public Image interactionDot;
 
@@ -25,7 +28,8 @@ public class InteractionController : MonoBehaviour
     {
         CheckInteraction();
 
-        if (currentInteractable != null && Input.GetKeyDown(interactionKey))
+        if (currentInteractable != null &&
+            Input.GetKeyDown(interactionKey))
         {
             currentInteractable.Interact();
         }
@@ -38,16 +42,28 @@ public class InteractionController : MonoBehaviour
         if (interactionDot != null)
             interactionDot.gameObject.SetActive(false);
 
-        if (playerCamera == null) return;
+        if (playerCamera == null)
+            return;
 
-        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        Ray ray = new Ray(
+            playerCamera.transform.position,
+            playerCamera.transform.forward
+        );
 
-        if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
+        if (Physics.Raycast(
+            ray,
+            out RaycastHit hit,
+            interactionDistance,
+            interactableLayers))
         {
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+            IInteractable interactable =
+                hit.collider.GetComponent<IInteractable>();
 
             if (interactable == null)
-                interactable = hit.collider.GetComponentInParent<IInteractable>();
+            {
+                interactable =
+                    hit.collider.GetComponentInParent<IInteractable>();
+            }
 
             if (interactable != null)
             {

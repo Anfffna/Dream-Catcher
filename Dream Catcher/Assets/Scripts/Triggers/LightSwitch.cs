@@ -10,6 +10,9 @@ public class LightSwitch : MonoBehaviour, IInteractable
     public QuestUIManager questUIManager;
     public string questIdToComplete = "turn_on_light";
 
+    [Header("Invite Door")]
+    public InviteDoor inviteDoor;
+
     private bool isOn = false;
     private bool questCompleted = false;
 
@@ -37,6 +40,11 @@ public class LightSwitch : MonoBehaviour, IInteractable
 
             if (questUIManager != null)
                 questUIManager.CompleteQuest(questIdToComplete);
+
+            if (inviteDoor != null)
+                inviteDoor.StartInviteDoorSequence();
+            else
+                Debug.LogWarning("InviteDoor не назначен в LightSwitch");
         }
     }
 }
