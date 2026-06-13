@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 06b59cd663794b04987eb3f31ad0a166
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 362166
+  packageName: CENSOR - Screen-Space Quantization and Refraction
+  packageVersion: 1.0.0
+  assetPath: Assets/Mirza/CENSOR - Screen-Space Quantization and Refraction/Settings/PC_Renderer.asset
+  uploadId: 864670

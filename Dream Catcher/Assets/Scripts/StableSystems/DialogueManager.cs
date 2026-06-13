@@ -14,6 +14,10 @@ public class DialogueManager : MonoBehaviour
         [Header("Color")]
         public bool useCustomColor = false;
         public string colorHex = "#A997C9";
+
+        [Header("After Click Pause")]
+        [Tooltip("Задержка в секундах после клика (диалоговое окно исчезнет), затем появится следующая реплика. 0 = сразу. Клики во время паузы не работают.")]
+        public float clickPauseDelay = 0f;
     }
 
     [Header("UI Elements")]
@@ -29,15 +33,24 @@ public class DialogueManager : MonoBehaviour
     private int currentLineIndex = 0;
     private bool isTyping = false;
     private bool dialogueActive = false;
+    private bool waitingForClickAfterTyping = false; // текст полностью показан, ждём клик для паузы
     private Coroutine typingCoroutine;
+    private Coroutine pauseCoroutine;
+    private bool isWaitingForClickPause = false;
+    private bool skipProtection = false; // защита от двойного клика при пропуске печати
+    private PlayerController playerController;
+    private bool wasMovementLocked = false;
+    private bool originalCanMoveState = false;
+    private bool blockMovementForCurrentDialogue = false;
 
     public bool DialogueActive => dialogueActive;
 
     void Start()
     {
+        playerController = FindObjectOfType<PlayerController>();
+
         if (hidePanelOnStart && dialoguePanel != null)
             dialoguePanel.SetActive(false);
-
         if (dialogueText != null)
             dialogueText.text = "";
     }
@@ -45,49 +58,64 @@ public class DialogueManager : MonoBehaviour
     void Update()
     {
         if (!dialogueActive) return;
+        if (isWaitingForClickPause) return; // во время паузы клики игнорируем
+        if (skipProtection) return; // защита после скипа: кратковременно не принимаем клики
 
         if (Input.GetMouseButtonDown(0))
         {
+            // Если идёт печать – пропускаем
             if (isTyping)
             {
                 SkipTyping();
+                return;
             }
-            else
+
+            // Если текст полностью показан и ждём клик – запускаем паузу
+            if (waitingForClickAfterTyping)
             {
-                ShowNextLine();
+                StartClickPauseAndNext();
             }
         }
     }
 
     public void StartDialogue()
     {
+        StartDialogue(dialogueLines, false);
+    }
+
+    public void StartDialogue(List<DialogueLine> lines, bool blockMovement = false)
+    {
+        dialogueLines = lines;
+        blockMovementForCurrentDialogue = blockMovement;
+
         if (dialogueLines == null || dialogueLines.Count == 0) return;
 
         currentLineIndex = 0;
         dialogueActive = true;
 
-        if (dialoguePanel != null)
-            dialoguePanel.SetActive(true);
+        // Блокируем движение, если требуется
+        if (blockMovementForCurrentDialogue && playerController != null)
+        {
+            originalCanMoveState = playerController.canMove;
+            playerController.canMove = false;
+            wasMovementLocked = true;
+        }
 
+        waitingForClickAfterTyping = false;
+        ShowDialoguePanel(true);
         ShowLine(dialogueLines[currentLineIndex]);
-    }
-
-    public void StartDialogue(List<DialogueLine> lines)
-    {
-        dialogueLines = lines;
-        StartDialogue();
     }
 
     private void ShowNextLine()
     {
         currentLineIndex++;
-
         if (currentLineIndex >= dialogueLines.Count)
         {
             EndDialogue();
             return;
         }
-
+        waitingForClickAfterTyping = false;
+        ShowDialoguePanel(true);
         ShowLine(dialogueLines[currentLineIndex]);
     }
 
@@ -95,6 +123,11 @@ public class DialogueManager : MonoBehaviour
     {
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
+        if (pauseCoroutine != null)
+            StopCoroutine(pauseCoroutine);
+        isWaitingForClickPause = false;
+        waitingForClickAfterTyping = false;
+        skipProtection = false;
 
         string finalText = GetFinalText(line);
         typingCoroutine = StartCoroutine(TypeLine(finalText));
@@ -103,26 +136,21 @@ public class DialogueManager : MonoBehaviour
     private string GetFinalText(DialogueLine line)
     {
         if (line == null) return "";
-
         if (line.useCustomColor)
             return "<color=" + line.colorHex + ">" + line.text + "</color>";
-
         return line.text;
     }
 
     private IEnumerator TypeLine(string line)
     {
         isTyping = true;
-
         dialogueText.text = line;
         dialogueText.maxVisibleCharacters = 0;
 
         float delay = lettersPerSecond <= 0f ? 0f : 1f / lettersPerSecond;
-
         for (int i = 1; i <= line.Length; i++)
         {
             dialogueText.maxVisibleCharacters = i;
-
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
             else
@@ -131,6 +159,8 @@ public class DialogueManager : MonoBehaviour
 
         isTyping = false;
         typingCoroutine = null;
+        // Печать завершена, теперь ждём клик игрока для паузы
+        waitingForClickAfterTyping = true;
     }
 
     private void SkipTyping()
@@ -147,16 +177,70 @@ public class DialogueManager : MonoBehaviour
 
         isTyping = false;
         typingCoroutine = null;
+        waitingForClickAfterTyping = true;
+
+        // Включаем защиту от двойного клика на 0.2 секунды
+        if (!skipProtection)
+            StartCoroutine(SkipProtectionRoutine());
+    }
+
+    private IEnumerator SkipProtectionRoutine()
+    {
+        skipProtection = true;
+        yield return new WaitForSeconds(0.2f);
+        skipProtection = false;
+    }
+
+    private void StartClickPauseAndNext()
+    {
+        float delay = dialogueLines[currentLineIndex].clickPauseDelay;
+        waitingForClickAfterTyping = false;
+
+        if (delay > 0f)
+        {
+            isWaitingForClickPause = true;
+            ShowDialoguePanel(false);
+            pauseCoroutine = StartCoroutine(ClickPauseRoutine(delay));
+        }
+        else
+        {
+            ShowNextLine();
+        }
+    }
+
+    private IEnumerator ClickPauseRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        isWaitingForClickPause = false;
+        pauseCoroutine = null;
+        ShowNextLine();
+    }
+
+    private void ShowDialoguePanel(bool show)
+    {
+        if (dialoguePanel != null && dialoguePanel.activeSelf != show)
+            dialoguePanel.SetActive(show);
     }
 
     private void EndDialogue()
     {
         dialogueActive = false;
-        isTyping = false;
+
+        if (wasMovementLocked && playerController != null)
+        {
+            playerController.canMove = originalCanMoveState;
+            wasMovementLocked = false;
+        }
+        blockMovementForCurrentDialogue = false;
 
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
-
+        if (pauseCoroutine != null)
+            StopCoroutine(pauseCoroutine);
+        pauseCoroutine = null;
+        isWaitingForClickPause = false;
+        waitingForClickAfterTyping = false;
+        skipProtection = false;
         typingCoroutine = null;
 
         if (dialogueText != null)
@@ -164,7 +248,6 @@ public class DialogueManager : MonoBehaviour
             dialogueText.text = "";
             dialogueText.maxVisibleCharacters = 99999;
         }
-
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);
     }

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5409fceab40c5e642b9333dfa2af1d32
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 362166
+  packageName: CENSOR - Screen-Space Quantization and Refraction
+  packageVersion: 1.0.0
+  assetPath: Assets/Mirza/CENSOR - Screen-Space Quantization and Refraction/Materials/Blur
+    (Fullscreen).mat
+  uploadId: 864670

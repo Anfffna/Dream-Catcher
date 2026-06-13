@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 91735f469d148084a967d2f8f64a2cec
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 362166
+  packageName: CENSOR - Screen-Space Quantization and Refraction
+  packageVersion: 1.0.0
+  assetPath: Assets/Mirza/CENSOR - Screen-Space Quantization and Refraction/Materials/Censor
+    (Black).mat
+  uploadId: 864670

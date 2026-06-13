@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d92917b84ad78a948a61e32490e434fe
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 362166
+  packageName: CENSOR - Screen-Space Quantization and Refraction
+  packageVersion: 1.0.0
+  assetPath: Assets/Mirza/CENSOR - Screen-Space Quantization and Refraction/Materials/Censor
+    (Pixelate - Blue).mat
+  uploadId: 864670

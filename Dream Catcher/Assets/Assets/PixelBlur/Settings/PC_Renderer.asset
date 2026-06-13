@@ -1,5 +1,45 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-4439986864026897948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba8f1b6f69acbe14f9d1bcc74b57bc14, type: 3}
+  m_Name: FullScreenRendererFeature2
+  m_EditorClassIdentifier: Assembly-CSharp::Mirza.VFXToolKit.FullScreenRendererFeature2
+  m_Active: 1
+  renderInSceneView: 1
+  injectionPoint: 450
+  requirements: 0
+  settings:
+    isGlobalTexture: 1
+    globalTextureName: _CameraBlurTexture
+    filterMode: 1
+    textureFormat: 0
+    downsampleLevel: 16
+    material: {fileID: 2100000, guid: 5409fceab40c5e642b9333dfa2af1d32, type: 2}
+    sendToMaterial: {fileID: 0}
+    sendToMaterialTextureName: _MainTex
+    controller: {fileID: 0}
+--- !u!114 &-4376424148568782040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15057520a917a694db3f5ac3e4277259, type: 3}
+  m_Name: VolumetricFogRendererFeature
+  m_EditorClassIdentifier: Assembly-CSharp::VolumetricFogRendererFeature
+  m_Active: 0
+  fogMaterial: {fileID: 2100000, guid: fedf334cf2cc1b44d9ae7b524decb528, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -55,6 +95,32 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &1947921041540141089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba8f1b6f69acbe14f9d1bcc74b57bc14, type: 3}
+  m_Name: FullScreenRendererFeature2
+  m_EditorClassIdentifier: Assembly-CSharp::Mirza.VFXToolKit.FullScreenRendererFeature2
+  m_Active: 1
+  renderInSceneView: 1
+  injectionPoint: 450
+  requirements: 0
+  settings:
+    isGlobalTexture: 1
+    globalTextureName: _CameraPreBlurTexture
+    filterMode: 1
+    textureFormat: 0
+    downsampleLevel: 16
+    material: {fileID: 2100000, guid: eac1a27764011914c86e30cfd1da2824, type: 2}
+    sendToMaterial: {fileID: 2100000, guid: 5409fceab40c5e642b9333dfa2af1d32, type: 2}
+    sendToMaterialTextureName: _BlitCustomTexture
+    controller: {fileID: 0}
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0

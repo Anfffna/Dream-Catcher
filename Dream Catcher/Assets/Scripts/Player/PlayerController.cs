@@ -14,11 +14,15 @@ public class PlayerController : MonoBehaviour
 
     [Header("Control")]
     public bool canControl = false;
+    public bool canMove = true;   
 
     [Header("Footsteps")]
     public AudioSource footstepSource;
     public AudioClip walkClip;
+    public float walkVolume = 0.5f;
+    
     public AudioClip runClip;
+    public float runVolume = 0.8f;
 
     private CharacterController controller;
     private Vector3 velocity;
@@ -73,6 +77,7 @@ public class PlayerController : MonoBehaviour
     public void EnableControlSmooth()
     {
         canControl = true;
+        canMove = true;
         firstControlFrame = true;
     }
 
@@ -98,6 +103,8 @@ public class PlayerController : MonoBehaviour
 
     void Move()
     {
+        if (!canMove) return;
+
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
@@ -140,6 +147,8 @@ public class PlayerController : MonoBehaviour
         }
 
         AudioClip targetClip = isRunning ? runClip : walkClip;
+        footstepSource.volume =
+            isRunning ? runVolume : walkVolume;
 
         if (footstepSource.clip != targetClip)
         {
@@ -148,10 +157,14 @@ public class PlayerController : MonoBehaviour
             footstepSource.loop = true;
             footstepSource.Play();
         }
+
         else if (!footstepSource.isPlaying)
         {
             footstepSource.loop = true;
             footstepSource.Play();
         }
+
+        footstepSource.volume =
+            isRunning ? runVolume : walkVolume;
     }
 }
