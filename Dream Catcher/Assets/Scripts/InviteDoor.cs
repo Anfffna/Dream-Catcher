@@ -22,11 +22,17 @@ public class InviteDoor : MonoBehaviour
     public List<DialogueManager.DialogueLine> ggLines = new List<DialogueManager.DialogueLine>();   // после стука, до открытия
     public List<DialogueManager.DialogueLine> workerLines = new List<DialogueManager.DialogueLine>(); // после открытия двери
 
+    [Header("Door Block Dialogue")]
+    public List<DialogueManager.DialogueLine> doorLines = new List<DialogueManager.DialogueLine>();
+
     [Header("Door")]
     public InviteDoorInteractable doorInteractable;
 
     [Header("NPC")]
-    public GameObject npcToHide;   
+    public GameObject npcToHide;
+
+    [Header("Items Activator")]
+    public HomeItemsActivator homeItemsActivator;
 
     private bool started = false;
     private bool waitingForOpen = false; // чтобы не повторно обработать открытие
@@ -102,6 +108,28 @@ public class InviteDoor : MonoBehaviour
         if (questUIManager != null && !string.IsNullOrEmpty(questIdToAdd))
         {
             questUIManager.AddQuest(questIdToAdd);
+        }
+
+        // ? Активируем домашние предметы
+        if (homeItemsActivator != null)
+        {
+            homeItemsActivator.ActivateItems();
+        }
+    }
+
+    public bool CanOpenDoor()
+    {
+        // Если задание "find_the_key" ещё не выполнено (активно), то открывать нельзя
+        if (questUIManager != null && questUIManager.IsQuestActive(questIdToAdd))
+            return false;
+        return true;
+    }
+
+    public void ShowDoorBlockDialogue()
+    {
+        if (dialogueManager != null && doorLines != null && doorLines.Count > 0)
+        {
+            dialogueManager.StartDialogue(doorLines); // не блокируем движение (можно false)
         }
     }
 

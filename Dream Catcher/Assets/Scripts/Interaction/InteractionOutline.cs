@@ -335,6 +335,7 @@ public class InteractionOutline : MonoBehaviour
     {
         if (playerCamera == null) return false;
 
+        // Вычисляем общий bounds объекта (учитываем все рендереры)
         Bounds bounds = new Bounds(transform.position, Vector3.zero);
         bool hasBounds = false;
 
@@ -343,9 +344,7 @@ public class InteractionOutline : MonoBehaviour
             for (int i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
-
                 if (renderer == null) continue;
-
                 if (!hasBounds)
                 {
                     bounds = renderer.bounds;
@@ -361,26 +360,38 @@ public class InteractionOutline : MonoBehaviour
         if (!hasBounds)
             return false;
 
-        Vector3 cameraPosition = playerCamera.transform.position;
-        Vector3 targetPosition = bounds.center;
-
-        Vector3 direction = targetPosition - cameraPosition;
-        float distance = direction.magnitude;
-
-        if (distance <= 0.01f)
-            return false;
-
-        Ray ray = new Ray(cameraPosition, direction.normalized);
-
-        if (Physics.Raycast(ray, out RaycastHit hit, distance, occlusionMask, QueryTriggerInteraction.Ignore))
+        // Точки для проверки: центр и 8 углов ограничивающего параллелепипеда
+        Vector3[] points = new Vector3[]
         {
-            if (hit.collider.transform == transform)
-                return false;
+        bounds.center,
+        bounds.min,
+        bounds.max,
+        new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+        new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
+        new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
+        new Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
+        new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
+        new Vector3(bounds.max.x, bounds.min.y, bounds.max.z)
+        };
 
-            if (hit.collider.transform.IsChildOf(transform))
-                return false;
+        Vector3 cameraPosition = playerCamera.transform.position;
 
-            return true;
+        foreach (Vector3 point in points)
+        {
+            Vector3 direction = point - cameraPosition;
+            float distance = direction.magnitude;
+            if (distance <= 0.01f) continue;
+
+            Ray ray = new Ray(cameraPosition, direction.normalized);
+            if (Physics.Raycast(ray, out RaycastHit hit, distance, occlusionMask, QueryTriggerInteraction.Ignore))
+            {
+                // Если луч попал в сам объект или его дочернюю часть – не считаем перекрытием
+                if (hit.collider.transform == transform) continue;
+                if (hit.collider.transform.IsChildOf(transform)) continue;
+
+                // Любое другое препятствие – объект перекрыт
+                return true;
+            }
         }
 
         return false;

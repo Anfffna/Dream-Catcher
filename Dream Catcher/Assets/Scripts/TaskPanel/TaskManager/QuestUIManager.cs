@@ -194,4 +194,9 @@ public class QuestUIManager : MonoBehaviour
                 outline.HideOutline();
         }
     }
+
+    public bool IsQuestActive(string questId)
+    {
+        return activeQuestObjects.ContainsKey(questId);
+    }
 }

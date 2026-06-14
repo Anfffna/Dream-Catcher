@@ -17,6 +17,20 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
     [Header("Invite Door (сюжетный контроллер)")]
     public InviteDoor inviteDoor;
 
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip openSound;
+    public AudioClip closeSound;
+
+    [Header("Auto Close Triggers")]
+    public Collider[] autoCloseTriggers;
+
+    [Header("Auto Close")]
+    public string playerTag = "Player";
+
+    public bool IsOpen => isOpen;
+    public bool IsAnimating => isAnimating;
+
     private bool isOpen = false;
     private bool isAnimating = false;
     private bool isAvailable = false; // доступна ли для взаимодействия
@@ -24,6 +38,9 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
     void Start()
     {
         SetDoorAvailable(false);
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
     }
 
     public void SetDoorAvailable(bool state)
@@ -35,6 +52,14 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
     public void Interact()
     {
         if (!isAvailable || isOpen || isAnimating) return;
+
+        // Проверяем, можно ли открыть дверь (добавленная логика)
+        if (inviteDoor != null && !inviteDoor.CanOpenDoor())
+        {
+            inviteDoor.ShowDoorBlockDialogue();
+            return;
+        }
+
         StartCoroutine(OpenRoutine());
     }
 
@@ -42,6 +67,10 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
     {
         isAnimating = true;
         SetDoorAvailable(false); // блокируем повторное нажатие
+
+        // Звук открытия
+        if (audioSource != null && openSound != null)
+            audioSource.PlayOneShot(openSound);
 
         if (doorAnimator != null)
             doorAnimator.SetTrigger(openTrigger);
@@ -58,6 +87,7 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
 
     public void CloseDoor()
     {
+        Debug.Log("CloseDoor() вызван, isOpen=" + isOpen + ", isAnimating=" + isAnimating);
         if (!isOpen || isAnimating) return;
         StartCoroutine(CloseRoutine());
     }
@@ -66,6 +96,10 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
     {
         isAnimating = true;
         SetDoorAvailable(false);
+
+        // Звук закрытия
+        if (audioSource != null && closeSound != null)
+            audioSource.PlayOneShot(closeSound);
 
         if (doorAnimator != null)
             doorAnimator.SetTrigger(closeTrigger);
@@ -76,7 +110,28 @@ public class InviteDoorInteractable : MonoBehaviour, IInteractable
         isAnimating = false;
 
         // После закрытия делаем дверь снова доступной (если нужно для повторного открытия)
-        // Если не нужно — закомментируй следующую строку
         SetDoorAvailable(true);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        // Проверяем, что коллайдер, в который вошёл игрок, есть в массиве autoCloseTriggers
+        bool isInArray = false;
+        if (autoCloseTriggers != null)
+        {
+            foreach (var trigger in autoCloseTriggers)
+            {
+                if (trigger == other)
+                {
+                    isInArray = true;
+                    break;
+                }
+            }
+        }
+
+        if (isInArray && other.CompareTag(playerTag) && isOpen && !isAnimating)
+        {
+            CloseDoor();
+        }
     }
 }

@@ -13,6 +13,9 @@ public class LightSwitch : MonoBehaviour, IInteractable
     [Header("Invite Door")]
     public InviteDoor inviteDoor;
 
+    [Header("Audio")]
+    public AudioSource audioSource;   // ссылка на AudioSource (клип уже в нём)
+
     private bool isOn = false;
     private bool questCompleted = false;
 
@@ -22,18 +25,26 @@ public class LightSwitch : MonoBehaviour, IInteractable
             isOn = roomLight1.enabled;
         else if (roomLight2 != null)
             isOn = roomLight2.enabled;
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
     }
 
     public void Interact()
     {
+        // Переключаем свет
         isOn = !isOn;
 
         if (roomLight1 != null)
             roomLight1.enabled = isOn;
-
         if (roomLight2 != null)
             roomLight2.enabled = isOn;
 
+        // Воспроизводим звук переключения (при любом нажатии)
+        if (audioSource != null)
+            audioSource.Play();
+
+        // Если свет включён и задание ещё не завершено
         if (isOn && !questCompleted)
         {
             questCompleted = true;
