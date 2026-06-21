@@ -43,6 +43,15 @@ public class TaskPanelController : MonoBehaviour
     [Header("Unlock")]
     public bool panelUnlocked = false;
 
+    void Awake()
+    {
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
+
+        if (blurVolume == null)
+            blurVolume = FindObjectOfType<Volume>();
+    }
+
     void Start()
     {
         if (taskPanel != null)

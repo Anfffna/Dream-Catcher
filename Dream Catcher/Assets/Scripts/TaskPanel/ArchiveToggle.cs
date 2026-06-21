@@ -19,6 +19,13 @@ public class ArchiveToggle : MonoBehaviour
 
     void Start()
     {
+        // Если ссылка на менеджер не назначена, ищем автоматически
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        if (questUIManager == null)
+            Debug.LogWarning("QuestUIManager не найден! Архив не будет обновлять резюме.");
+
         if (arrowTransform != null)
         {
             closedArrowPosition = arrowTransform.anchoredPosition;
@@ -33,6 +40,8 @@ public class ArchiveToggle : MonoBehaviour
 
     public void ToggleArchive()
     {
+        Debug.Log("ToggleArchive вызван на " + gameObject.name);
+
         isOpen = !isOpen;
 
         if (archiveScrollView != null)

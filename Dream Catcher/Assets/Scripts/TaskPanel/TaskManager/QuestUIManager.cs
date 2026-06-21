@@ -25,6 +25,8 @@ public class QuestUIManager : MonoBehaviour
     private Dictionary<string, QuestData> questById = new Dictionary<string, QuestData>();
     private Dictionary<string, GameObject> activeQuestObjects = new Dictionary<string, GameObject>();
 
+    private static QuestUIManager _instance; //
+
     private enum SummarySource
     {
         None,
@@ -38,6 +40,17 @@ public class QuestUIManager : MonoBehaviour
 
     void Awake()
     {
+        // --- днаюбхрэ щрнр акнй ---
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        _instance = this;
+        //DontDestroyOnLoad(gameObject);
+        // --------------------------
+
         questById.Clear();
 
         for (int i = 0; i < quests.Count; i++)

@@ -29,6 +29,18 @@ public class PlayerController : MonoBehaviour
     private float xRotation = 0f;
     private bool firstControlFrame = false;
 
+    void Awake()
+    {
+        // Проверяем, есть ли уже другой PlayerController в сцене
+        PlayerController[] existing = FindObjectsOfType<PlayerController>();
+        if (existing.Length > 1)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        //DontDestroyOnLoad(gameObject);
+    }
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
