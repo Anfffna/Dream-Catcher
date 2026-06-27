@@ -1,14 +1,15 @@
 using UnityEngine;
+using System.Collections;
 
 public class LoadingSpinnerController : MonoBehaviour
 {
     [Header("References")]
-    public RectTransform outerCircle;   // внешний круг (для определения радиуса)
-    public RectTransform innerDot;      // маленький кружок
+    public RectTransform outerCircle;
+    public RectTransform innerDot;
 
     [Header("Settings")]
-    public float orbitRadius = 30f;     // радиус орбиты в пикселях
-    public float speed = 180f;          // градусов в секунду (полный оборот за 2 сек)
+    public float orbitRadius = 30f;
+    public float speed = 180f;
 
     [Header("Appearance")]
     public float fadeDuration = 0.3f;
@@ -22,29 +23,28 @@ public class LoadingSpinnerController : MonoBehaviour
         canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 0f;
-        gameObject.SetActive(false);
 
-        // Если внешний круг задан, можно вычислить радиус автоматически
+        // Изначально скрыт (прозрачен)
+        canvasGroup.alpha = 0f;
+        // Не выключаем объект, чтобы корутины работали
+
+        // Вычисляем радиус, если есть ссылки
         if (outerCircle != null)
         {
             float outerRadius = outerCircle.rect.width * 0.5f;
-            float innerRadius = innerDot.rect.width * 0.5f;
-            orbitRadius = outerRadius - innerRadius - 2f; // минус небольшой отступ
-        }
-
-        // Запоминаем центр (это центр внешнего круга)
-        if (outerCircle != null)
+            float innerRadius = innerDot != null ? innerDot.rect.width * 0.5f : 0f;
+            orbitRadius = outerRadius - innerRadius - 2f;
             centerPosition = outerCircle.anchoredPosition;
+        }
         else
-            centerPosition = GetComponent<RectTransform>().anchoredPosition; // или Vector2.zero
+        {
+            centerPosition = GetComponent<RectTransform>().anchoredPosition;
+        }
     }
 
     public void Show()
     {
-        gameObject.SetActive(true);
-        canvasGroup.alpha = 0f;
-        currentAngle = 0f; // начальный угол (можно задать случайный)
+        gameObject.SetActive(true); // <-- ВОТ ЭТО ВАЖНО
         StopAllCoroutines();
         StartCoroutine(Fade(0f, 1f, fadeDuration));
     }
@@ -52,11 +52,20 @@ public class LoadingSpinnerController : MonoBehaviour
     public void Hide()
     {
         StopAllCoroutines();
-        StartCoroutine(Fade(1f, 0f, fadeDuration, () => gameObject.SetActive(false)));
+        // Мгновенно скрываем без корутины, чтобы избежать ошибок при вызове до инициализации
+        if (canvasGroup != null)
+            canvasGroup.alpha = 0f;
     }
 
-    private System.Collections.IEnumerator Fade(float from, float to, float duration, System.Action onComplete = null)
+    public void HideSmooth()
     {
+        StopAllCoroutines();
+        StartCoroutine(Fade(1f, 0f, fadeDuration));
+    }
+
+    private IEnumerator Fade(float from, float to, float duration)
+    {
+        if (canvasGroup == null) yield break;
         float t = 0f;
         while (t < duration)
         {
@@ -65,28 +74,18 @@ public class LoadingSpinnerController : MonoBehaviour
             yield return null;
         }
         canvasGroup.alpha = to;
-        onComplete?.Invoke();
     }
 
     void Update()
     {
-        if (!gameObject.activeInHierarchy) return;
+        if (canvasGroup == null || canvasGroup.alpha <= 0.01f) return;
+        if (innerDot == null) return;
 
-        // Обновляем угол
         currentAngle += speed * Time.deltaTime;
         if (currentAngle > 360f) currentAngle -= 360f;
-
-        // Вычисляем позицию на окружности
         float rad = currentAngle * Mathf.Deg2Rad;
         float x = centerPosition.x + orbitRadius * Mathf.Cos(rad);
         float y = centerPosition.y + orbitRadius * Mathf.Sin(rad);
-
         innerDot.anchoredPosition = new Vector2(x, y);
-    }
-
-    // Опционально: можно менять направление (по часовой / против)
-    public void SetClockwise(bool clockwise)
-    {
-        speed = clockwise ? Mathf.Abs(speed) : -Mathf.Abs(speed);
     }
 }

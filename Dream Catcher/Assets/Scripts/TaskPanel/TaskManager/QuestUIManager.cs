@@ -70,6 +70,22 @@ public class QuestUIManager : MonoBehaviour
 
     public void AddQuest(string questId)
     {
+        Debug.Log($"AddQuest вызван для {questId}");
+        Debug.Log($"activeTasksContainer = {(activeTasksContainer != null ? activeTasksContainer.name : "NULL")}");
+        Debug.Log($"taskEntryPrefab = {(taskEntryPrefab != null ? taskEntryPrefab.name : "NULL")}");
+        Debug.Log($"Менеджер на объекте {gameObject.name} в сцене {gameObject.scene.name}");
+
+        if (activeTasksContainer == null)
+        {
+            Debug.LogError("? activeTasksContainer NULL! UI не обновится!");
+            return;
+        }
+        if (taskEntryPrefab == null)
+        {
+            Debug.LogError("? taskEntryPrefab NULL! UI не обновится!");
+            return;
+        }
+
         if (!questById.ContainsKey(questId))
         {
             Debug.LogWarning("Задание не найдено: " + questId);

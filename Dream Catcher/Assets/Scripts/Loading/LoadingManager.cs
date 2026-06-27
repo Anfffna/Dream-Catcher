@@ -30,7 +30,16 @@ public class LoadingManager : MonoBehaviour
             return;
         }
         Instance = this;
-        //DontDestroyOnLoad(gameObject);
+
+        // Ищем спиннер автоматически, если ссылка не задана или объект уничтожен
+        if (loadingSpinner == null)
+        {
+            loadingSpinner = FindObjectOfType<LoadingSpinnerController>();
+            if (loadingSpinner != null)
+                Debug.Log("Спиннер найден автоматически: " + loadingSpinner.name);
+            else
+                Debug.LogWarning("Спиннер не найден!");
+        }
     }
 
     public void StartLoading(
@@ -40,6 +49,9 @@ public class LoadingManager : MonoBehaviour
         float showImageDelay = 1f
     )
     {
+        if (loadingSpinner == null)
+            loadingSpinner = FindObjectOfType<LoadingSpinnerController>();
+
         StartCoroutine(LoadingSequence(sceneName, dialogueManager, dialogueLines, showImageDelay));
     }
 

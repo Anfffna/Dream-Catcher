@@ -4,6 +4,8 @@ using UnityEngine.Rendering;
 
 public class TaskPanelController : MonoBehaviour
 {
+    public static TaskPanelController Instance { get; private set; }
+
     [Header("Panel")]
     public GameObject taskPanel;
     public CanvasGroup taskPanelCanvasGroup;
@@ -34,6 +36,8 @@ public class TaskPanelController : MonoBehaviour
     public Vector2 defaultCursorHotspot = Vector2.zero;
     public Vector2 interactCursorHotspot = Vector2.zero;
 
+    public bool IsPanelOpen => isPanelOpen;
+
     private bool isPanelOpen = false;
     private bool cursorIsDefault = false;
     private bool cursorIsInteract = false;
@@ -45,6 +49,13 @@ public class TaskPanelController : MonoBehaviour
 
     void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
 
@@ -66,9 +77,7 @@ public class TaskPanelController : MonoBehaviour
         if (blurVolume != null)
         {
             blurVolume.weight = 0f;
-
-            if (disableBlurWhenClosed)
-                blurVolume.gameObject.SetActive(false);
+            blurVolume.gameObject.SetActive(true); // всегда активен
         }
 
         ClosePanelInstant();
@@ -76,6 +85,10 @@ public class TaskPanelController : MonoBehaviour
 
     void Update()
     {
+        // Если пауза активна – игнорируем Tab
+        if (PauseManager.Instance != null && PauseManager.Instance.IsPaused)
+            return;
+
         if (panelUnlocked && Input.GetKeyDown(KeyCode.Tab))
         {
             if (isPanelOpen)
@@ -169,13 +182,14 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
+        // --- ПРАВИЛЬНЫЙ ПОРЯДОК СКРЫТИЯ КУРСОРА ---
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
+        // ------------------------------------------
 
         cursorIsDefault = false;
         cursorIsInteract = false;
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
 
         if (playerController != null)
             playerController.canControl = true;
@@ -197,13 +211,12 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
 
         cursorIsDefault = false;
         cursorIsInteract = false;
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
 
         if (playerController != null)
             playerController.canControl = true;
@@ -217,7 +230,6 @@ public class TaskPanelController : MonoBehaviour
 
         if (blurVolume != null)
         {
-            blurVolume.gameObject.SetActive(true);
             startBlurWeight = blurVolume.weight;
         }
 
@@ -248,9 +260,6 @@ public class TaskPanelController : MonoBehaviour
         if (blurVolume != null)
         {
             blurVolume.weight = targetBlurWeight;
-
-            if (targetBlurWeight <= 0f && disableBlurWhenClosed)
-                blurVolume.gameObject.SetActive(false);
         }
 
         fadeCoroutine = null;

@@ -45,8 +45,10 @@ public class InteractionController : MonoBehaviour
         currentInteractable = null;
 
         if (interactionDot != null)
+        {
             interactionDot.gameObject.SetActive(false);
-            interactionDot.color = defaultDotColor; // возвращаем стандартный цвет
+            interactionDot.color = defaultDotColor; // теперь в безопасности
+        }
 
         if (playerCamera == null)
             return;
