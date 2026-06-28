@@ -135,8 +135,38 @@ public class PauseManager : MonoBehaviour
 
     // ----- Открытие правых панелей (из кнопок) -----
 
-    public void ShowSavePanel() => ShowRightPanel(savePanelCG);
-    public void ShowDownloadPanel() => ShowRightPanel(downloadPanelCG);
+    public void ShowSavePanel()
+    {
+        if (savePanelCG != null)
+        {
+            SavePanelController controller = savePanelCG.GetComponent<SavePanelController>();
+
+            if (controller == null)
+                controller = savePanelCG.GetComponentInChildren<SavePanelController>(true);
+
+            if (controller != null)
+                controller.PrepareSavePanel();
+        }
+
+        ShowRightPanel(savePanelCG);
+    }
+
+    public void ShowDownloadPanel()
+    {
+        if (downloadPanelCG != null)
+        {
+            LoadPanelController controller = downloadPanelCG.GetComponent<LoadPanelController>();
+
+            if (controller == null)
+                controller = downloadPanelCG.GetComponentInChildren<LoadPanelController>(true);
+
+            if (controller != null)
+                controller.PrepareLoadPanel();
+        }
+
+        ShowRightPanel(downloadPanelCG);
+    }
+
     public void ShowSettingsPanel() => ShowRightPanel(settingsPanelCG);
 
     private void ShowRightPanel(CanvasGroup panelCG)

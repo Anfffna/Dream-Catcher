@@ -71,6 +71,9 @@ public class IndicatorHover : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
     private void SetColor(Color targetColor)
     {
+        // Если объект неактивен – выходим, не запускаем корутину
+        if (!gameObject.activeInHierarchy) return;
+
         if (colorCoroutine != null) StopCoroutine(colorCoroutine);
         colorCoroutine = StartCoroutine(ChangeColor(indicator.color, targetColor));
     }

@@ -9,7 +9,6 @@ public class PlayerController : MonoBehaviour
     public float gravity = -9.81f;
 
     [Header("Mouse Look")]
-    public float mouseSensitivity = 150f;
     public Transform cameraTransform;
 
     [Header("Control")]
@@ -95,8 +94,8 @@ public class PlayerController : MonoBehaviour
 
     void Look()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        float mouseX = Input.GetAxis("Mouse X") * GameSettings.MouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * GameSettings.MouseSensitivity;
 
         // Горизонтальный поворот — поворачиваем ТЕЛО игрока
         transform.Rotate(Vector3.up * mouseX);
