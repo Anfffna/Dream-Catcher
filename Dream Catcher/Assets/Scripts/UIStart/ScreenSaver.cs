@@ -8,6 +8,9 @@ public class ScreenSaver : MonoBehaviour
     [Header("Background")]
     public CanvasGroup backgroundGroup;
 
+    [Header("Loading")]
+    public bool skipWhenLoadingSave = true;
+
     [Header("Text 1")]
     public CanvasGroup textGroup1;
 
@@ -55,6 +58,14 @@ public class ScreenSaver : MonoBehaviour
 
     void Start()
     {
+        if (skipWhenLoadingSave &&
+            SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            ApplySkippedState();
+            return;
+        }
+
         backgroundGroup.alpha = 1f;
 
         textGroup1.alpha = 0f;
@@ -196,5 +207,52 @@ public class ScreenSaver : MonoBehaviour
 
         a.alpha = to;
         b.alpha = to;
+    }
+
+    void ApplySkippedState()
+    {
+        canInteract = false;
+        isRunning = true;
+
+        if (backgroundGroup != null)
+        {
+            backgroundGroup.alpha = 0f;
+            backgroundGroup.interactable = false;
+            backgroundGroup.blocksRaycasts = false;
+        }
+
+        if (textGroup1 != null)
+        {
+            textGroup1.alpha = 0f;
+            textGroup1.interactable = false;
+            textGroup1.blocksRaycasts = false;
+        }
+
+        if (textGroup2 != null)
+        {
+            textGroup2.alpha = 0f;
+            textGroup2.interactable = false;
+            textGroup2.blocksRaycasts = false;
+        }
+
+        if (textGroup3 != null)
+        {
+            textGroup3.alpha = 0f;
+            textGroup3.interactable = false;
+            textGroup3.blocksRaycasts = false;
+        }
+
+        if (text2 != null)
+            text2.text = "";
+
+        if (wakeUpBlurVolume != null)
+        {
+            wakeUpBlurVolume.weight = 0f;
+
+            if (disableBlurAfterFade)
+                wakeUpBlurVolume.gameObject.SetActive(false);
+        }
+
+        Debug.Log("ScreenSaver: пропущен, потому что загружается сейв.");
     }
 }

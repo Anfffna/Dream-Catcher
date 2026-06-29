@@ -31,11 +31,20 @@ public class TVController : MonoBehaviour
 
     void Start()
     {
+        if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
+        {
+            ApplyLoadedSaveState();
+            return;
+        }
+
         StartNoise();
     }
 
     public void StartNoise()
     {
+        if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
+            return;
+
         if (tvAudioSource == null || tvNoiseClip == null) return;
 
         if (videoPlayer != null)
@@ -55,6 +64,9 @@ public class TVController : MonoBehaviour
 
     public void PlayNewsVideo()
     {
+        if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
+            return;
+
         if (videoPlayer == null) return;
 
         if (newsAlreadyStarted) return;
@@ -121,5 +133,32 @@ public class TVController : MonoBehaviour
         videoPlayer.Play();
 
         noiseFadeCoroutine = null;
+    }
+
+    private void ApplyLoadedSaveState()
+    {
+        newsAlreadyStarted = true;
+
+        if (noiseFadeCoroutine != null)
+        {
+            StopCoroutine(noiseFadeCoroutine);
+            noiseFadeCoroutine = null;
+        }
+
+        if (tvAudioSource != null)
+        {
+            tvAudioSource.Stop();
+            tvAudioSource.clip = null;
+            tvAudioSource.loop = false;
+            tvAudioSource.volume = 0f;
+        }
+
+        if (videoPlayer != null)
+        {
+            videoPlayer.Stop();
+            videoPlayer.time = 0;
+        }
+
+        Debug.Log("TVController: пропущен, потому что загружается сейв.");
     }
 }

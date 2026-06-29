@@ -133,6 +133,66 @@ public class PauseManager : MonoBehaviour
         Cursor.visible = false;
     }
 
+    public void HidePauseMenuBeforeLoading()
+    {
+        isPaused = false;
+        isTransitioning = false;
+
+        Time.timeScale = 1f;
+
+        if (playerController != null)
+            playerController.canControl = false;
+
+        if (leftPanel != null)
+            leftPanel.gameObject.SetActive(false);
+
+        SetPanelActive(savePanelCG, false);
+        SetPanelActive(downloadPanelCG, false);
+        SetPanelActive(settingsPanelCG, false);
+
+        currentRightPanel = null;
+
+        if (leftPanel != null)
+            leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
+
+        if (blurVolume != null)
+            blurVolume.weight = 0f;
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    public void EnableGameplayAfterLoading()
+    {
+        isPaused = false;
+        isTransitioning = false;
+
+        Time.timeScale = 1f;
+
+        playerController = FindObjectOfType<PlayerController>();
+
+        if (playerController != null)
+            playerController.canControl = true;
+
+        if (leftPanel != null)
+            leftPanel.gameObject.SetActive(false);
+
+        SetPanelActive(savePanelCG, false);
+        SetPanelActive(downloadPanelCG, false);
+        SetPanelActive(settingsPanelCG, false);
+
+        currentRightPanel = null;
+
+        if (leftPanel != null)
+            leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
+
+        if (blurVolume != null)
+            blurVolume.weight = 0f;
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
     // ----- Открытие правых панелей (из кнопок) -----
 
     public void ShowSavePanel()

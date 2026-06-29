@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System;
@@ -15,6 +16,10 @@ public class SaveManager : MonoBehaviour
     private string savePath;
 
     private SaveData pendingLoadData;
+
+    public bool IsLoadingSave { get; private set; }
+
+    private Coroutine finishLoadingCoroutine;
 
     private void Awake()
     {
@@ -43,6 +48,9 @@ public class SaveManager : MonoBehaviour
 
     public void CreateNewSave(string name)
     {
+        if (saves == null)
+            saves = new List<SaveData>();
+
         if (saves.Count >= maxSaves)
         {
             Debug.LogWarning("Максимум сохранений!");
@@ -60,27 +68,20 @@ public class SaveManager : MonoBehaviour
 
     public void OverwriteSave(int index, string newName)
     {
+        if (saves == null)
+            saves = new List<SaveData>();
+
         if (index < 0 || index >= saves.Count)
             return;
 
         SaveData save = saves[index];
 
-        save.saveName = newName;
-        save.sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-
-        PlayerController player = FindObjectOfType<PlayerController>();
-        if (player != null)
-        {
-            save.posX = player.transform.position.x;
-            save.posY = player.transform.position.y;
-            save.posZ = player.transform.position.z;
-        }
-
-        save.dateTime = DateTime.Now.ToString("dd.MM.yy / HH:mm");
+        if (!FillSaveDataFromCurrentGame(save, newName))
+            return;
 
         // После перезаписи перемещаем это сохранение в конец списка.
-        // Так как SavePanelController показывает список в обратном порядке,
-        // это сохранение визуально окажется самым верхним.
+        // SavePanelController и LoadPanelController показывают список наоборот,
+        // поэтому это сохранение визуально окажется самым верхним.
         saves.RemoveAt(index);
         saves.Add(save);
 
@@ -89,6 +90,9 @@ public class SaveManager : MonoBehaviour
 
     private bool FillSaveDataFromCurrentGame(SaveData save, string saveName)
     {
+        if (save == null)
+            return false;
+
         PlayerController player = FindObjectOfType<PlayerController>();
 
         if (player == null)
@@ -106,18 +110,40 @@ public class SaveManager : MonoBehaviour
 
         save.dateTime = DateTime.Now.ToString("dd.MM.yy / HH:mm");
 
+        SaveQuestState(save);
+
         return true;
+    }
+
+    private void SaveQuestState(SaveData save)
+    {
+        save.activeQuestIds = new List<string>();
+        save.completedQuestIds = new List<string>();
+
+        QuestUIManager questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        if (questUIManager == null)
+        {
+            Debug.LogWarning("SaveManager: QuestUIManager не найден. Задания не будут записаны в сохранение.");
+            return;
+        }
+
+        save.activeQuestIds = questUIManager.GetActiveQuestIds();
+        save.completedQuestIds = questUIManager.GetCompletedQuestIds();
     }
 
     public void LoadSave(int index)
     {
-        if (index < 0 || index >= saves.Count)
+        if (saves == null || index < 0 || index >= saves.Count)
         {
             Debug.LogWarning("SaveManager: неверный индекс сохранения.");
             return;
         }
 
-        pendingLoadData = saves[index];
+        pendingLoadData = CloneSaveData(saves[index]);
 
         if (pendingLoadData == null || string.IsNullOrEmpty(pendingLoadData.sceneName))
         {
@@ -125,7 +151,10 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
+        NormalizeSaveData(pendingLoadData);
+
         Time.timeScale = 1f;
+        IsLoadingSave = true;
 
         SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
         SceneManager.sceneLoaded += OnSceneLoadedAfterSaveLoad;
@@ -150,39 +179,107 @@ public class SaveManager : MonoBehaviour
 
         SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
 
+        // Потом восстанавливаем квесты.
+        RestoreQuestState(pendingLoadData);
+
+        // Потом ставим игрока на сохранённую позицию.
+        RestorePlayerPosition(pendingLoadData);
+
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.EnableGameplayAfterLoading();
+
+        pendingLoadData = null;
+
+        if (finishLoadingCoroutine != null)
+            StopCoroutine(finishLoadingCoroutine);
+
+        finishLoadingCoroutine = StartCoroutine(FinishLoadingFlagNextFrame());
+    }
+
+    private IEnumerator FinishLoadingFlagNextFrame()
+    {
+        // Держим IsLoadingSave включённым ещё один кадр,
+        // чтобы Start() у StartDay и других сценовых скриптов понял,
+        // что это загрузка сейва, а не новая игра.
+        yield return null;
+
+        IsLoadingSave = false;
+        finishLoadingCoroutine = null;
+    }
+
+    private void RestoreQuestState(SaveData data)
+    {
+        QuestUIManager questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        if (questUIManager == null)
+        {
+            Debug.LogWarning("SaveManager: QuestUIManager не найден в загруженной сцене. Задания не восстановлены.");
+            return;
+        }
+
+        questUIManager.RestoreQuests(data.activeQuestIds, data.completedQuestIds);
+    }
+
+    private void RestorePlayerPosition(SaveData data)
+    {
         PlayerController player = FindObjectOfType<PlayerController>();
 
-        if (player != null)
+        if (player == null)
         {
-            Vector3 loadedPosition = new Vector3(
-                pendingLoadData.posX,
-                pendingLoadData.posY,
-                pendingLoadData.posZ
-            );
+            Debug.LogWarning("SaveManager: PlayerController не найден после загрузки сцены.");
+            return;
+        }
 
-            CharacterController characterController = player.GetComponent<CharacterController>();
+        Vector3 loadedPosition = new Vector3(
+            data.posX,
+            data.posY,
+            data.posZ
+        );
 
-            if (characterController != null)
-            {
-                characterController.enabled = false;
-                player.transform.position = loadedPosition;
-                characterController.enabled = true;
-            }
-            else
-            {
-                player.transform.position = loadedPosition;
-            }
+        CharacterController characterController = player.GetComponent<CharacterController>();
+
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+            player.transform.position = loadedPosition;
+            characterController.enabled = true;
         }
         else
         {
-            Debug.LogWarning("SaveManager: после загрузки сцены PlayerController не найден.");
+            player.transform.position = loadedPosition;
+        }
+    }
+
+    public bool HasAnySaves()
+    {
+        return saves != null && saves.Count > 0;
+    }
+
+    public void LoadLatestSave()
+    {
+        if (saves == null || saves.Count == 0)
+        {
+            Debug.LogWarning("SaveManager: нет сохранений для продолжения.");
+            return;
         }
 
-        pendingLoadData = null;
+        // Последнее сохранение хранится в конце списка.
+        int latestIndex = saves.Count - 1;
+
+        LoadSave(latestIndex);
     }
 
     private void SaveToFile()
     {
+        if (saves == null)
+            saves = new List<SaveData>();
+
+        for (int i = 0; i < saves.Count; i++)
+            NormalizeSaveData(saves[i]);
+
         SaveWrapper wrapper = new SaveWrapper();
         wrapper.saves = saves;
 
@@ -200,13 +297,97 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
-        string json = File.ReadAllText(savePath);
-        SaveWrapper wrapper = JsonUtility.FromJson<SaveWrapper>(json);
+        try
+        {
+            string json = File.ReadAllText(savePath);
+            SaveWrapper wrapper = JsonUtility.FromJson<SaveWrapper>(json);
 
-        if (wrapper != null && wrapper.saves != null)
-            saves = wrapper.saves;
-        else
+            if (wrapper != null && wrapper.saves != null)
+                saves = wrapper.saves;
+            else
+                saves = new List<SaveData>();
+
+            NormalizeAllLoadedSaves();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("SaveManager: не удалось прочитать файл сохранений. Будет создан пустой список. Ошибка: " + e.Message);
             saves = new List<SaveData>();
+        }
+    }
+
+    private void NormalizeAllLoadedSaves()
+    {
+        if (saves == null)
+        {
+            saves = new List<SaveData>();
+            return;
+        }
+
+        for (int i = saves.Count - 1; i >= 0; i--)
+        {
+            if (saves[i] == null)
+            {
+                saves.RemoveAt(i);
+                continue;
+            }
+
+            NormalizeSaveData(saves[i]);
+        }
+    }
+
+    private void NormalizeSaveData(SaveData save)
+    {
+        if (save == null)
+            return;
+
+        if (save.activeQuestIds == null)
+            save.activeQuestIds = new List<string>();
+
+        if (save.completedQuestIds == null)
+            save.completedQuestIds = new List<string>();
+    }
+
+    private SaveData CloneSaveData(SaveData source)
+    {
+        if (source == null)
+            return null;
+
+        NormalizeSaveData(source);
+
+        SaveData clone = new SaveData();
+
+        clone.saveName = source.saveName;
+        clone.sceneName = source.sceneName;
+
+        clone.posX = source.posX;
+        clone.posY = source.posY;
+        clone.posZ = source.posZ;
+
+        clone.dateTime = source.dateTime;
+
+        clone.activeQuestIds = new List<string>(source.activeQuestIds);
+        clone.completedQuestIds = new List<string>(source.completedQuestIds);
+
+        return clone;
+    }
+
+    public void PrepareNewGame()
+    {
+        pendingLoadData = null;
+        IsLoadingSave = false;
+
+        SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
+
+        if (finishLoadingCoroutine != null)
+        {
+            StopCoroutine(finishLoadingCoroutine);
+            finishLoadingCoroutine = null;
+        }
+
+        Time.timeScale = 1f;
+
+        Debug.Log("SaveManager: подготовка новой игры завершена.");
     }
 
     public void DeleteAllSaves()

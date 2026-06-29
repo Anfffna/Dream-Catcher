@@ -10,8 +10,39 @@ public class LoadPanelController : MonoBehaviour
     public GameObject loadSlotPrefab;
     public GameObject emptyPrefab;
 
+    [Header("Confirm Load")]
+    public GameObject loadConfirmPanel;
+    public TextMeshProUGUI loadingText;
+    public Button yesButton;
+    public Button noButton;
+
+    private int selectedLoadIndex = -1;
+
+    private void Awake()
+    {
+        if (yesButton != null)
+        {
+            yesButton.onClick.RemoveAllListeners();
+            yesButton.onClick.AddListener(OnYesClicked);
+        }
+
+        if (noButton != null)
+        {
+            noButton.onClick.RemoveAllListeners();
+            noButton.onClick.AddListener(OnNoClicked);
+        }
+
+        if (loadConfirmPanel != null)
+            loadConfirmPanel.SetActive(false);
+    }
+
     public void PrepareLoadPanel()
     {
+        selectedLoadIndex = -1;
+
+        if (loadConfirmPanel != null)
+            loadConfirmPanel.SetActive(false);
+
         RefreshUI();
     }
 
@@ -29,10 +60,7 @@ public class LoadPanelController : MonoBehaviour
             return;
         }
 
-        for (int i = loadContainer.childCount - 1; i >= 0; i--)
-        {
-            Destroy(loadContainer.GetChild(i).gameObject);
-        }
+        ClearContainer();
 
         List<SaveData> saves = SaveManager.Instance.GetSaves();
 
@@ -42,7 +70,11 @@ public class LoadPanelController : MonoBehaviour
             return;
         }
 
-        for (int i = 0; i < saves.Count; i++)
+        // ВАЖНО:
+        // В SavePanelController сохранения отображаются в обратном порядке,
+        // чтобы новые были сверху.
+        // Здесь делаем так же, чтобы загрузки были синхронизированы с сохранениями.
+        for (int i = saves.Count - 1; i >= 0; i--)
         {
             GameObject slotObj = Instantiate(loadSlotPrefab, loadContainer);
 
@@ -53,6 +85,8 @@ public class LoadPanelController : MonoBehaviour
 
             if (slot != null)
             {
+                // Передаём настоящий индекс из SaveManager.
+                // Даже если визуально список перевёрнут, загрузится правильное сохранение.
                 slot.Setup(saves[i], i, this);
             }
             else
@@ -62,9 +96,54 @@ public class LoadPanelController : MonoBehaviour
         }
     }
 
+    private void ClearContainer()
+    {
+        for (int i = loadContainer.childCount - 1; i >= 0; i--)
+        {
+            Destroy(loadContainer.GetChild(i).gameObject);
+        }
+    }
+
     public void OnLoadSlotClicked(int index)
     {
+        selectedLoadIndex = index;
+
+        if (loadingText != null)
+            loadingText.text = "Загрузить игру?";
+
+        if (loadConfirmPanel != null)
+            loadConfirmPanel.SetActive(true);
+    }
+
+    public void OnYesClicked()
+    {
+        if (selectedLoadIndex < 0)
+        {
+            Debug.LogWarning("LoadPanelController: сохранение для загрузки не выбрано.");
+            return;
+        }
+
+        if (loadConfirmPanel != null)
+            loadConfirmPanel.SetActive(false);
+
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.HidePauseMenuBeforeLoading();
+
         if (SaveManager.Instance != null)
-            SaveManager.Instance.LoadSave(index);
+        {
+            SaveManager.Instance.LoadSave(selectedLoadIndex);
+        }
+        else
+        {
+            Debug.LogError("LoadPanelController: SaveManager.Instance == null.");
+        }
+    }
+
+    public void OnNoClicked()
+    {
+        selectedLoadIndex = -1;
+
+        if (loadConfirmPanel != null)
+            loadConfirmPanel.SetActive(false);
     }
 }

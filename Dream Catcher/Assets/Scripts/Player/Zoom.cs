@@ -3,9 +3,12 @@ using UnityEngine;
 public class Zoom : MonoBehaviour
 {
     [Header("Zoom Settings")]
-    public KeyCode zoomKey = KeyCode.Z;      // клавиша для приближения
-    public float zoomFactor = 1.5f;          // во сколько раз приблизить (1.5 = 1.5x)
-    public float zoomSpeed = 5f;             // скорость плавного изменения
+    public KeyCode zoomKey = KeyCode.Z;
+    public float zoomFactor = 1.5f;
+    public float zoomSpeed = 5f;
+
+    [Header("Player")]
+    public PlayerController playerController;
 
     private Camera cam;
     private float originalFOV;
@@ -15,22 +18,32 @@ public class Zoom : MonoBehaviour
     void Start()
     {
         cam = GetComponent<Camera>();
+
         if (cam == null)
         {
             Debug.LogError("Zoom скрипт должен быть прикреплён к камере!");
             enabled = false;
             return;
         }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
+
         originalFOV = cam.fieldOfView;
         targetFOV = originalFOV;
     }
 
     void Update()
     {
+        // Пока игроком нельзя управлять, Zoom НЕ трогает FOV.
+        // Это важно для StartDay, TV-з zoom, заставки и катсцен.
+        if (playerController != null && !playerController.canControl)
+            return;
+
         if (Input.GetKeyDown(zoomKey))
         {
             isZooming = true;
-            targetFOV = originalFOV / zoomFactor; // уменьшаем угол обзора ? приближение
+            targetFOV = originalFOV / zoomFactor;
         }
         else if (Input.GetKeyUp(zoomKey))
         {
@@ -38,7 +51,22 @@ public class Zoom : MonoBehaviour
             targetFOV = originalFOV;
         }
 
-        // Плавный переход к целевому FOV
-        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, Time.deltaTime * zoomSpeed);
+        cam.fieldOfView = Mathf.Lerp(
+            cam.fieldOfView,
+            targetFOV,
+            Time.deltaTime * zoomSpeed
+        );
+    }
+
+    public void RefreshOriginalFOV()
+    {
+        if (cam == null)
+            cam = GetComponent<Camera>();
+
+        if (cam == null)
+            return;
+
+        originalFOV = cam.fieldOfView;
+        targetFOV = originalFOV;
     }
 }

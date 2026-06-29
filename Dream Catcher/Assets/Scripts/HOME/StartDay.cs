@@ -10,6 +10,9 @@ public class StartDay : MonoBehaviour
     public Camera playerCamera;
     public PlayerController playerController;
 
+    [Header("Loading")]
+    public bool skipWhenLoadingSave = true;
+
     [Header("Pivots")]
     public Transform bedPivot;
     public Transform sitPivot;
@@ -68,6 +71,14 @@ public class StartDay : MonoBehaviour
         charController = playerController != null
             ? playerController.GetComponent<CharacterController>()
             : null;
+
+        if (skipWhenLoadingSave &&
+            SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            ApplyLoadedSaveState();
+            return;
+        }
 
         if (charController != null)
             charController.enabled = false;
@@ -144,6 +155,16 @@ public class StartDay : MonoBehaviour
 
     public void BeginStandUp()
     {
+        Debug.LogWarning(
+            "StartDay.BeginStandUp ВЫЗВАН! " +
+            "time=" + Time.time +
+            " | videoTime=" +
+            (tvController != null && tvController.videoPlayer != null
+                ? tvController.videoPlayer.time.ToString("F2")
+                : "NO_VIDEO") +
+            "\nSTACK:\n" + System.Environment.StackTrace
+        );
+
         if (standUpStarted) return;
 
         standUpStarted = true;
@@ -313,6 +334,46 @@ public class StartDay : MonoBehaviour
             return cameraTransform.rotation;
 
         return Quaternion.LookRotation(direction.normalized, Vector3.up);
+    }
+
+    void ApplyLoadedSaveState()
+    {
+        sequenceStarted = true;
+        standUpStarted = true;
+        controlEnabled = true;
+        stopTVMagnet = true;
+
+        if (tvZoomRoutine != null)
+        {
+            StopCoroutine(tvZoomRoutine);
+            tvZoomRoutine = null;
+        }
+
+        if (screenSaverAudioSource != null)
+            screenSaverAudioSource.Stop();
+
+        if (cameraTransform != null)
+            cameraTransform.localRotation = Quaternion.identity;
+
+        if (playerCamera != null)
+            playerCamera.fieldOfView = defaultFOV;
+
+        if (charController != null && !charController.enabled)
+        {
+            charController.enabled = true;
+            charController.Move(Vector3.zero);
+        }
+
+        if (playerController != null)
+        {
+            playerController.canControl = true;
+            playerController.canMove = true;
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        Debug.Log("StartDay: пропущен, потому что загружается сейв.");
     }
 
     void OnDrawGizmos()
