@@ -32,10 +32,14 @@ public class PauseManager : MonoBehaviour
     public Vector2 defaultCursorHotspot = Vector2.zero;
     public Vector2 interactCursorHotspot = Vector2.zero;
 
+    [Header("Player Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+
+    private PlayerController playerController;
     private bool isPaused = false;
     private bool isTransitioning = false;
     private CanvasGroup currentRightPanel = null;
-    private PlayerController playerController;
 
     public bool IsPaused => isPaused;
 
@@ -51,7 +55,7 @@ public class PauseManager : MonoBehaviour
 
     void Start()
     {
-        playerController = FindObjectOfType<PlayerController>();
+        FindReferences();
 
         leftPanel.gameObject.SetActive(false);
         SetPanelActive(savePanelCG, false);
@@ -85,6 +89,8 @@ public class PauseManager : MonoBehaviour
 
     public void PauseGame()
     {
+        FindReferences();
+
         if (isPaused) return;
         isPaused = true;
         Time.timeScale = 0f;
@@ -98,8 +104,8 @@ public class PauseManager : MonoBehaviour
 
         // ---- Показываем курсор ----
         Cursor.lockState = CursorLockMode.None;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = true;
-        SetDefaultCursor();
 
         // ---- Показываем левую панель ----
         leftPanel.gameObject.SetActive(true);
@@ -115,6 +121,8 @@ public class PauseManager : MonoBehaviour
 
     public void ResumeGame()
     {
+        FindReferences();
+
         if (!isPaused) return;
         isPaused = false;
         Time.timeScale = 1f;
@@ -129,12 +137,15 @@ public class PauseManager : MonoBehaviour
         HideRightPanelInstantly();
 
         // ---- Скрываем курсор ----
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     public void HidePauseMenuBeforeLoading()
     {
+        FindReferences();
+
         isPaused = false;
         isTransitioning = false;
 
@@ -158,8 +169,9 @@ public class PauseManager : MonoBehaviour
         if (blurVolume != null)
             blurVolume.weight = 0f;
 
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     public void EnableGameplayAfterLoading()
@@ -169,7 +181,7 @@ public class PauseManager : MonoBehaviour
 
         Time.timeScale = 1f;
 
-        playerController = FindObjectOfType<PlayerController>();
+        FindReferences();
 
         if (playerController != null)
             playerController.canControl = true;
@@ -189,8 +201,9 @@ public class PauseManager : MonoBehaviour
         if (blurVolume != null)
             blurVolume.weight = 0f;
 
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     // ----- Открытие правых панелей (из кнопок) -----
@@ -394,5 +407,22 @@ public class PauseManager : MonoBehaviour
                 trigger.triggers.Add(entryExit);
             }
         }
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerController == null)
+        {
+            GameObject playerObj = GameObject.Find(playerObjectName);
+
+            if (playerObj != null)
+                playerController = playerObj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

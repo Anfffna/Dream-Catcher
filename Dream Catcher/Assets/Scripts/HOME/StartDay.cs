@@ -10,6 +10,11 @@ public class StartDay : MonoBehaviour
     public Camera playerCamera;
     public PlayerController playerController;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+    public string cameraObjectName = "Camera";
+
     [Header("Loading")]
     public bool skipWhenLoadingSave = true;
 
@@ -62,6 +67,8 @@ public class StartDay : MonoBehaviour
 
     void Start()
     {
+        FindReferences();
+
         if (playerCamera == null && cameraTransform != null)
             playerCamera = cameraTransform.GetComponent<Camera>();
 
@@ -101,6 +108,8 @@ public class StartDay : MonoBehaviour
 
     public void OnScreenSaverFinished()
     {
+        FindReferences();
+
         if (!sequenceStarted)
         {
             sequenceStarted = true;
@@ -155,6 +164,8 @@ public class StartDay : MonoBehaviour
 
     public void BeginStandUp()
     {
+        FindReferences();
+
         Debug.LogWarning(
             "StartDay.BeginStandUp ВЫЗВАН! " +
             "time=" + Time.time +
@@ -419,5 +430,59 @@ public class StartDay : MonoBehaviour
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(tvLookTarget.position, 0.1f);
         }
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        // PlayerController + playerTransform
+        if (playerController == null || playerTransform == null)
+        {
+            GameObject playerObj = GameObject.Find(playerObjectName);
+
+            if (playerObj != null)
+            {
+                if (playerTransform == null)
+                    playerTransform = playerObj.transform;
+
+                if (playerController == null)
+                    playerController = playerObj.GetComponent<PlayerController>();
+            }
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
+
+        if (playerTransform == null && playerController != null)
+            playerTransform = playerController.transform;
+
+        // Camera Transform
+        if (cameraTransform == null && playerTransform != null)
+        {
+            Transform foundCamera = playerTransform.Find(cameraObjectName);
+
+            if (foundCamera != null)
+                cameraTransform = foundCamera;
+        }
+
+        if (cameraTransform == null)
+        {
+            GameObject cameraObj = GameObject.Find(cameraObjectName);
+
+            if (cameraObj != null)
+                cameraTransform = cameraObj.transform;
+        }
+
+        // Camera Component
+        if (playerCamera == null && cameraTransform != null)
+            playerCamera = cameraTransform.GetComponent<Camera>();
+
+        if (playerCamera == null)
+            playerCamera = Camera.main;
+
+        if (cameraTransform == null && playerCamera != null)
+            cameraTransform = playerCamera.transform;
     }
 }

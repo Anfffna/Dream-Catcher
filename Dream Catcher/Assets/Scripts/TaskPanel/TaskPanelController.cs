@@ -28,6 +28,10 @@ public class TaskPanelController : MonoBehaviour
     [Header("Player")]
     public PlayerController playerController;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+
     [Header("Custom Cursors")]
     public Texture2D defaultCursor;
     public Texture2D interactCursor;
@@ -55,9 +59,6 @@ public class TaskPanelController : MonoBehaviour
             return;
         }
         Instance = this;
-
-        if (playerController == null)
-            playerController = FindObjectOfType<PlayerController>();
 
         if (blurVolume == null)
             blurVolume = FindObjectOfType<Volume>();
@@ -147,6 +148,8 @@ public class TaskPanelController : MonoBehaviour
 
     public void OpenPanel()
     {
+        FindReferences();
+
         isPanelOpen = true;
 
         if (taskPanel != null)
@@ -159,9 +162,11 @@ public class TaskPanelController : MonoBehaviour
         }
 
         Cursor.lockState = CursorLockMode.None;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = true;
 
-        SetDefaultCursor();
+        cursorIsDefault = true;
+        cursorIsInteract = false;
 
         if (playerController != null)
             playerController.canControl = false;
@@ -174,6 +179,8 @@ public class TaskPanelController : MonoBehaviour
 
     public void ClosePanel()
     {
+        FindReferences();
+
         isPanelOpen = false;
 
         if (taskPanelCanvasGroup != null)
@@ -183,16 +190,19 @@ public class TaskPanelController : MonoBehaviour
         }
 
         // --- œ–¿¬»À‹Õ€… œŒ–ﬂƒŒ  — –€“»ﬂ  ”–—Œ–¿ ---
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
+        Cursor.lockState = CursorLockMode.Locked;
         // ------------------------------------------
 
         cursorIsDefault = false;
         cursorIsInteract = false;
 
-        if (playerController != null)
+        if (playerController != null &&
+            (PauseManager.Instance == null || !PauseManager.Instance.IsPaused))
+        {
             playerController.canControl = true;
+        }
 
         if (fadeCoroutine != null)
             StopCoroutine(fadeCoroutine);
@@ -211,9 +221,9 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.ForceSoftware);
+        Cursor.lockState = CursorLockMode.Locked;
 
         cursorIsDefault = false;
         cursorIsInteract = false;
@@ -285,5 +295,22 @@ public class TaskPanelController : MonoBehaviour
 
         cursorIsInteract = true;
         cursorIsDefault = false;
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerController == null)
+        {
+            GameObject playerObj = GameObject.Find(playerObjectName);
+
+            if (playerObj != null)
+                playerController = playerObj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

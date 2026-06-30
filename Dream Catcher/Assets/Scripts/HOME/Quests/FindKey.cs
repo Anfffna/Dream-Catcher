@@ -9,6 +9,10 @@ public class FindKey : MonoBehaviour, IInteractable
     public string questId = "find_the_key";
     public string nextQuestId = "check_the_mailbox";
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string questUIManagerObjectName = "QuestUIManager";
+
     [Header("Interaction")]
     public float fadeDuration = 0.5f;
 
@@ -28,6 +32,7 @@ public class FindKey : MonoBehaviour, IInteractable
 
     void Start()
     {
+        FindReferences();
         // --- 1. Настройка слоя ---
         gameObject.layer = LayerMask.NameToLayer("Default");
         isAvailable = false;
@@ -67,6 +72,9 @@ public class FindKey : MonoBehaviour, IInteractable
 
     void Update()
     {
+        if (questUIManager == null)
+            FindReferences();
+
         if (!isAvailable && !isPickedUp && questUIManager != null)
         {
             if (questUIManager.IsQuestActive(questId))
@@ -137,16 +145,38 @@ public class FindKey : MonoBehaviour, IInteractable
             }
         }
 
+        FindReferences();
+
         // Завершаем задание
         if (questUIManager != null)
+        {
             questUIManager.CompleteQuest(questId);
 
-        if (!string.IsNullOrEmpty(nextQuestId))
-        {
-            questUIManager.AddQuest(nextQuestId);
+            if (!string.IsNullOrEmpty(nextQuestId))
+                questUIManager.AddQuest(nextQuestId);
         }
 
         // Уничтожаем объект (звук продолжит играть)
         Destroy(gameObject, 0.1f);
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+        {
+            GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+            if (obj != null)
+                questUIManager = obj.GetComponent<QuestUIManager>();
+        }
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
     }
 }

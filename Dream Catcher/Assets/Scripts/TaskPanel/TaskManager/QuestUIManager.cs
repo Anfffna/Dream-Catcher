@@ -134,6 +134,8 @@ public class QuestUIManager : MonoBehaviour
 
         if (taskUpdateToast != null && showToast && !isRestoring)
             taskUpdateToast.ShowToast();
+        if (!isRestoring)
+            QuestWorldStateApplier.ApplyAllInScene();
     }
 
     private void CreateActiveQuestObject(string questId)
@@ -228,6 +230,8 @@ public class QuestUIManager : MonoBehaviour
         // Toast при завершении показываем только дл€ сюжетных, как у теб€ было
         if (taskUpdateToast != null && quest != null && quest.tag == QuestTag.—южет && !isRestoring)
             taskUpdateToast.ShowToast();
+        if (!isRestoring)
+            QuestWorldStateApplier.ApplyAllInScene();
     }
 
     private void AddQuestToArchive(QuestData quest)
@@ -309,20 +313,20 @@ public class QuestUIManager : MonoBehaviour
         if (quest == null)
             return;
 
-        if (quest.outlines == null)
+        if (quest.outlineIds == null)
             return;
 
-        for (int i = 0; i < quest.outlines.Length; i++)
+        for (int i = 0; i < quest.outlineIds.Length; i++)
         {
-            InteractionOutline outline = quest.outlines[i];
+            string outlineId = quest.outlineIds[i];
 
-            if (outline == null)
+            if (string.IsNullOrEmpty(outlineId))
                 continue;
 
             if (state)
-                outline.ShowOutline();
+                InteractionOutlineRegistry.Show(outlineId);
             else
-                outline.HideOutline();
+                InteractionOutlineRegistry.Hide(outlineId);
         }
     }
 

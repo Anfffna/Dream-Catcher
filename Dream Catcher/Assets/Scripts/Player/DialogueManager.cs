@@ -30,6 +30,10 @@ public class DialogueManager : MonoBehaviour
     public bool hidePanelOnStart = true;
     public bool hidePanelOnEnd = true;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+
     private int currentLineIndex = 0;
     private bool isTyping = false;
     private bool dialogueActive = false;
@@ -47,7 +51,7 @@ public class DialogueManager : MonoBehaviour
 
     void Start()
     {
-        playerController = FindObjectOfType<PlayerController>();
+        FindReferences();
 
         if (hidePanelOnStart && dialoguePanel != null)
             dialoguePanel.SetActive(false);
@@ -85,6 +89,8 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(List<DialogueLine> lines, bool blockMovement = false)
     {
+        FindReferences();
+
         dialogueLines = lines;
         blockMovementForCurrentDialogue = blockMovement;
 
@@ -250,5 +256,22 @@ public class DialogueManager : MonoBehaviour
         }
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerController == null)
+        {
+            GameObject obj = GameObject.Find(playerObjectName);
+
+            if (obj != null)
+                playerController = obj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

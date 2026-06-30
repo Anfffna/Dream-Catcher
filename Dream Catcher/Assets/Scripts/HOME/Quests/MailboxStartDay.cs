@@ -32,6 +32,12 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
     [Header("Player")]
     public PlayerController playerController;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string questUIManagerObjectName = "QuestUIManager";
+    public string dialogueManagerObjectName = "DialogueManager";
+    public string playerObjectName = "Player";
+
     private bool isReading = false;
     private bool isRead = false;
     private Vector2 startPos;   // Y = -990
@@ -42,6 +48,8 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
 
     void Start()
     {
+        FindReferences();
+
         gameObject.layer = LayerMask.NameToLayer("Interactable");
         startPos = new Vector2(letterImage.anchoredPosition.x, -990f);
         targetPos = new Vector2(letterImage.anchoredPosition.x, 0f);
@@ -68,6 +76,8 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
 
     public void Interact()
     {
+        FindReferences();
+
         if (isRead || isReading) return;
         if (currentCoroutine != null) StopCoroutine(currentCoroutine);
         currentCoroutine = StartCoroutine(ShowLetterRoutine());
@@ -75,6 +85,7 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
 
     private IEnumerator ShowLetterRoutine()
     {
+        FindReferences();
         isReading = true;
 
         // Блюр
@@ -143,6 +154,7 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
             // Звук начнёт играть автоматически, когда игрок начнёт двигаться
         }
 
+        FindReferences();
         // Завершаем задание
         if (questUIManager != null && !string.IsNullOrEmpty(questIdToComplete))
         {
@@ -159,6 +171,7 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
         if (dialogueDelay > 0f)
             yield return new WaitForSeconds(dialogueDelay);
 
+        FindReferences();
         // Запускаем диалог после письма
         if (dialogueManager != null && afterLetterLines != null && afterLetterLines.Count > 0)
         {
@@ -221,5 +234,61 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
             blurVolume.weight = 0f;
             blurVolume.enabled = false;
         }
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        // QuestUIManager
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+        {
+            GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+            if (obj != null)
+                questUIManager = obj.GetComponent<QuestUIManager>();
+        }
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        // DialogueManager — строго ищем объект с именем DialogueManager
+        if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
+        {
+            GameObject obj = GameObject.Find(dialogueManagerObjectName);
+
+            if (obj != null)
+                dialogueManager = obj.GetComponent<DialogueManager>();
+        }
+
+        if (dialogueManager == null)
+        {
+            DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
+
+            foreach (DialogueManager manager in managers)
+            {
+                if (manager.gameObject.name == dialogueManagerObjectName)
+                {
+                    dialogueManager = manager;
+                    break;
+                }
+            }
+        }
+
+        // PlayerController
+        if (playerController == null)
+        {
+            GameObject obj = GameObject.Find(playerObjectName);
+
+            if (obj != null)
+                playerController = obj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

@@ -10,6 +10,14 @@ public class InteractionOutline : MonoBehaviour
     [Header("UI Parent")]
     public RectTransform outlineCanvasParent;
 
+    [Header("Auto Find")]
+    public string playerCameraObjectName = "Camera";
+    public string outlineCanvasParentObjectName = "InteractionOutlineCanvas";
+    public bool autoFindReferences = true;
+
+    [Header("Quest Outline ID")]
+    public string outlineId;
+
     [Header("Outline Look")]
     public Color outlineColor = new Color(0.745f, 0.831f, 0.663f, 1f);
     public float lineThicknessPixels = 4f;
@@ -34,6 +42,7 @@ public class InteractionOutline : MonoBehaviour
     private readonly List<Image> lineImages = new List<Image>();
     private Canvas parentCanvas;
     private bool isVisible = false;
+    private RectTransform currentLineParent;
 
     private struct ScreenPoint
     {
@@ -47,11 +56,7 @@ public class InteractionOutline : MonoBehaviour
 
     void Awake()
     {
-        if (playerCamera == null)
-            playerCamera = Camera.main;
-
-        if (outlineCanvasParent != null)
-            parentCanvas = outlineCanvasParent.GetComponentInParent<Canvas>();
+        ResolveReferences();
 
         meshFilters = includeChildren
             ? GetComponentsInChildren<MeshFilter>(true)
@@ -64,6 +69,14 @@ public class InteractionOutline : MonoBehaviour
 
     void Start()
     {
+        ResolveReferences();
+
+        if (InteractionOutlineRegistry.ShouldBeVisible(outlineId))
+        {
+            ShowOutline();
+            return;
+        }
+
         if (hideOnStart)
             HideOutline();
         else
@@ -80,6 +93,8 @@ public class InteractionOutline : MonoBehaviour
 
     public void ShowOutline()
     {
+        ResolveReferences();
+
         isVisible = true;
         DrawOutline();
     }
@@ -87,16 +102,37 @@ public class InteractionOutline : MonoBehaviour
     public void HideOutline()
     {
         isVisible = false;
+        ClearLineImages();
+    }
 
-        for (int i = 0; i < lineImages.Count; i++)
-        {
-            if (lineImages[i] != null)
-                lineImages[i].gameObject.SetActive(false);
-        }
+    private void OnEnable()
+    {
+        ResolveReferences();
+        InteractionOutlineRegistry.Register(outlineId, this);
+    }
+
+    private void OnDisable()
+    {
+        InteractionOutlineRegistry.Unregister(outlineId, this);
+        ClearLineImages();
+    }
+
+    public void ForceRedrawOutline()
+    {
+        ClearLineImages();
+        ShowOutline();
+    }
+
+    private void OnDestroy()
+    {
+        InteractionOutlineRegistry.Unregister(outlineId, this);
+        ClearLineImages();
     }
 
     private void DrawOutline()
     {
+        ResolveReferences();
+
         if (playerCamera == null) return;
         if (outlineCanvasParent == null) return;
 
@@ -145,6 +181,46 @@ public class InteractionOutline : MonoBehaviour
         }
 
         DrawUILines(paddedHull);
+    }
+
+    private void ResolveReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerCamera == null)
+        {
+            Camera mainCamera = Camera.main;
+
+            if (mainCamera != null)
+            {
+                playerCamera = mainCamera;
+            }
+            else if (!string.IsNullOrEmpty(playerCameraObjectName))
+            {
+                GameObject cameraObject = GameObject.Find(playerCameraObjectName);
+
+                if (cameraObject != null)
+                    playerCamera = cameraObject.GetComponent<Camera>();
+            }
+        }
+
+        if (outlineCanvasParent == null && !string.IsNullOrEmpty(outlineCanvasParentObjectName))
+        {
+            GameObject canvasParentObject = GameObject.Find(outlineCanvasParentObjectName);
+
+            if (canvasParentObject != null)
+                outlineCanvasParent = canvasParentObject.GetComponent<RectTransform>();
+        }
+
+        if (outlineCanvasParent != currentLineParent)
+        {
+            ClearLineImages();
+            currentLineParent = outlineCanvasParent;
+        }
+
+        if (outlineCanvasParent != null)
+            parentCanvas = outlineCanvasParent.GetComponentInParent<Canvas>();
     }
 
     private void CollectMeshScreenPoints(List<ScreenPoint> screenPoints)
@@ -215,6 +291,10 @@ public class InteractionOutline : MonoBehaviour
             );
 
             Image line = GetLineImage(i);
+
+            if (line == null)
+                continue;
+
             line.gameObject.SetActive(true);
 
             Vector2 direction = localB - localA;
@@ -239,7 +319,13 @@ public class InteractionOutline : MonoBehaviour
 
     private Image GetLineImage(int index)
     {
+        if (outlineCanvasParent == null)
+            return null;
+
         while (lineImages.Count <= index)
+            lineImages.Add(null);
+
+        if (lineImages[index] == null)
         {
             GameObject lineObject = new GameObject("InteractionOutline_UI_Line");
             lineObject.transform.SetParent(outlineCanvasParent, false);
@@ -255,7 +341,7 @@ public class InteractionOutline : MonoBehaviour
             ApplyLineVisual(image);
 
             lineObject.SetActive(false);
-            lineImages.Add(image);
+            lineImages[index] = image;
         }
 
         return lineImages[index];
@@ -286,6 +372,17 @@ public class InteractionOutline : MonoBehaviour
             if (lineImages[i] != null)
                 lineImages[i].gameObject.SetActive(false);
         }
+    }
+
+    private void ClearLineImages()
+    {
+        for (int i = 0; i < lineImages.Count; i++)
+        {
+            if (lineImages[i] != null)
+                Destroy(lineImages[i].gameObject);
+        }
+
+        lineImages.Clear();
     }
 
     private List<ScreenPoint> BuildConvexHull(List<ScreenPoint> points)

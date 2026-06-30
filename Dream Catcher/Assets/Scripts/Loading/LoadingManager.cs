@@ -22,6 +22,10 @@ public class LoadingManager : MonoBehaviour
     [Header("Player")]
     public PlayerController playerController;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -30,6 +34,7 @@ public class LoadingManager : MonoBehaviour
             return;
         }
         Instance = this;
+        FindReferences();
 
         // Ищем спиннер автоматически, если ссылка не задана или объект уничтожен
         if (loadingSpinner == null)
@@ -49,6 +54,8 @@ public class LoadingManager : MonoBehaviour
         float showImageDelay = 1f
     )
     {
+        FindReferences();
+
         if (loadingSpinner == null)
             loadingSpinner = FindObjectOfType<LoadingSpinnerController>();
 
@@ -67,6 +74,7 @@ public class LoadingManager : MonoBehaviour
         yield return StartCoroutine(FadeIn(loadingImageCanvasGroup, loadingImage));
 
         // 2. Отключаем звуки шагов
+        FindReferences();
         if (playerController != null && playerController.footstepSource != null)
         {
             playerController.footstepSource.Stop();
@@ -97,6 +105,8 @@ public class LoadingManager : MonoBehaviour
 
         // 7. Активируем новую сцену
         asyncLoad.allowSceneActivation = true;
+        yield return null;
+        FindReferences();
 
         // Скрываем спиннер (плавно)
         if (loadingSpinner != null)
@@ -141,5 +151,22 @@ public class LoadingManager : MonoBehaviour
         }
         canvasGroup.alpha = 0f;
         obj.SetActive(false);
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerController == null)
+        {
+            GameObject playerObj = GameObject.Find(playerObjectName);
+
+            if (playerObj != null)
+                playerController = playerObj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

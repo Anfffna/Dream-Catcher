@@ -14,10 +14,10 @@ public class LightSwitch : MonoBehaviour, IInteractable
     public InviteDoor inviteDoor;
 
     [Header("Audio")]
-    public AudioSource audioSource;   // ссылка на AudioSource (клип уже в нём)
+    public AudioSource audioSource;
 
     private bool isOn = false;
-    private bool questCompleted = false;
+    private bool sequenceStarted = false;
 
     void Start()
     {
@@ -28,34 +28,48 @@ public class LightSwitch : MonoBehaviour, IInteractable
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
+
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
     }
 
     public void Interact()
     {
-        // Переключаем свет
         isOn = !isOn;
 
         if (roomLight1 != null)
             roomLight1.enabled = isOn;
+
         if (roomLight2 != null)
             roomLight2.enabled = isOn;
 
-        // Воспроизводим звук переключения (при любом нажатии)
         if (audioSource != null)
             audioSource.Play();
 
-        // Если свет включён и задание ещё не завершено
-        if (isOn && !questCompleted)
-        {
-            questCompleted = true;
+        if (!isOn)
+            return;
 
-            if (questUIManager != null)
-                questUIManager.CompleteQuest(questIdToComplete);
+        if (sequenceStarted)
+            return;
 
-            if (inviteDoor != null)
-                inviteDoor.StartInviteDoorSequence();
-            else
-                Debug.LogWarning("InviteDoor не назначен в LightSwitch");
-        }
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        // Запускаем дверную цепочку только если задание реально активно.
+        if (questUIManager != null && !questUIManager.IsQuestActive(questIdToComplete))
+            return;
+
+        sequenceStarted = true;
+
+        if (inviteDoor != null)
+            inviteDoor.StartInviteDoorSequence();
+        else
+            Debug.LogWarning("InviteDoor не назначен в LightSwitch");
     }
 }

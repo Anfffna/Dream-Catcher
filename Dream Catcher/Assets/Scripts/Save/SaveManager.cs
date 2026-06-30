@@ -181,6 +181,7 @@ public class SaveManager : MonoBehaviour
 
         // Потом восстанавливаем квесты.
         RestoreQuestState(pendingLoadData);
+        QuestWorldStateApplier.ApplyAllInScene();
 
         // Потом ставим игрока на сохранённую позицию.
         RestorePlayerPosition(pendingLoadData);

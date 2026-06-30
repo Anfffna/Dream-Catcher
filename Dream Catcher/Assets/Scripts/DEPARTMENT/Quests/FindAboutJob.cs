@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -15,6 +16,12 @@ public class FindAboutJob : MonoBehaviour, IInteractable
     public List<DialogueManager.DialogueLine> firstDialogueLines;
     public List<DialogueManager.DialogueLine> secondDialogueLines;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string questUIManagerObjectName = "QuestUIManager";
+    public string dialogueManagerObjectName = "DialogueManager";
+    public string interactionDotObjectName = "InteractionDot";
+
     private bool isCompleted = false;
     private bool firstDialogueShown = false;
     private bool secondDialogueShown = false;
@@ -23,6 +30,7 @@ public class FindAboutJob : MonoBehaviour, IInteractable
     private int interactableLayer;
     private QuestUIManager questManager;
     private DialogueManager dialogueManager; // теперь приватное, ищется по имени
+    private Image interactionDot;
 
     void Start()
     {
@@ -33,43 +41,22 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         gameObject.layer = defaultLayer;
         if (objectCollider != null) objectCollider.enabled = false;
 
-        // Ищем DialogueManager строго по имени объекта
-        dialogueManager = FindDialogueManagerByName();
-
-        questManager = FindObjectOfType<QuestUIManager>();
+        FindReferences();
 
         StartCoroutine(ActivationRoutine());
-    }
-
-    private DialogueManager FindDialogueManagerByName()
-    {
-        // 1. Ищем объект по точному имени (без пробела)
-        GameObject dmObj = GameObject.Find("DialogueManager");
-        if (dmObj == null)
-            dmObj = GameObject.Find("Dialogue Manager"); // если имя с пробелом
-
-        if (dmObj != null)
-            return dmObj.GetComponent<DialogueManager>();
-
-        // 2. Если не найден – пробуем перебор всех диалоговых менеджеров и отфильтровать по имени
-        DialogueManager[] all = FindObjectsOfType<DialogueManager>();
-        foreach (var dm in all)
-        {
-            if (dm.name == "DialogueManager" || dm.name == "Dialogue Manager")
-                return dm;
-        }
-
-        Debug.LogWarning("DialogueManager не найден по имени! Проверь, что объект с именем 'DialogueManager' существует в GlobalSystem.");
-        return null;
     }
 
     private IEnumerator ActivationRoutine()
     {
         yield return new WaitForSeconds(activationDelay);
 
+        FindReferences();
+
         if (questManager == null)
         {
-            Debug.LogWarning("QuestUIManager not found!");
+            Debug.LogWarning("QuestUIManager not found! Повторная проверка через 2 сек.");
+            yield return new WaitForSeconds(2f);
+            StartCoroutine(ActivationRoutine());
             yield break;
         }
 
@@ -89,28 +76,13 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
     private void EnsureDialogueManager()
     {
-        if (dialogueManager == null)
-            dialogueManager = FindDialogueManagerByName();
-
-        // Если ссылки на UI сброшены – восстанавливаем
-        if (dialogueManager != null && dialogueManager.dialoguePanel == null)
-        {
-            Transform panel = dialogueManager.transform.Find("DialoguePanel");
-            if (panel != null)
-            {
-                dialogueManager.dialoguePanel = panel.gameObject;
-                dialogueManager.dialogueText = panel.GetComponentInChildren<TextMeshProUGUI>();
-                Debug.Log("Ссылки на диалоговую панель восстановлены.");
-            }
-            else
-            {
-                Debug.LogError("DialoguePanel не найден в иерархии DialogueManager!");
-            }
-        }
+        FindReferences();
     }
 
     public void Interact()
     {
+        FindReferences();
+
         if (isCompleted) return;
 
         EnsureDialogueManager();
@@ -133,8 +105,13 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         {
             if (firstDialogueLines != null && firstDialogueLines.Count > 0)
             {
+                HideInteractionDot();
+
                 dialogueManager.StartDialogue(firstDialogueLines, true);
                 firstDialogueShown = true;
+
+                StartCoroutine(ShowDotAfterDialogue());
+
                 Debug.Log($"Запущен первый диалог для {questIdToComplete}");
             }
             else
@@ -146,6 +123,8 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         {
             if (secondDialogueLines != null && secondDialogueLines.Count > 0)
             {
+                HideInteractionDot();
+
                 dialogueManager.StartDialogue(secondDialogueLines, true);
                 secondDialogueShown = true;
                 StartCoroutine(WaitForDialogueAndComplete());
@@ -158,10 +137,21 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         }
     }
 
+    private IEnumerator ShowDotAfterDialogue()
+    {
+        while (dialogueManager != null && dialogueManager.DialogueActive)
+            yield return null;
+
+        ShowInteractionDot();
+    }
+
     private IEnumerator WaitForDialogueAndComplete()
     {
         while (dialogueManager.DialogueActive)
             yield return null;
+
+        ShowInteractionDot();
+        FindReferences();
 
         if (questManager != null && questManager.IsQuestActive(questIdToComplete))
         {
@@ -174,5 +164,74 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (objectCollider != null) objectCollider.enabled = false;
 
         Debug.Log($"Объект {gameObject.name} больше не интерактивен.");
+    }
+
+    private void HideInteractionDot()
+    {
+        FindReferences();
+
+        if (interactionDot != null)
+            interactionDot.enabled = false;
+    }
+
+    private void ShowInteractionDot()
+    {
+        FindReferences();
+
+        if (interactionDot != null)
+            interactionDot.enabled = true;
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        // QuestUIManager
+        if (questManager == null)
+            questManager = QuestUIManager.Instance;
+
+        if (questManager == null)
+        {
+            GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+            if (obj != null)
+                questManager = obj.GetComponent<QuestUIManager>();
+        }
+
+        if (questManager == null)
+            questManager = FindObjectOfType<QuestUIManager>();
+
+        // DialogueManager — ВАЖНО: ищем именно обычный DialogueManager, не LoadingDialogueManager
+        if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
+        {
+            GameObject obj = GameObject.Find(dialogueManagerObjectName);
+
+            if (obj != null)
+                dialogueManager = obj.GetComponent<DialogueManager>();
+        }
+
+        if (dialogueManager == null)
+        {
+            DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
+
+            foreach (DialogueManager manager in managers)
+            {
+                if (manager.gameObject.name == dialogueManagerObjectName)
+                {
+                    dialogueManager = manager;
+                    break;
+                }
+            }
+        }
+
+        // InteractionDot
+        if (interactionDot == null)
+        {
+            GameObject obj = GameObject.Find(interactionDotObjectName);
+
+            if (obj != null)
+                interactionDot = obj.GetComponent<Image>();
+        }
     }
 }

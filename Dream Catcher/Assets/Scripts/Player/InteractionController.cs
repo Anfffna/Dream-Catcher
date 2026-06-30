@@ -3,6 +3,11 @@ using UnityEngine.UI;
 
 public class InteractionController : MonoBehaviour
 {
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerCameraObjectName = "Camera";
+    public string interactionDotObjectName = "InteractionDot";
+
     [Header("Camera")]
     public Camera playerCamera;
 
@@ -22,6 +27,8 @@ public class InteractionController : MonoBehaviour
 
     void Start()
     {
+        FindReferences();
+
         if (interactionDot != null)
         {
             interactionDot.gameObject.SetActive(false);
@@ -31,6 +38,9 @@ public class InteractionController : MonoBehaviour
 
     void Update()
     {
+        if (playerCamera == null || interactionDot == null)
+            FindReferences();
+
         CheckInteraction();
 
         if (currentInteractable != null &&
@@ -111,5 +121,27 @@ public class InteractionController : MonoBehaviour
         }
 
         return defaultDotColor;
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        if (playerCamera == null)
+        {
+            GameObject camObj = GameObject.Find(playerCameraObjectName);
+
+            if (camObj != null)
+                playerCamera = camObj.GetComponent<Camera>();
+        }
+
+        if (interactionDot == null)
+        {
+            GameObject dotObj = GameObject.Find(interactionDotObjectName);
+
+            if (dotObj != null)
+                interactionDot = dotObj.GetComponent<Image>();
+        }
     }
 }

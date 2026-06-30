@@ -19,6 +19,11 @@ public class NewsDialogue : MonoBehaviour
     [Header("Start Day")]
     public StartDay startDay;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string questUIManagerObjectName = "QuestUIManager";
+    public string taskPanelControllerObjectName = "TaskPanel";
+
     [Header("Timing")]
     public double firstLineTime = 4.0;
     public double firstPauseTime = 9.0;
@@ -64,6 +69,8 @@ public class NewsDialogue : MonoBehaviour
 
     void Start()
     {
+        FindReferences();
+
         if (hidePanelOnStart && dialoguePanel != null)
             dialoguePanel.SetActive(false);
 
@@ -135,6 +142,8 @@ public class NewsDialogue : MonoBehaviour
             {
                 EndDialogue();
                 allDialoguesFinished = true;
+
+                FindReferences();
 
                 if (taskPanelController != null)
                     taskPanelController.panelUnlocked = true;
@@ -324,5 +333,38 @@ public class NewsDialogue : MonoBehaviour
 
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        // QuestUIManager
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+        {
+            GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+            if (obj != null)
+                questUIManager = obj.GetComponent<QuestUIManager>();
+        }
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        // TaskPanelController
+        if (taskPanelController == null)
+        {
+            GameObject obj = GameObject.Find(taskPanelControllerObjectName);
+
+            if (obj != null)
+                taskPanelController = obj.GetComponent<TaskPanelController>();
+        }
+
+        if (taskPanelController == null)
+            taskPanelController = FindObjectOfType<TaskPanelController>();
     }
 }

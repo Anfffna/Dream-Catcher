@@ -13,8 +13,17 @@ public class InviteDoor : MonoBehaviour
     public float delayAfterLight = 3f;
     public float delayAfterKnock = 1.5f;
 
+    [Header("Auto Find")]
+    public bool autoFindReferences = true;
+    public string playerObjectName = "Player";
+    public string dialogueManagerObjectName = "DialogueManager";
+    public string questUIManagerObjectName = "QuestUIManager";
+
     [Header("Player")]
     public PlayerController playerController;
+
+    [Header("Quest Complete")]
+    public string questIdToComplete = "turn_on_light";
 
     [Header("Quest")]
     public QuestUIManager questUIManager;
@@ -40,8 +49,20 @@ public class InviteDoor : MonoBehaviour
     private bool started = false;
     private bool waitingForOpen = false; // чтобы не повторно обработать открытие
 
+    void Awake()
+    {
+        FindReferences();
+    }
+
+    void Start()
+    {
+        FindReferences();
+    }
+
     public void StartInviteDoorSequence()
     {
+        FindReferences();
+
         if (started) return;
         started = true;
         StartCoroutine(InviteRoutine());
@@ -49,6 +70,8 @@ public class InviteDoor : MonoBehaviour
 
     private IEnumerator InviteRoutine()
     {
+        FindReferences();
+
         if (doorInteractable != null)
             doorInteractable.SetDoorAvailable(false);
 
@@ -73,6 +96,8 @@ public class InviteDoor : MonoBehaviour
     // Этот метод вызывается из InviteDoorInteractable после завершения анимации открытия
     public void OnDoorOpened()
     {
+        FindReferences();
+
         if (waitingForOpen) return;
         waitingForOpen = true;
 
@@ -93,6 +118,7 @@ public class InviteDoor : MonoBehaviour
 
     private IEnumerator DialogueThenClose()
     {
+        FindReferences();
         // Отключаем звуки шагов перед блокировкой движения
         if (playerController != null && playerController.footstepSource != null)
         {
@@ -120,13 +146,26 @@ public class InviteDoor : MonoBehaviour
             npcToHide.SetActive(false);
         }
 
-        // Добавляем новое задание
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        // Завершаем текущее задание только после всей дверной цепочки.
+        if (questUIManager != null && !string.IsNullOrEmpty(questIdToComplete))
+        {
+            if (questUIManager.IsQuestActive(questIdToComplete))
+                questUIManager.CompleteQuest(questIdToComplete);
+        }
+
+        // Добавляем следующее задание.
         if (questUIManager != null && !string.IsNullOrEmpty(questIdToAdd))
         {
             questUIManager.AddQuest(questIdToAdd);
         }
 
-        // Активируем домашние предметы
+        // Активируем домашние предметы.
         if (homeItemsActivator != null)
         {
             homeItemsActivator.ActivateItems();
@@ -135,6 +174,7 @@ public class InviteDoor : MonoBehaviour
 
     public bool CanOpenDoor()
     {
+        FindReferences();
         // Если задание "find_the_key" ещё не выполнено (активно), то открывать нельзя
         if (questUIManager != null && questUIManager.IsQuestActive(questIdToAdd))
             return false;
@@ -143,6 +183,8 @@ public class InviteDoor : MonoBehaviour
 
     public void ShowDoorBlockDialogue()
     {
+        FindReferences();
+
         if (dialogueManager != null && doorLines != null && doorLines.Count > 0)
         {
             dialogueManager.StartDialogue(doorLines); // не блокируем движение (можно false)
@@ -162,5 +204,103 @@ public class InviteDoor : MonoBehaviour
         if (audioSource == null) return;
         audioSource.Stop();
         audioSource.loop = false;
+    }
+
+    public void ResetSequenceForQuestStart()
+    {
+        FindReferences();
+
+        StopAllCoroutines();
+        StopKnock();
+
+        started = false;
+        waitingForOpen = false;
+
+        if (doorInteractable != null)
+        {
+            doorInteractable.SetDoorAvailable(false);
+            doorInteractable.CloseDoor();
+        }
+
+        if (npcToHide != null)
+            npcToHide.SetActive(true);
+    }
+
+    public void ApplyCompletedState()
+    {
+        FindReferences();
+
+        StopKnock();
+
+        started = true;
+        waitingForOpen = true;
+
+        if (doorInteractable != null)
+        {
+            doorInteractable.CloseDoor();
+            doorInteractable.SetDoorAvailable(true);
+        }
+
+        if (npcToHide != null)
+            npcToHide.SetActive(false);
+
+        if (homeItemsActivator != null)
+            homeItemsActivator.ActivateItems();
+    }
+
+    private void FindReferences()
+    {
+        if (!autoFindReferences)
+            return;
+
+        // QuestUIManager
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+        {
+            GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+            if (obj != null)
+                questUIManager = obj.GetComponent<QuestUIManager>();
+        }
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+
+        // DialogueManager — строго ищем объект с именем DialogueManager
+        if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
+        {
+            GameObject obj = GameObject.Find(dialogueManagerObjectName);
+
+            if (obj != null)
+                dialogueManager = obj.GetComponent<DialogueManager>();
+        }
+
+        if (dialogueManager == null)
+        {
+            DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
+
+            foreach (DialogueManager manager in managers)
+            {
+                if (manager.gameObject.name == dialogueManagerObjectName)
+                {
+                    dialogueManager = manager;
+                    break;
+                }
+            }
+        }
+
+        // PlayerController
+        if (playerController == null)
+        {
+            GameObject obj = GameObject.Find(playerObjectName);
+
+            if (obj != null)
+                playerController = obj.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+            playerController = FindObjectOfType<PlayerController>();
     }
 }

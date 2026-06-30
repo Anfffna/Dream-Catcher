@@ -21,6 +21,6 @@ public class QuestData
     [TextArea(3, 8)]
     public string description;
 
-    [Header("Object Outlines")]
-    public InteractionOutline[] outlines;
+    [Header("Quest Outline IDs")]
+    public string[] outlineIds;
 }
