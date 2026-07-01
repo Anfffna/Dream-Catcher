@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -11,23 +12,29 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
     [Header("Auto Find")]
     public bool autoFindReferences = true;
     public string dialogueManagerObjectName = "DialogueManager";
+    public string interactionDotObjectName = "InteractionDot";
 
     private bool hasTalked = false;
+    private Image interactionDot;
 
     void Start()
     {
         FindReferences();
-        // Устанавливаем слой Interactable (если ещё не)
         gameObject.layer = LayerMask.NameToLayer("Interactable");
     }
 
     public void Interact()
     {
         FindReferences();
-        if (hasTalked) return;
 
-        if (dialogueManager != null && dialogueLines != null && dialogueLines.Count > 0)
+        if (hasTalked) return;
+        if (dialogueManager == null) return;
+        if (dialogueManager.DialogueActive) return;
+
+        if (dialogueLines != null && dialogueLines.Count > 0)
         {
+            HideInteractionDot();
+
             dialogueManager.StartDialogue(dialogueLines);
             StartCoroutine(AfterDialogue());
         }
@@ -39,13 +46,29 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
 
     private IEnumerator AfterDialogue()
     {
-        // Ждём, пока диалог не закончится
-        while (dialogueManager.DialogueActive)
+        while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
 
+        ShowInteractionDot();
+
         hasTalked = true;
-        // Меняем слой на Default, чтобы больше нельзя было взаимодействовать
         gameObject.layer = LayerMask.NameToLayer("Default");
+    }
+
+    private void HideInteractionDot()
+    {
+        FindReferences();
+
+        if (interactionDot != null)
+            interactionDot.enabled = false;
+    }
+
+    private void ShowInteractionDot()
+    {
+        FindReferences();
+
+        if (interactionDot != null)
+            interactionDot.enabled = true;
     }
 
     private void FindReferences()
@@ -53,7 +76,6 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
         if (!autoFindReferences)
             return;
 
-        // Сначала ищем строго объект с именем DialogueManager
         if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
         {
             GameObject obj = GameObject.Find(dialogueManagerObjectName);
@@ -62,7 +84,6 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
                 dialogueManager = obj.GetComponent<DialogueManager>();
         }
 
-        // Запасной вариант: ищем среди всех DialogueManager именно тот, у которого имя DialogueManager
         if (dialogueManager == null)
         {
             DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
@@ -75,6 +96,14 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
                     break;
                 }
             }
+        }
+
+        if (interactionDot == null)
+        {
+            GameObject obj = GameObject.Find(interactionDotObjectName);
+
+            if (obj != null)
+                interactionDot = obj.GetComponent<Image>();
         }
     }
 }

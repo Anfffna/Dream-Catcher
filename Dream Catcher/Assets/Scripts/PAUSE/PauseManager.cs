@@ -74,6 +74,16 @@ public class PauseManager : MonoBehaviour
 
     void Update()
     {
+        if (IsPauseBlocked())
+        {
+            ForceGameplayCursorLocked();
+
+            if (Input.GetKeyDown(pauseKey))
+                StartCoroutine(ForceGameplayCursorLockedNextFrame());
+
+            return;
+        }
+
         // Если панель задач открыта – игнорируем Esc
         if (TaskPanelController.Instance != null && TaskPanelController.Instance.IsPanelOpen)
             return;
@@ -89,6 +99,13 @@ public class PauseManager : MonoBehaviour
 
     public void PauseGame()
     {
+        if (IsPauseBlocked())
+        {
+            ForceGameplayCursorLocked();
+            StartCoroutine(ForceGameplayCursorLockedNextFrame());
+            return;
+        }
+
         FindReferences();
 
         if (isPaused) return;
@@ -102,11 +119,6 @@ public class PauseManager : MonoBehaviour
             blurVolume.weight = 1f;
         }
 
-        // ---- Показываем курсор ----
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = true;
-
         // ---- Показываем левую панель ----
         leftPanel.gameObject.SetActive(true);
         leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
@@ -117,6 +129,8 @@ public class PauseManager : MonoBehaviour
 
         // ---- Навешиваем события курсора на все кнопки ----
         AddCursorEventsToAllButtons();
+
+        CursorCenterHelper.ShowCursorCentered(this, defaultCursor, defaultCursorHotspot);
     }
 
     public void ResumeGame()
@@ -424,5 +438,41 @@ public class PauseManager : MonoBehaviour
 
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
+    }
+
+    private bool IsPauseBlocked()
+    {
+        if (StartDay.IntroBlocksPause)
+            return true;
+
+        if (NewsDialogue.NewsBlocksPause)
+            return true;
+
+        if (LoadingManager.IsLoadingScreenBlockingPause())
+            return true;
+
+        if (DialogueManager.AnyDialogueActive)
+            return true;
+
+        return false;
+    }
+
+    private void ForceGameplayCursorLocked()
+    {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    private IEnumerator ForceGameplayCursorLockedNextFrame()
+    {
+        yield return null;
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
+        yield return null;
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 }

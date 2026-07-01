@@ -146,6 +146,37 @@ public class TaskPanelController : MonoBehaviour
         return false;
     }
 
+    public void ResetForNewGame()
+    {
+        panelUnlocked = false;
+        isPanelOpen = false;
+
+        if (fadeCoroutine != null)
+        {
+            StopCoroutine(fadeCoroutine);
+            fadeCoroutine = null;
+        }
+
+        if (taskPanel != null)
+            taskPanel.SetActive(true);
+
+        if (taskPanelCanvasGroup == null && taskPanel != null)
+            taskPanelCanvasGroup = taskPanel.GetComponent<CanvasGroup>();
+
+        if (taskPanelCanvasGroup != null)
+        {
+            taskPanelCanvasGroup.alpha = 0f;
+            taskPanelCanvasGroup.interactable = false;
+            taskPanelCanvasGroup.blocksRaycasts = false;
+        }
+
+        if (blurVolume != null)
+            blurVolume.weight = 0f;
+
+        cursorIsDefault = false;
+        cursorIsInteract = false;
+    }
+
     public void OpenPanel()
     {
         FindReferences();
@@ -161,10 +192,6 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = true;
         }
 
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = true;
-
         cursorIsDefault = true;
         cursorIsInteract = false;
 
@@ -175,6 +202,8 @@ public class TaskPanelController : MonoBehaviour
             StopCoroutine(fadeCoroutine);
 
         fadeCoroutine = StartCoroutine(FadePanelAndBlur(1f, blurOpenWeight));
+
+        CursorCenterHelper.ShowCursorCentered(this, defaultCursor, defaultCursorHotspot);
     }
 
     public void ClosePanel()

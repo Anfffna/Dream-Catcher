@@ -156,8 +156,9 @@ public class FindKey : MonoBehaviour, IInteractable
                 questUIManager.AddQuest(nextQuestId);
         }
 
-        // Уничтожаем объект (звук продолжит играть)
-        Destroy(gameObject, 0.1f);
+        // Не уничтожаем ключ навсегда.
+        // Его видимостью теперь управляет QuestWorldStateApplier по состоянию задания.
+        gameObject.SetActive(false);
     }
 
     private void FindReferences()

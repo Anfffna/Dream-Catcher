@@ -23,6 +23,10 @@ public class StartDay : MonoBehaviour
     public Transform sitPivot;
     public Transform standPivot;
 
+    [Header("Bed Collision")]
+    public MeshCollider bedMeshCollider;
+    public bool disableBedColliderDuringIntro = true;
+
     [Header("Lying Camera Tilt")]
     [Range(0f, 90f)]
     public float lyingTiltZ = 45f;
@@ -60,6 +64,7 @@ public class StartDay : MonoBehaviour
     private bool standUpStarted = false;
     private bool controlEnabled = false;
     private bool stopTVMagnet = false;
+    public static bool IntroBlocksPause { get; private set; }
 
     private CharacterController charController;
     private Coroutine tvZoomRoutine;
@@ -79,6 +84,8 @@ public class StartDay : MonoBehaviour
             ? playerController.GetComponent<CharacterController>()
             : null;
 
+        IntroBlocksPause = false;
+
         if (skipWhenLoadingSave &&
             SaveManager.Instance != null &&
             SaveManager.Instance.IsLoadingSave)
@@ -86,6 +93,8 @@ public class StartDay : MonoBehaviour
             ApplyLoadedSaveState();
             return;
         }
+
+        IntroBlocksPause = true;
 
         if (charController != null)
             charController.enabled = false;
@@ -101,6 +110,9 @@ public class StartDay : MonoBehaviour
 
         if (playerController != null)
             playerController.canControl = false;
+
+        if (bedMeshCollider != null && disableBedColliderDuringIntro)
+            bedMeshCollider.enabled = false;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -251,11 +263,17 @@ public class StartDay : MonoBehaviour
         if (playerCamera != null)
             playerCamera.fieldOfView = defaultFOV;
 
+        // Включаем коллайдер кровати только ПОСЛЕ того,
+        // как игрок уже поставлен в stand position.
+        if (bedMeshCollider != null)
+            bedMeshCollider.enabled = true;
+
         EnableCharacterControllerAndControl();
     }
 
     void EnableCharacterControllerAndControl()
     {
+        IntroBlocksPause = false;
         if (controlEnabled) return;
 
         controlEnabled = true;
@@ -349,6 +367,11 @@ public class StartDay : MonoBehaviour
 
     void ApplyLoadedSaveState()
     {
+        IntroBlocksPause = false;
+
+        if (bedMeshCollider != null)
+            bedMeshCollider.enabled = true;
+
         sequenceStarted = true;
         standUpStarted = true;
         controlEnabled = true;
@@ -484,5 +507,15 @@ public class StartDay : MonoBehaviour
 
         if (cameraTransform == null && playerCamera != null)
             cameraTransform = playerCamera.transform;
+    }
+
+    private void OnDisable()
+    {
+        IntroBlocksPause = false;
+    }
+
+    private void OnDestroy()
+    {
+        IntroBlocksPause = false;
     }
 }

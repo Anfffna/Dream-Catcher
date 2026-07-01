@@ -53,6 +53,7 @@ public class NewsDialogue : MonoBehaviour
 
     private int currentLineIndex = 0;
 
+    public static bool NewsBlocksPause { get; private set; }
     private bool firstLineStarted = false;
     private bool firstPauseTriggered = false;
     private bool secondLineStarted = false;
@@ -142,6 +143,7 @@ public class NewsDialogue : MonoBehaviour
             {
                 EndDialogue();
                 allDialoguesFinished = true;
+                NewsBlocksPause = false;
 
                 FindReferences();
 
@@ -160,6 +162,8 @@ public class NewsDialogue : MonoBehaviour
     {
         if (dialogueLines == null || dialogueLines.Count <= lineIndex) return;
 
+        NewsBlocksPause = true;
+
         currentLineIndex = lineIndex;
         dialogueActive = true;
 
@@ -172,6 +176,8 @@ public class NewsDialogue : MonoBehaviour
     void StartStandDialogue()
     {
         if (standDialogueLines == null || standDialogueLines.Count == 0) return;
+
+        NewsBlocksPause = true;
 
         currentLineIndex = 0;
         standDialogueStarted = true;
@@ -233,6 +239,7 @@ public class NewsDialogue : MonoBehaviour
 
         EndDialogue();
         allDialoguesFinished = true;
+        NewsBlocksPause = false;
 
         if (videoPlayer != null)
             videoPlayer.Play();
@@ -366,5 +373,15 @@ public class NewsDialogue : MonoBehaviour
 
         if (taskPanelController == null)
             taskPanelController = FindObjectOfType<TaskPanelController>();
+    }
+
+    private void OnDisable()
+    {
+        NewsBlocksPause = false;
+    }
+
+    private void OnDestroy()
+    {
+        NewsBlocksPause = false;
     }
 }

@@ -28,18 +28,21 @@ public class InteractionController : MonoBehaviour
     void Start()
     {
         FindReferences();
-
-        if (interactionDot != null)
-        {
-            interactionDot.gameObject.SetActive(false);
-            interactionDot.color = defaultDotColor;
-        }
+        ClearCurrentInteraction();
     }
 
     void Update()
     {
         if (playerCamera == null || interactionDot == null)
             FindReferences();
+
+        // ВАЖНО:
+        // Если открыт любой игровой UI, вообще не проверяем 3D-взаимодействие.
+        if (IsGameplayInteractionBlocked())
+        {
+            ClearCurrentInteraction();
+            return;
+        }
 
         CheckInteraction();
 
@@ -50,15 +53,49 @@ public class InteractionController : MonoBehaviour
         }
     }
 
-    void CheckInteraction()
+    private bool IsGameplayInteractionBlocked()
+    {
+        // Пауза открыта
+        if (PauseManager.Instance != null && PauseManager.Instance.IsPaused)
+            return true;
+
+        // Панель заданий открыта
+        if (TaskPanelController.Instance != null && TaskPanelController.Instance.IsPanelOpen)
+            return true;
+
+        // Обычные диалоги DialogueManager
+        if (DialogueManager.AnyDialogueActive)
+            return true;
+
+        // Loading screen
+        if (LoadingManager.IsLoadingScreenBlockingPause())
+            return true;
+
+        // Интро / старт дня
+        if (StartDay.IntroBlocksPause)
+            return true;
+
+        // Новости / телевизор
+        if (NewsDialogue.NewsBlocksPause)
+            return true;
+
+        return false;
+    }
+
+    private void ClearCurrentInteraction()
     {
         currentInteractable = null;
 
         if (interactionDot != null)
         {
             interactionDot.gameObject.SetActive(false);
-            interactionDot.color = defaultDotColor; // теперь в безопасности
+            interactionDot.color = defaultDotColor;
         }
+    }
+
+    void CheckInteraction()
+    {
+        ClearCurrentInteraction();
 
         if (playerCamera == null)
             return;
@@ -90,7 +127,6 @@ public class InteractionController : MonoBehaviour
                 if (interactionDot != null)
                 {
                     interactionDot.gameObject.SetActive(true);
-                    // Определяем цвет точки в зависимости от яркости объекта
                     Color dotColor = GetDotColorForObject(hit.collider.gameObject);
                     interactionDot.color = dotColor;
                 }
@@ -100,21 +136,24 @@ public class InteractionController : MonoBehaviour
 
     private Color GetDotColorForObject(GameObject obj)
     {
-        // Пытаемся получить Renderer (MeshRenderer или SkinnedMeshRenderer)
         Renderer renderer = obj.GetComponent<Renderer>();
+
         if (renderer == null)
             renderer = obj.GetComponentInChildren<Renderer>();
+
         if (renderer == null)
             renderer = obj.GetComponentInParent<Renderer>();
 
         if (renderer != null && renderer.sharedMaterial != null)
         {
-            // Проверяем, есть ли свойство _Color (стандартный шейдер)
             if (renderer.sharedMaterial.HasProperty("_Color"))
             {
                 Color matColor = renderer.sharedMaterial.color;
-                float luminance = 0.299f * matColor.r + 0.587f * matColor.g + 0.114f * matColor.b;
-                // Если яркость > 0.7, считаем объект светлым
+                float luminance =
+                    0.299f * matColor.r +
+                    0.587f * matColor.g +
+                    0.114f * matColor.b;
+
                 if (luminance > 1f)
                     return darkDotColor;
             }

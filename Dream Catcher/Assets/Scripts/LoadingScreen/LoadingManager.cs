@@ -6,6 +6,22 @@ using UnityEngine.SceneManagement;
 public class LoadingManager : MonoBehaviour
 {
     public static LoadingManager Instance { get; private set; }
+    public static bool LoadingBlocksPause { get; private set; }
+
+    public static bool IsLoadingScreenBlockingPause()
+    {
+        if (LoadingBlocksPause)
+            return true;
+
+        if (Instance == null)
+            return false;
+
+        if (Instance.loadingBackgroundCanvasGroup != null &&
+            Instance.loadingBackgroundCanvasGroup.alpha > 0.001f)
+            return true;
+
+        return false;
+    }
 
     [Header("Loading Screen UI")]
     public GameObject loadingBackground;
@@ -34,6 +50,7 @@ public class LoadingManager : MonoBehaviour
             return;
         }
         Instance = this;
+        LoadingBlocksPause = false;
         FindReferences();
 
         // Ищем спиннер автоматически, если ссылка не задана или объект уничтожен
@@ -69,6 +86,7 @@ public class LoadingManager : MonoBehaviour
         float showImageDelay
     )
     {
+        LoadingBlocksPause = true;
         // 1. Показываем фон и картинку
         yield return StartCoroutine(FadeIn(loadingBackgroundCanvasGroup, loadingBackground));
         yield return StartCoroutine(FadeIn(loadingImageCanvasGroup, loadingImage));
@@ -116,6 +134,7 @@ public class LoadingManager : MonoBehaviour
         yield return StartCoroutine(FadeOut(loadingImageCanvasGroup, loadingImage));
         yield return StartCoroutine(FadeOut(loadingBackgroundCanvasGroup, loadingBackground));
 
+        LoadingBlocksPause = false;
         // 9. Включаем звуки шагов обратно
         if (playerController != null && playerController.footstepSource != null)
             playerController.footstepSource.enabled = true;
@@ -168,5 +187,15 @@ public class LoadingManager : MonoBehaviour
 
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
+    }
+
+    private void OnDisable()
+    {
+        LoadingBlocksPause = false;
+    }
+
+    private void OnDestroy()
+    {
+        LoadingBlocksPause = false;
     }
 }

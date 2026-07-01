@@ -129,6 +129,8 @@ public class QuestUIManager : MonoBehaviour
         }
 
         activeQuestIds.Add(questId);
+        if (TaskPanelController.Instance != null)
+            TaskPanelController.Instance.panelUnlocked = true;
 
         CreateActiveQuestObject(questId);
 

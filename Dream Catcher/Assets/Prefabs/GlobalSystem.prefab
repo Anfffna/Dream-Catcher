@@ -1611,6 +1611,8 @@ MonoBehaviour:
   interactCursor: {fileID: 2800000, guid: 92a2c716075b0844c85132940c947f40, type: 3}
   defaultCursorHotspot: {x: 0, y: 0}
   interactCursorHotspot: {x: 0, y: 0}
+  autoFindReferences: 1
+  playerObjectName: Player
 --- !u!114 &997736188909885502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2291,6 +2293,8 @@ MonoBehaviour:
   loadingSpinner: {fileID: 0}
   fadeDuration: 1
   playerController: {fileID: 0}
+  autoFindReferences: 1
+  playerObjectName: Player
 --- !u!1 &2348909262902305480
 GameObject:
   m_ObjectHideFlags: 0
@@ -3320,6 +3324,8 @@ MonoBehaviour:
   lettersPerSecond: 25
   hidePanelOnStart: 1
   hidePanelOnEnd: 1
+  autoFindReferences: 1
+  playerObjectName: Player
 --- !u!1 &3286359419662496375
 GameObject:
   m_ObjectHideFlags: 0
@@ -4711,6 +4717,8 @@ MonoBehaviour:
   - {fileID: 8465412236443263703}
   - {fileID: 0}
   playerController: {fileID: 0}
+  autoFindReferences: 1
+  playerObjectName: Player
   defaultCursor: {fileID: 2800000, guid: a3d5f1d032a92134d9861569b344b26a, type: 3}
   interactCursor: {fileID: 2800000, guid: 92a2c716075b0844c85132940c947f40, type: 3}
   defaultCursorHotspot: {x: 0, y: 0}
@@ -6017,6 +6025,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4281526872085347302}
   - component: {fileID: 5840233839521558439}
+  - component: {fileID: 903707179898011539}
   m_Layer: 5
   m_Name: InteractionOutlineCanvas
   m_TagString: Untagged
@@ -6056,6 +6065,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutlineCanvasCleaner
   lineObjectName: InteractionOutline_UI_Line
+--- !u!114 &903707179898011539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5725742058820258474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bb78e2e83cd0864e824ceabe0802489, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionOutlineAutoHider
+  scanAllActiveCanvases: 1
+  uiRoot: {fileID: 0}
+  ignoredRoots: []
+  minWidthPixels: 400
+  minHeightPixels: 400
+  alphaThreshold: 0.05
+  requireVisibleGraphic: 1
+  redrawWhenShown: 1
+  debugLogBlocker: 0
+  currentBlockerName: 
 --- !u!1 &5830218362058203383
 GameObject:
   m_ObjectHideFlags: 0
@@ -7708,6 +7739,8 @@ MonoBehaviour:
   lettersPerSecond: 25
   hidePanelOnStart: 1
   hidePanelOnEnd: 1
+  autoFindReferences: 1
+  playerObjectName: Player
 --- !u!1 &8775366937243821151
 GameObject:
   m_ObjectHideFlags: 0

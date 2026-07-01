@@ -37,6 +37,9 @@ public class DialogueManager : MonoBehaviour
     private int currentLineIndex = 0;
     private bool isTyping = false;
     private bool dialogueActive = false;
+    public static int ActiveDialogueCount { get; private set; }
+    public static bool AnyDialogueActive => ActiveDialogueCount > 0;
+    private bool registeredAsActiveDialogue = false;
     private bool waitingForClickAfterTyping = false; // текст полностью показан, ждём клик для паузы
     private Coroutine typingCoroutine;
     private Coroutine pauseCoroutine;
@@ -98,6 +101,7 @@ public class DialogueManager : MonoBehaviour
 
         currentLineIndex = 0;
         dialogueActive = true;
+        RegisterActiveDialogue();
 
         // Блокируем движение, если требуется
         if (blockMovementForCurrentDialogue && playerController != null)
@@ -228,9 +232,28 @@ public class DialogueManager : MonoBehaviour
             dialoguePanel.SetActive(show);
     }
 
+    private void RegisterActiveDialogue()
+    {
+        if (registeredAsActiveDialogue)
+            return;
+
+        registeredAsActiveDialogue = true;
+        ActiveDialogueCount++;
+    }
+
+    private void UnregisterActiveDialogue()
+    {
+        if (!registeredAsActiveDialogue)
+            return;
+
+        registeredAsActiveDialogue = false;
+        ActiveDialogueCount = Mathf.Max(0, ActiveDialogueCount - 1);
+    }
+
     private void EndDialogue()
     {
         dialogueActive = false;
+        UnregisterActiveDialogue();
 
         if (wasMovementLocked && playerController != null)
         {
@@ -273,5 +296,23 @@ public class DialogueManager : MonoBehaviour
 
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
+    }
+
+    private void OnDisable()
+    {
+        if (dialogueActive)
+        {
+            dialogueActive = false;
+            UnregisterActiveDialogue();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (dialogueActive)
+        {
+            dialogueActive = false;
+            UnregisterActiveDialogue();
+        }
     }
 }

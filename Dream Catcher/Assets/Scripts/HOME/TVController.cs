@@ -8,6 +8,18 @@ public class TVController : MonoBehaviour
     public VideoPlayer videoPlayer;
     public AudioSource tvAudioSource;
 
+    [Header("TV Screen Auto Setup")]
+    public bool autoFindScreenRenderer = true;
+    public string screenObjectName = "Quad";
+    public Renderer screenRenderer;
+
+    [Header("Render Texture Cleanup")]
+    public bool clearScreenOnStart = true;
+    public bool clearScreenBeforeNoise = true;
+    public bool clearScreenBeforeNews = true;
+    public bool clearScreenAfterNewsEnd = true;
+    public Color clearColor = Color.black;
+
     [Header("Noise")]
     public AudioClip tvNoiseClip;
 
@@ -29,8 +41,44 @@ public class TVController : MonoBehaviour
     private Coroutine noiseFadeCoroutine;
     private bool newsAlreadyStarted = false;
 
+    private RenderTexture targetTexture;
+    private Material screenMaterialInstance;
+
+    void Awake()
+    {
+        FindReferences();
+        SetupScreenMaterial();
+
+        if (clearScreenOnStart)
+            ClearTVScreen();
+    }
+
+    void OnEnable()
+    {
+        if (videoPlayer != null)
+        {
+            videoPlayer.loopPointReached -= OnNewsVideoFinished;
+            videoPlayer.loopPointReached += OnNewsVideoFinished;
+        }
+    }
+
+    void OnDisable()
+    {
+        if (videoPlayer != null)
+            videoPlayer.loopPointReached -= OnNewsVideoFinished;
+    }
+
+    void OnDestroy()
+    {
+        if (videoPlayer != null)
+            videoPlayer.loopPointReached -= OnNewsVideoFinished;
+    }
+
     void Start()
     {
+        FindReferences();
+        SetupScreenMaterial();
+
         if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
         {
             ApplyLoadedSaveState();
@@ -45,10 +93,20 @@ public class TVController : MonoBehaviour
         if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
             return;
 
-        if (tvAudioSource == null || tvNoiseClip == null) return;
+        FindReferences();
+        SetupScreenMaterial();
 
         if (videoPlayer != null)
+        {
             videoPlayer.Stop();
+            videoPlayer.time = 0;
+        }
+
+        if (clearScreenBeforeNoise)
+            ClearTVScreen();
+
+        if (tvAudioSource == null || tvNoiseClip == null)
+            return;
 
         if (noiseFadeCoroutine != null)
             StopCoroutine(noiseFadeCoroutine);
@@ -67,9 +125,15 @@ public class TVController : MonoBehaviour
         if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
             return;
 
-        if (videoPlayer == null) return;
+        FindReferences();
+        SetupScreenMaterial();
 
-        if (newsAlreadyStarted) return;
+        if (videoPlayer == null)
+            return;
+
+        if (newsAlreadyStarted)
+            return;
+
         newsAlreadyStarted = true;
 
         if (noiseFadeCoroutine != null)
@@ -78,9 +142,28 @@ public class TVController : MonoBehaviour
         noiseFadeCoroutine = StartCoroutine(FadeNoiseOutThenPlayVideo());
     }
 
+    // На будущее для 7 дней.
+    // DayManager сможет просто вызвать этот метод и подставить нужный клип дня.
+    public void SetNewsClip(VideoClip clip)
+    {
+        FindReferences();
+
+        newsAlreadyStarted = false;
+
+        if (videoPlayer == null)
+            return;
+
+        videoPlayer.Stop();
+        videoPlayer.time = 0;
+        videoPlayer.clip = clip;
+
+        ClearTVScreen();
+    }
+
     private IEnumerator FadeNoiseIn()
     {
-        if (tvAudioSource == null) yield break;
+        if (tvAudioSource == null)
+            yield break;
 
         float t = 0f;
         float startVolume = noiseStartVolume;
@@ -125,14 +208,119 @@ public class TVController : MonoBehaviour
             tvAudioSource.Stop();
             tvAudioSource.clip = null;
             tvAudioSource.loop = false;
-
             tvAudioSource.volume = newsVolume;
         }
 
+        if (videoPlayer == null)
+            yield break;
+
+        if (clearScreenBeforeNews)
+            ClearTVScreen();
+
+        videoPlayer.Stop();
         videoPlayer.time = 0;
+
+        videoPlayer.Prepare();
+
+        while (!videoPlayer.isPrepared)
+            yield return null;
+
         videoPlayer.Play();
 
         noiseFadeCoroutine = null;
+    }
+
+    private void OnNewsVideoFinished(VideoPlayer vp)
+    {
+        if (clearScreenAfterNewsEnd)
+            ClearTVScreen();
+    }
+
+    public void ClearTVScreen()
+    {
+        FindReferences();
+        SetupScreenMaterial();
+
+        if (targetTexture == null)
+            return;
+
+        if (!targetTexture.IsCreated())
+            targetTexture.Create();
+
+        RenderTexture previous = RenderTexture.active;
+
+        RenderTexture.active = targetTexture;
+        GL.Clear(true, true, clearColor);
+
+        RenderTexture.active = previous;
+    }
+
+    private void SetupScreenMaterial()
+    {
+        if (videoPlayer != null)
+            targetTexture = videoPlayer.targetTexture;
+
+        if (targetTexture == null)
+            return;
+
+        if (screenRenderer == null)
+            return;
+
+        // Важно: .material создаёт отдельный экземпляр материала только для телевизора.
+        // Так телевизор не будет случайно делить материал с постерами.
+        if (screenMaterialInstance == null)
+            screenMaterialInstance = screenRenderer.material;
+
+        screenMaterialInstance.mainTexture = targetTexture;
+
+        if (screenMaterialInstance.HasProperty("_BaseMap"))
+            screenMaterialInstance.SetTexture("_BaseMap", targetTexture);
+
+        if (screenMaterialInstance.HasProperty("_EmissionMap"))
+            screenMaterialInstance.SetTexture("_EmissionMap", targetTexture);
+    }
+
+    private void FindReferences()
+    {
+        if (videoPlayer == null)
+            videoPlayer = GetComponent<VideoPlayer>();
+
+        if (tvAudioSource == null)
+            tvAudioSource = GetComponent<AudioSource>();
+
+        if (videoPlayer != null)
+            targetTexture = videoPlayer.targetTexture;
+
+        if (!autoFindScreenRenderer)
+            return;
+
+        if (screenRenderer != null)
+            return;
+
+        Transform screen = transform.Find(screenObjectName);
+
+        if (screen != null)
+        {
+            screenRenderer = screen.GetComponent<Renderer>();
+            return;
+        }
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] == null)
+                continue;
+
+            if (renderers[i].gameObject.name == screenObjectName)
+            {
+                screenRenderer = renderers[i];
+                return;
+            }
+        }
+
+        if (renderers.Length == 1)
+            screenRenderer = renderers[0];
     }
 
     private void ApplyLoadedSaveState()
@@ -158,6 +346,8 @@ public class TVController : MonoBehaviour
             videoPlayer.Stop();
             videoPlayer.time = 0;
         }
+
+        ClearTVScreen();
 
         Debug.Log("TVController: пропущен, потому что загружается сейв.");
     }

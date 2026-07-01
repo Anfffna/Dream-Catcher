@@ -92,6 +92,18 @@ public class PlayerController : MonoBehaviour
         firstControlFrame = true;
     }
 
+    public void ResetMovementAfterTeleport()
+    {
+        velocity = Vector3.zero;
+        firstControlFrame = true;
+
+        if (controller == null)
+            controller = GetComponent<CharacterController>();
+
+        if (footstepSource != null && footstepSource.isPlaying)
+            footstepSource.Stop();
+    }
+
     void Look()
     {
         float mouseX = Input.GetAxis("Mouse X") * GameSettings.MouseSensitivity;

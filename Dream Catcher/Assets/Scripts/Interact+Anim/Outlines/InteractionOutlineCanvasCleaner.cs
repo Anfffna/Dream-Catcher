@@ -6,6 +6,8 @@ public class InteractionOutlineCanvasCleaner : MonoBehaviour
 {
     public string lineObjectName = "InteractionOutline_UI_Line";
 
+    private Coroutine clearCoroutine;
+
     private void Awake()
     {
         ClearLines();
@@ -13,17 +15,43 @@ public class InteractionOutlineCanvasCleaner : MonoBehaviour
 
     private void OnEnable()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
+
+        if (gameObject.activeInHierarchy)
+        {
+            if (clearCoroutine != null)
+                StopCoroutine(clearCoroutine);
+
+            clearCoroutine = StartCoroutine(ClearAndRedrawNextFrame());
+        }
     }
 
     private void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        if (clearCoroutine != null)
+        {
+            StopCoroutine(clearCoroutine);
+            clearCoroutine = null;
+        }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        StartCoroutine(ClearAndRedrawNextFrame());
+        // Если GlobalCanvas / InteractionOutlineCanvas выключен в MainMenu,
+        // корутину запускать нельзя и не нужно.
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+        {
+            ClearLines();
+            return;
+        }
+
+        if (clearCoroutine != null)
+            StopCoroutine(clearCoroutine);
+
+        clearCoroutine = StartCoroutine(ClearAndRedrawNextFrame());
     }
 
     private IEnumerator ClearAndRedrawNextFrame()
@@ -36,7 +64,10 @@ public class InteractionOutlineCanvasCleaner : MonoBehaviour
 
         yield return null;
 
-        InteractionOutlineRegistry.RedrawVisibleOutlines();
+        if (isActiveAndEnabled && gameObject.activeInHierarchy)
+            InteractionOutlineRegistry.RedrawVisibleOutlines();
+
+        clearCoroutine = null;
     }
 
     public void ClearLines()

@@ -96,4 +96,23 @@ public static class InteractionOutlineRegistry
             }
         }
     }
+
+    public static void ClearAllVisible()
+    {
+        visibleIds.Clear();
+
+        foreach (KeyValuePair<string, List<InteractionOutline>> pair in outlinesById)
+        {
+            List<InteractionOutline> outlines = pair.Value;
+
+            if (outlines == null)
+                continue;
+
+            for (int i = 0; i < outlines.Count; i++)
+            {
+                if (outlines[i] != null)
+                    outlines[i].HideOutline();
+            }
+        }
+    }
 }

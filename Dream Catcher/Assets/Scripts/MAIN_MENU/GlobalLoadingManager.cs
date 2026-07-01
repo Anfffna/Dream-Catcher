@@ -52,8 +52,19 @@ public class GlobalLoadingManager : MonoBehaviour
         while (!asyncLoad.isDone)
             yield return null;
 
+        // Если это загрузка сейва — ждём, пока SaveManager полностью:
+        // 1. восстановит квесты,
+        // 2. применит состояние мира,
+        // 3. поставит игрока в сохранённую позицию.
+        while (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
+            yield return null;
+
+        // Ещё один кадр, чтобы камера/CharacterController/Physics успели стабилизироваться.
+        yield return null;
+
         if (loadingSpinner != null)
             loadingSpinner.HideSmooth();
+
         yield return StartCoroutine(FadeCanvas(fadeCanvasGroup, 1f, 0f, fadeDuration));
     }
 

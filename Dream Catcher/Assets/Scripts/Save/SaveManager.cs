@@ -179,22 +179,48 @@ public class SaveManager : MonoBehaviour
 
         SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
 
-        // Потом восстанавливаем квесты.
-        RestoreQuestState(pendingLoadData);
+        if (finishLoadingCoroutine != null)
+            StopCoroutine(finishLoadingCoroutine);
+
+        finishLoadingCoroutine = StartCoroutine(ApplyLoadedSaveAfterSceneReady(pendingLoadData));
+    }
+
+    private IEnumerator ApplyLoadedSaveAfterSceneReady(SaveData data)
+    {
+        // Ждём, чтобы:
+        // 1. PersistentObject успел удалить дубликат Player из новой сцены.
+        // 2. Start/Awake у объектов сцены успели отработать.
+        yield return null;
+        yield return null;
+
+        // Сначала восстанавливаем квесты и состояние мира,
+        // чтобы нужные коллайдеры/объекты уже были в правильном состоянии.
+        RestoreQuestState(data);
         QuestWorldStateApplier.ApplyAllInScene();
 
-        // Потом ставим игрока на сохранённую позицию.
-        RestorePlayerPosition(pendingLoadData);
+        yield return null;
+
+        // Синхронизируем физику после включения/выключения объектов и коллайдеров.
+        Physics.SyncTransforms();
+
+        // Теперь ставим настоящего оставшегося Player в сохранённую позицию.
+        RestorePlayerPosition(data);
+
+        yield return null;
+
+        Physics.SyncTransforms();
+
+        // После переноса игрока можно перерисовать outline,
+        // чтобы камера и UI уже были в правильном месте.
+        InteractionOutlineRegistry.RedrawVisibleOutlines();
 
         if (PauseManager.Instance != null)
             PauseManager.Instance.EnableGameplayAfterLoading();
 
         pendingLoadData = null;
 
-        if (finishLoadingCoroutine != null)
-            StopCoroutine(finishLoadingCoroutine);
-
-        finishLoadingCoroutine = StartCoroutine(FinishLoadingFlagNextFrame());
+        IsLoadingSave = false;
+        finishLoadingCoroutine = null;
     }
 
     private IEnumerator FinishLoadingFlagNextFrame()
@@ -234,6 +260,9 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
+        // На время телепорта лучше не давать управлению/гравитации вмешаться.
+        player.canControl = false;
+
         Vector3 loadedPosition = new Vector3(
             data.posX,
             data.posY,
@@ -246,12 +275,16 @@ public class SaveManager : MonoBehaviour
         {
             characterController.enabled = false;
             player.transform.position = loadedPosition;
+            Physics.SyncTransforms();
             characterController.enabled = true;
         }
         else
         {
             player.transform.position = loadedPosition;
+            Physics.SyncTransforms();
         }
+
+        player.ResetMovementAfterTeleport();
     }
 
     public bool HasAnySaves()
@@ -387,6 +420,26 @@ public class SaveManager : MonoBehaviour
         }
 
         Time.timeScale = 1f;
+
+        // ВАЖНО:
+        // Новая игра не должна наследовать задания/обводки от ранее загруженного сейва.
+        InteractionOutlineRegistry.ClearAllVisible();
+
+        QuestUIManager questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>(true);
+
+        if (questUIManager != null)
+            questUIManager.ClearAllQuests();
+
+        TaskPanelController taskPanelController = TaskPanelController.Instance;
+
+        if (taskPanelController == null)
+            taskPanelController = FindObjectOfType<TaskPanelController>(true);
+
+        if (taskPanelController != null)
+            taskPanelController.ResetForNewGame();
 
         Debug.Log("SaveManager: подготовка новой игры завершена.");
     }
