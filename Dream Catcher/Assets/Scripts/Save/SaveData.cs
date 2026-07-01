@@ -15,4 +15,6 @@ public class SaveData
 
     // Завершённые задания
     public List<string> completedQuestIds = new List<string>();
+
+    public List<string> inspectedItemIds = new List<string>(); //сохранение взаимодействия с не квестовыми объектами
 }

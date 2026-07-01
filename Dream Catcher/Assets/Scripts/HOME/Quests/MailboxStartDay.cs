@@ -126,7 +126,13 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
 
         // Скрыть обводку с почтового ящика
         InteractionOutline outline = GetComponent<InteractionOutline>();
-        if (outline != null) outline.HideOutline();
+        if (outline != null)
+        {
+            if (!string.IsNullOrEmpty(outline.outlineId))
+                InteractionOutlineRegistry.Hide(outline.outlineId);
+
+            outline.HideOutline();
+        }
 
         // Ожидание первого клика (плашка появится только после него)
         waitingForFirstClick = true;

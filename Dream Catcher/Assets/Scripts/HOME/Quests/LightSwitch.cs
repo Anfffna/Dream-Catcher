@@ -10,6 +10,10 @@ public class LightSwitch : MonoBehaviour, IInteractable
     public QuestUIManager questUIManager;
     public string questIdToComplete = "turn_on_light";
 
+    [Header("Outline")]
+    public string outlineIdToHideAfterFirstInteraction = "obj_light_switch";
+    public bool hideOutlineAfterFirstSuccessfulInteraction = true;
+
     [Header("Invite Door")]
     public InviteDoor inviteDoor;
 
@@ -18,6 +22,7 @@ public class LightSwitch : MonoBehaviour, IInteractable
 
     private bool isOn = false;
     private bool sequenceStarted = false;
+    private bool outlineHiddenAfterInteraction = false;
 
     void Start()
     {
@@ -29,11 +34,7 @@ public class LightSwitch : MonoBehaviour, IInteractable
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        if (questUIManager == null)
-            questUIManager = QuestUIManager.Instance;
-
-        if (questUIManager == null)
-            questUIManager = FindObjectOfType<QuestUIManager>();
+        FindQuestManager();
     }
 
     public void Interact()
@@ -49,21 +50,25 @@ public class LightSwitch : MonoBehaviour, IInteractable
         if (audioSource != null)
             audioSource.Play();
 
+        // Если игрок выключил свет — цепочку не запускаем.
         if (!isOn)
             return;
 
+        // Если цепочка уже запускалась — второй раз не запускаем.
         if (sequenceStarted)
             return;
 
-        if (questUIManager == null)
-            questUIManager = QuestUIManager.Instance;
-
-        if (questUIManager == null)
-            questUIManager = FindObjectOfType<QuestUIManager>();
+        FindQuestManager();
 
         // Запускаем дверную цепочку только если задание реально активно.
         if (questUIManager != null && !questUIManager.IsQuestActive(questIdToComplete))
             return;
+
+        // ВАЖНО:Квест ещё НЕ завершаем, но обводку света уже убираем, потому что игрок сделал нужное первое действие.
+        HideLightOutlineAfterFirstInteraction();
+
+        if (questUIManager != null)
+            questUIManager.HideActiveQuestVisual(questIdToComplete);
 
         sequenceStarted = true;
 
@@ -71,5 +76,45 @@ public class LightSwitch : MonoBehaviour, IInteractable
             inviteDoor.StartInviteDoorSequence();
         else
             Debug.LogWarning("InviteDoor не назначен в LightSwitch");
+    }
+
+    private void HideLightOutlineAfterFirstInteraction()
+    {
+        if (!hideOutlineAfterFirstSuccessfulInteraction)
+            return;
+
+        if (outlineHiddenAfterInteraction)
+            return;
+
+        if (string.IsNullOrEmpty(outlineIdToHideAfterFirstInteraction))
+            return;
+
+        InteractionOutlineRegistry.Hide(outlineIdToHideAfterFirstInteraction);
+        outlineHiddenAfterInteraction = true;
+    }
+
+    private void FindQuestManager()
+    {
+        if (questUIManager == null)
+            questUIManager = QuestUIManager.Instance;
+
+        if (questUIManager == null)
+            questUIManager = FindObjectOfType<QuestUIManager>();
+    }
+
+    // Можно вызвать из QuestWorldStateApplier, если хочешь жёстко сбрасывать свет
+    // при восстановлении active-состояния задания.
+    public void ResetForQuestStart()
+    {
+        sequenceStarted = false;
+        outlineHiddenAfterInteraction = false;
+
+        isOn = false;
+
+        if (roomLight1 != null)
+            roomLight1.enabled = false;
+
+        if (roomLight2 != null)
+            roomLight2.enabled = false;
     }
 }

@@ -9,6 +9,10 @@ public class FirstInteractionHint : MonoBehaviour
     [Header("Fade Settings")]
     public float fadeDuration = 0.5f;    // время появления/исчезновения
 
+    [Header("Hide Input")]
+    public KeyCode hideKey = KeyCode.Z;
+    public float holdDurationToHide = 1f;
+
     private static bool hasBeenShown = false;
     private bool isShowing = false;
 
@@ -44,9 +48,21 @@ public class FirstInteractionHint : MonoBehaviour
         }
         hintCanvasGroup.alpha = 1f;
 
-        // Ждём, пока игрок не кликнет куда-нибудь (любая кнопка мыши)
-        yield return new WaitUntil(() => Input.GetMouseButtonDown(0));
+        // Ждём, пока игрок удержит Z
+        float holdTimer = 0f;
 
+        while (holdTimer < holdDurationToHide)
+        {
+            if (Input.GetKey(hideKey))
+            {
+                holdTimer += Time.deltaTime;
+            }
+            else
+            {
+                holdTimer = 0f;
+            }
+            yield return null;
+        }
         // Начинаем скрытие
         StartCoroutine(HideRoutine());
     }

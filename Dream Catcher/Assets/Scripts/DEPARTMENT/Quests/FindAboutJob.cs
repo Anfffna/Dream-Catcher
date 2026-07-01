@@ -54,7 +54,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (questManager == null)
         {
-            Debug.LogWarning("QuestUIManager not found! Повторная проверка через 2 сек.");
             yield return new WaitForSeconds(2f);
             StartCoroutine(ActivationRoutine());
             yield break;
@@ -68,7 +67,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         }
         else
         {
-            Debug.Log($"Задание {questIdToComplete} ещё не активно, повторная проверка через 2 сек.");
             yield return new WaitForSeconds(2f);
             StartCoroutine(ActivationRoutine());
         }
@@ -89,11 +87,10 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (questManager == null || dialogueManager == null)
         {
-            Debug.LogWarning("QuestManager или DialogueManager не найден!");
             return;
         }
 
-        if (!questManager.IsQuestActive(questIdToComplete))
+        if (!firstDialogueShown && !questManager.IsQuestActive(questIdToComplete))
         {
             Debug.Log($"Задание '{questIdToComplete}' не активно или уже завершено.");
             return;
@@ -110,13 +107,7 @@ public class FindAboutJob : MonoBehaviour, IInteractable
                 dialogueManager.StartDialogue(firstDialogueLines, true);
                 firstDialogueShown = true;
 
-                StartCoroutine(ShowDotAfterDialogue());
-
-                Debug.Log($"Запущен первый диалог для {questIdToComplete}");
-            }
-            else
-            {
-                Debug.LogWarning("Нет реплик для первого диалога!");
+                StartCoroutine(WaitForFirstDialogueAndCompleteQuest()); //первый диалог запущен
             }
         }
         else if (!secondDialogueShown)
@@ -127,12 +118,7 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
                 dialogueManager.StartDialogue(secondDialogueLines, true);
                 secondDialogueShown = true;
-                StartCoroutine(WaitForDialogueAndComplete());
-                Debug.Log($"Запущен второй диалог для {questIdToComplete}");
-            }
-            else
-            {
-                Debug.LogWarning("Нет реплик для второго диалога!");
+                StartCoroutine(WaitForSecondDialogueAndDisableInteraction());
             }
         }
     }
@@ -145,9 +131,9 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         ShowInteractionDot();
     }
 
-    private IEnumerator WaitForDialogueAndComplete()
+    private IEnumerator WaitForFirstDialogueAndCompleteQuest()
     {
-        while (dialogueManager.DialogueActive)
+        while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
 
         ShowInteractionDot();
@@ -156,14 +142,25 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (questManager != null && questManager.IsQuestActive(questIdToComplete))
         {
             questManager.CompleteQuest(questIdToComplete);
-            Debug.Log($"Задание '{questIdToComplete}' завершено после второго диалога.");
+            Debug.Log($"Задание '{questIdToComplete}' завершено после первого диалога.");
         }
+        // ВАЖНО: Не ставим isCompleted = true, чтобы второй необязательный диалог ещё можно было вызвать.
+    }
+
+    private IEnumerator WaitForSecondDialogueAndDisableInteraction()
+    {
+        while (dialogueManager != null && dialogueManager.DialogueActive)
+            yield return null;
+
+        ShowInteractionDot();
 
         isCompleted = true;
         gameObject.layer = defaultLayer;
-        if (objectCollider != null) objectCollider.enabled = false;
 
-        Debug.Log($"Объект {gameObject.name} больше не интерактивен.");
+        if (objectCollider != null)
+            objectCollider.enabled = false;
+
+        Debug.Log($"Второй диалог для {questIdToComplete} завершён. Объект больше не интерактивен.");
     }
 
     private void HideInteractionDot()

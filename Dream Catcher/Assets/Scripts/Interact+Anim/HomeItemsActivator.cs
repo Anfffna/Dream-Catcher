@@ -1,39 +1,111 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 public class HomeItemsActivator : MonoBehaviour
 {
     [Header("Items to Activate")]
-    public GameObject[] itemsToActivate; // сюда перетащи объекты с ItemInteraction и InteractionOutline
+    public GameObject[] itemsToActivate;
+
+    [Header("Layer")]
+    public string interactableLayerName = "Interactable";
 
     public void ActivateItems()
     {
-        foreach (GameObject item in itemsToActivate)
+        int interactableLayer = LayerMask.NameToLayer(interactableLayerName);
+
+        for (int i = 0; i < itemsToActivate.Length; i++)
         {
-            if (item == null) continue;
+            GameObject item = itemsToActivate[i];
 
-            // Меняем слой на Interactable
-            item.layer = LayerMask.NameToLayer("Interactable");
+            if (item == null)
+                continue;
 
-            // Включаем обводку (если есть)
+            item.SetActive(true);
+
+            if (interactableLayer != -1)
+                SetLayerRecursively(item, interactableLayer);
+
+            ItemInteraction interaction = item.GetComponent<ItemInteraction>();
+
+            if (interaction != null)
+                interaction.enabled = true;
+                interaction.RefreshInspectedState();
+
             InteractionOutline outline = item.GetComponent<InteractionOutline>();
-            if (outline != null)
+
+            if (outline == null)
             {
-                outline.ShowOutline();
+                Debug.LogWarning("На объекте " + item.name + " нет InteractionOutline", item);
+                continue;
+            }
+
+            string outlineId = outline.outlineId;
+
+            if (string.IsNullOrEmpty(outlineId))
+            {
+                Debug.LogWarning("На объекте " + item.name + " пустой outlineId", item);
+                continue;
+            }
+
+            if (ItemInteractionState.IsInspected(outlineId))
+            {
+                InteractionOutlineRegistry.Hide(outlineId);
+                outline.HideOutline();
             }
             else
             {
-                // Если нет компонента, можно добавить или просто игнорировать
-                Debug.LogWarning($"На объекте {item.name} нет InteractionOutline", item);
+                InteractionOutlineRegistry.Show(outlineId);
+                outline.ForceRedrawOutline();
+            }
+        }
+    }
+
+    private void SetLayerRecursively(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+
+        for (int i = 0; i < obj.transform.childCount; i++)
+        {
+            Transform child = obj.transform.GetChild(i);
+
+            if (child != null)
+                SetLayerRecursively(child.gameObject, layer);
+        }
+    }
+
+    public void DeactivateItems()
+    {
+        int defaultLayer = LayerMask.NameToLayer("Default");
+
+        for (int i = 0; i < itemsToActivate.Length; i++)
+        {
+            GameObject item = itemsToActivate[i];
+
+            if (item == null)
+                continue;
+
+            InteractionOutline outline = item.GetComponent<InteractionOutline>();
+
+            if (outline != null)
+            {
+                string outlineId = outline.outlineId;
+
+                if (!string.IsNullOrEmpty(outlineId))
+                    InteractionOutlineRegistry.Hide(outlineId);
+
+                outline.HideOutline();
             }
 
-            // Убедимся, что скрипт ItemInteraction есть и включён
             ItemInteraction interaction = item.GetComponent<ItemInteraction>();
+
             if (interaction != null)
-            {
-                interaction.enabled = true;
-                // Можно также передать ссылку на диалог менеджер, если не задан в инспекторе
-            }
+                interaction.enabled = false;
+
+            if (defaultLayer != -1)
+                SetLayerRecursively(item, defaultLayer);
+
+            // Если эти предметы вообще не должны существовать до завершения света,
+            // раскомментируй строку ниже:
+            // item.SetActive(false);
         }
     }
 }

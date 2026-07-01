@@ -407,6 +407,7 @@ MonoBehaviour:
   - {fileID: 1283835375}
   - {fileID: 618421611}
   - {fileID: 2015623538}
+  interactableLayerName: Interactable
 --- !u!4 &68094355
 Transform:
   m_ObjectHideFlags: 0
@@ -436,6 +437,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FirstInteractionHint
   hintCanvasGroup: {fileID: 1387283996}
   fadeDuration: 0.5
+  hideKey: 122
+  holdDurationToHide: 1
 --- !u!1 &76138426
 GameObject:
   m_ObjectHideFlags: 0
@@ -1508,10 +1511,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   playerCamera: {fileID: 1610071385}
   outlineCanvasParent: {fileID: 0}
-  playerCameraObjectName: Player Camera
-  outlineCanvasParentObjectName: Outline Canvas Parent
+  playerCameraObjectName: Camera
+  outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: 
+  outlineId: obj_mailbox
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
@@ -3072,6 +3075,8 @@ MonoBehaviour:
     useCustomColor: 1
     colorHex: '#A997C9'
     clickPauseDelay: 0
+  itemId: obj_poster1
+  hideOutlineAfterFirstInteraction: 1
   autoFindReferences: 1
   dialogueManagerObjectName: DialogueManager
 --- !u!114 &404369623
@@ -3088,10 +3093,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   playerCamera: {fileID: 1610071385}
   outlineCanvasParent: {fileID: 0}
-  playerCameraObjectName: Player Camera
-  outlineCanvasParentObjectName: Outline Canvas Parent
+  playerCameraObjectName: Camera
+  outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: 
+  outlineId: obj_poster1
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
@@ -3480,6 +3485,83 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &487613241
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 487613242}
+  - component: {fileID: 487613243}
+  m_Layer: 0
+  m_Name: MailBox
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &487613242
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 487613241}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1628710552}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &487613243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 487613241}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0c202b95b1393c4b829e425d18d3c1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestWorldStateApplier
+  questId: check_the_mailbox
+  applyOnStart: 1
+  applyOneFrameLater: 1
+  enableWhenNotStarted: []
+  disableWhenNotStarted: []
+  enableBehavioursWhenNotStarted: []
+  disableBehavioursWhenNotStarted: []
+  enableCollidersWhenNotStarted: []
+  disableCollidersWhenNotStarted:
+  - {fileID: 218814372}
+  onNotStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  enableWhenActive: []
+  disableWhenActive: []
+  enableBehavioursWhenActive: []
+  disableBehavioursWhenActive: []
+  enableCollidersWhenActive:
+  - {fileID: 218814372}
+  disableCollidersWhenActive: []
+  onActive:
+    m_PersistentCalls:
+      m_Calls: []
+  enableWhenCompleted: []
+  disableWhenCompleted: []
+  enableBehavioursWhenCompleted: []
+  disableBehavioursWhenCompleted: []
+  enableCollidersWhenCompleted: []
+  disableCollidersWhenCompleted:
+  - {fileID: 218814372}
+  onCompleted:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &491645316
 GameObject:
   m_ObjectHideFlags: 0
@@ -4246,6 +4328,8 @@ MonoBehaviour:
     useCustomColor: 1
     colorHex: '#A997C9'
     clickPauseDelay: 0
+  itemId: obj_mineta
+  hideOutlineAfterFirstInteraction: 1
   autoFindReferences: 1
   dialogueManagerObjectName: DialogueManager
 --- !u!114 &618421617
@@ -4262,10 +4346,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   playerCamera: {fileID: 1610071385}
   outlineCanvasParent: {fileID: 0}
-  playerCameraObjectName: Player Camera
-  outlineCanvasParentObjectName: Outline Canvas Parent
+  playerCameraObjectName: Camera
+  outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: 
+  outlineId: obj_mineta
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 6
@@ -5967,19 +6051,29 @@ MonoBehaviour:
   applyOnStart: 1
   applyOneFrameLater: 1
   enableWhenNotStarted: []
-  disableWhenNotStarted:
-  - {fileID: 68094353}
+  disableWhenNotStarted: []
   enableBehavioursWhenNotStarted: []
   disableBehavioursWhenNotStarted: []
   enableCollidersWhenNotStarted: []
   disableCollidersWhenNotStarted: []
   onNotStarted:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 68094354}
+        m_TargetAssemblyTypeName: HomeItemsActivator, Assembly-CSharp
+        m_MethodName: DeactivateItems
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   enableWhenActive:
   - {fileID: 925543333}
-  disableWhenActive:
-  - {fileID: 68094353}
+  disableWhenActive: []
   enableBehavioursWhenActive: []
   disableBehavioursWhenActive: []
   enableCollidersWhenActive: []
@@ -5999,8 +6093,19 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  enableWhenCompleted:
-  - {fileID: 68094353}
+      - m_Target: {fileID: 68094354}
+        m_TargetAssemblyTypeName: HomeItemsActivator, Assembly-CSharp
+        m_MethodName: DeactivateItems
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  enableWhenCompleted: []
   disableWhenCompleted:
   - {fileID: 925543333}
   enableBehavioursWhenCompleted: []
@@ -6013,6 +6118,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1648375913}
         m_TargetAssemblyTypeName: InviteDoor, Assembly-CSharp
         m_MethodName: ApplyCompletedState
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 68094354}
+        m_TargetAssemblyTypeName: HomeItemsActivator, Assembly-CSharp
+        m_MethodName: ActivateItems
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -7943,6 +8060,8 @@ MonoBehaviour:
     useCustomColor: 1
     colorHex: '#A997C9'
     clickPauseDelay: 0
+  itemId: obj_poster2
+  hideOutlineAfterFirstInteraction: 1
   autoFindReferences: 1
   dialogueManagerObjectName: DialogueManager
 --- !u!114 &1283835381
@@ -7959,10 +8078,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   playerCamera: {fileID: 1610071385}
   outlineCanvasParent: {fileID: 0}
-  playerCameraObjectName: Player Camera
-  outlineCanvasParentObjectName: Outline Canvas Parent
+  playerCameraObjectName: Camera
+  outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: 
+  outlineId: obj_poster2
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
@@ -9540,6 +9659,83 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 218814376}
   m_SourcePrefab: {fileID: 100100000, guid: 7987ae5e709a1304e9214fcde9d47e4d, type: 3}
+--- !u!1 &1416403699
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1416403700}
+  - component: {fileID: 1416403701}
+  m_Layer: 0
+  m_Name: GoToDepart
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1416403700
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1416403699}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1628710552}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1416403701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1416403699}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0c202b95b1393c4b829e425d18d3c1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestWorldStateApplier
+  questId: go_to_depart
+  applyOnStart: 1
+  applyOneFrameLater: 1
+  enableWhenNotStarted: []
+  disableWhenNotStarted: []
+  enableBehavioursWhenNotStarted: []
+  disableBehavioursWhenNotStarted: []
+  enableCollidersWhenNotStarted: []
+  disableCollidersWhenNotStarted:
+  - {fileID: 104509544}
+  onNotStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  enableWhenActive: []
+  disableWhenActive: []
+  enableBehavioursWhenActive: []
+  disableBehavioursWhenActive: []
+  enableCollidersWhenActive:
+  - {fileID: 104509544}
+  disableCollidersWhenActive: []
+  onActive:
+    m_PersistentCalls:
+      m_Calls: []
+  enableWhenCompleted: []
+  disableWhenCompleted: []
+  enableBehavioursWhenCompleted: []
+  disableBehavioursWhenCompleted: []
+  enableCollidersWhenCompleted: []
+  disableCollidersWhenCompleted:
+  - {fileID: 104509544}
+  onCompleted:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1438152070
 GameObject:
   m_ObjectHideFlags: 0
@@ -10443,6 +10639,8 @@ Transform:
   m_Children:
   - {fileID: 857851722}
   - {fileID: 545777758}
+  - {fileID: 487613242}
+  - {fileID: 1416403700}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1648375910
@@ -11723,6 +11921,8 @@ MonoBehaviour:
   roomLight2: {fileID: 319603238}
   questUIManager: {fileID: 0}
   questIdToComplete: turn_on_light
+  outlineIdToHideAfterFirstInteraction: obj_light_switch
+  hideOutlineAfterFirstSuccessfulInteraction: 1
   inviteDoor: {fileID: 1648375913}
   audioSource: {fileID: 1869449992}
 --- !u!65 &1869449986
@@ -11763,7 +11963,7 @@ MonoBehaviour:
   playerCameraObjectName: Camera
   outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: home_light_switch
+  outlineId: obj_light_switch
   outlineColor: {r: 0.74509805, g: 0.83137256, b: 0.6627451, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
@@ -12769,6 +12969,8 @@ MonoBehaviour:
     useCustomColor: 1
     colorHex: '#A997C9'
     clickPauseDelay: 0
+  itemId: obj_check3
+  hideOutlineAfterFirstInteraction: 1
   autoFindReferences: 1
   dialogueManagerObjectName: DialogueManager
 --- !u!114 &2015623542
@@ -12785,10 +12987,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutline
   playerCamera: {fileID: 1610071385}
   outlineCanvasParent: {fileID: 0}
-  playerCameraObjectName: Player Camera
-  outlineCanvasParentObjectName: Outline Canvas Parent
+  playerCameraObjectName: Camera
+  outlineCanvasParentObjectName: InteractionOutlineCanvas
   autoFindReferences: 1
-  outlineId: 
+  outlineId: obj_check3
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0

@@ -111,6 +111,7 @@ public class SaveManager : MonoBehaviour
         save.dateTime = DateTime.Now.ToString("dd.MM.yy / HH:mm");
 
         SaveQuestState(save);
+        SaveItemInteractionState(save);
 
         return true;
     }
@@ -131,8 +132,16 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
-        save.activeQuestIds = questUIManager.GetActiveQuestIds();
-        save.completedQuestIds = questUIManager.GetCompletedQuestIds();
+        save.activeQuestIds = new List<string>(questUIManager.GetActiveQuestIds());
+        save.completedQuestIds = new List<string>(questUIManager.GetCompletedQuestIds());
+    }
+
+    private void SaveItemInteractionState(SaveData save)
+    {
+        if (save == null)
+            return;
+
+        save.inspectedItemIds = ItemInteractionState.GetInspectedItemIds();
     }
 
     public void LoadSave(int index)
@@ -195,6 +204,9 @@ public class SaveManager : MonoBehaviour
 
         // Сначала восстанавливаем квесты и состояние мира,
         // чтобы нужные коллайдеры/объекты уже были в правильном состоянии.
+        InteractionOutlineRegistry.ClearAllVisible();
+        ItemInteractionState.Restore(data.inspectedItemIds);
+
         RestoreQuestState(data);
         QuestWorldStateApplier.ApplyAllInScene();
 
@@ -380,6 +392,9 @@ public class SaveManager : MonoBehaviour
 
         if (save.completedQuestIds == null)
             save.completedQuestIds = new List<string>();
+
+        if (save.inspectedItemIds == null)
+            save.inspectedItemIds = new List<string>();
     }
 
     private SaveData CloneSaveData(SaveData source)
@@ -402,6 +417,7 @@ public class SaveManager : MonoBehaviour
 
         clone.activeQuestIds = new List<string>(source.activeQuestIds);
         clone.completedQuestIds = new List<string>(source.completedQuestIds);
+        clone.inspectedItemIds = new List<string>(source.inspectedItemIds);
 
         return clone;
     }
@@ -424,6 +440,7 @@ public class SaveManager : MonoBehaviour
         // ВАЖНО:
         // Новая игра не должна наследовать задания/обводки от ранее загруженного сейва.
         InteractionOutlineRegistry.ClearAllVisible();
+        ItemInteractionState.Clear();
 
         QuestUIManager questUIManager = QuestUIManager.Instance;
 

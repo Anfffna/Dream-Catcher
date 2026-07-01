@@ -44,6 +44,7 @@ public class QuestUIManager : MonoBehaviour
     }
 
     private SummarySource currentSummarySource = SummarySource.None;
+    private string currentSummaryQuestId = "";
 
     private int completedArchiveQuestCount = 0;
 
@@ -289,6 +290,7 @@ public class QuestUIManager : MonoBehaviour
             return;
 
         currentSummarySource = source;
+        currentSummaryQuestId = quest.questId;
 
         if (summaryDescriptionText != null)
             summaryDescriptionText.text = quest.description;
@@ -297,6 +299,7 @@ public class QuestUIManager : MonoBehaviour
     public void ClearSummary()
     {
         currentSummarySource = SummarySource.None;
+        currentSummaryQuestId = "";
 
         if (summaryDescriptionText != null)
             summaryDescriptionText.text = "";
@@ -350,6 +353,30 @@ public class QuestUIManager : MonoBehaviour
     public List<string> GetCompletedQuestIds()
     {
         return new List<string>(completedQuestIds);
+    }
+
+    public void HideActiveQuestVisual(string questId)
+    {
+        if (string.IsNullOrEmpty(questId))
+            return;
+
+        // Важно: скрываем только активное задание.Completed / Archive / другие задания не трогаем.
+        if (!activeQuestIds.Contains(questId))
+            return;
+
+        if (activeQuestObjects.ContainsKey(questId))
+        {
+            GameObject questObject = activeQuestObjects[questId];
+
+            if (questObject != null)
+                questObject.SetActive(false);
+        }
+
+        // Если сейчас открыто описание именно ЭТОГО активного задания, очищаем описание. Описание других заданий не трогаем.
+        if (currentSummarySource == SummarySource.Active && currentSummaryQuestId == questId)
+        {
+            ClearSummary();
+        }
     }
 
     public void RestoreQuests(List<string> activeIds, List<string> completedIds)

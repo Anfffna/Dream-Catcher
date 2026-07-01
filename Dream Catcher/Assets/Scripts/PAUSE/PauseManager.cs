@@ -23,6 +23,12 @@ public class PauseManager : MonoBehaviour
     public float leftStartX = 0f;
     public float leftTargetX = -382f;
 
+    [Header("Pause Panel Fade")]
+    public CanvasGroup leftPanelCG;
+    public float pausePanelFadeDuration = 0.3f;
+
+    private Coroutine pausePanelFadeCoroutine;
+
     [Header("Key")]
     public KeyCode pauseKey = KeyCode.Escape;
 
@@ -56,8 +62,17 @@ public class PauseManager : MonoBehaviour
     void Start()
     {
         FindReferences();
+        FindLeftPanelCanvasGroup();
 
         leftPanel.gameObject.SetActive(false);
+
+        if (leftPanelCG != null)
+        {
+            leftPanelCG.alpha = 0f;
+            leftPanelCG.interactable = false;
+            leftPanelCG.blocksRaycasts = false;
+        }
+
         SetPanelActive(savePanelCG, false);
         SetPanelActive(downloadPanelCG, false);
         SetPanelActive(settingsPanelCG, false);
@@ -65,7 +80,7 @@ public class PauseManager : MonoBehaviour
         if (blurVolume != null)
         {
             blurVolume.weight = 0f;
-            blurVolume.gameObject.SetActive(true); // всегда активен
+            blurVolume.gameObject.SetActive(true);
             blurVolume.enabled = true;
         }
 
@@ -107,11 +122,17 @@ public class PauseManager : MonoBehaviour
         }
 
         FindReferences();
+        FindLeftPanelCanvasGroup();
 
         if (isPaused) return;
+
         isPaused = true;
+        isTransitioning = true;
+
         Time.timeScale = 0f;
-        if (playerController != null) playerController.canControl = false;
+
+        if (playerController != null)
+            playerController.canControl = false;
 
         // ---- Мгновенно включаем блюр ----
         if (blurVolume != null)
@@ -119,46 +140,54 @@ public class PauseManager : MonoBehaviour
             blurVolume.weight = 1f;
         }
 
-        // ---- Показываем левую панель ----
+        // ---- Показываем левую панель через fade ----
         leftPanel.gameObject.SetActive(true);
         leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
+
         HideRightPanelInstantly();
 
-        // ---- СБРАСЫВАЕМ ВЫДЕЛЕННЫЙ ИНДИКАТОР ПРИ ОТКРЫТИИ ПАУЗЫ ----
+        if (leftPanelCG != null)
+        {
+            leftPanelCG.alpha = 0f;
+            leftPanelCG.interactable = false;
+            leftPanelCG.blocksRaycasts = false;
+        }
+
         IndicatorHover.ResetSelection();
 
-        // ---- Навешиваем события курсора на все кнопки ----
         AddCursorEventsToAllButtons();
 
         CursorCenterHelper.ShowCursorCentered(this, defaultCursor, defaultCursorHotspot);
+
+        if (pausePanelFadeCoroutine != null)
+            StopCoroutine(pausePanelFadeCoroutine);
+
+        pausePanelFadeCoroutine = StartCoroutine(FadePausePanelIn());
     }
 
     public void ResumeGame()
     {
         FindReferences();
+        FindLeftPanelCanvasGroup();
 
         if (!isPaused) return;
-        isPaused = false;
-        Time.timeScale = 1f;
-        if (playerController != null) playerController.canControl = true;
 
-        // ---- Плавно скрываем блюр ----
-        if (blurVolume != null)
-            StartCoroutine(FadeBlur(blurVolume.weight, 0f, blurFadeDuration));
+        if (pausePanelFadeCoroutine != null)
+            StopCoroutine(pausePanelFadeCoroutine);
 
-        // ---- Скрываем панели ----
-        leftPanel.gameObject.SetActive(false);
-        HideRightPanelInstantly();
-
-        // ---- Скрываем курсор ----
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        pausePanelFadeCoroutine = StartCoroutine(FadePausePanelOutAndResume());
     }
 
     public void HidePauseMenuBeforeLoading()
     {
         FindReferences();
+        FindLeftPanelCanvasGroup();
+
+        if (pausePanelFadeCoroutine != null)
+        {
+            StopCoroutine(pausePanelFadeCoroutine);
+            pausePanelFadeCoroutine = null;
+        }
 
         isPaused = false;
         isTransitioning = false;
@@ -170,6 +199,13 @@ public class PauseManager : MonoBehaviour
 
         if (leftPanel != null)
             leftPanel.gameObject.SetActive(false);
+
+        if (leftPanelCG != null)
+        {
+            leftPanelCG.alpha = 0f;
+            leftPanelCG.interactable = false;
+            leftPanelCG.blocksRaycasts = false;
+        }
 
         SetPanelActive(savePanelCG, false);
         SetPanelActive(downloadPanelCG, false);
@@ -196,12 +232,26 @@ public class PauseManager : MonoBehaviour
         Time.timeScale = 1f;
 
         FindReferences();
+        FindLeftPanelCanvasGroup();
+
+        if (pausePanelFadeCoroutine != null)
+        {
+            StopCoroutine(pausePanelFadeCoroutine);
+            pausePanelFadeCoroutine = null;
+        }
 
         if (playerController != null)
             playerController.canControl = true;
 
         if (leftPanel != null)
             leftPanel.gameObject.SetActive(false);
+
+        if (leftPanelCG != null)
+        {
+            leftPanelCG.alpha = 0f;
+            leftPanelCG.interactable = false;
+            leftPanelCG.blocksRaycasts = false;
+        }
 
         SetPanelActive(savePanelCG, false);
         SetPanelActive(downloadPanelCG, false);
@@ -293,6 +343,8 @@ public class PauseManager : MonoBehaviour
 
         panelCG.gameObject.SetActive(true);
         panelCG.alpha = 0f;
+        panelCG.interactable = false;
+        panelCG.blocksRaycasts = false;
 
         Vector2 startLeftPos = leftPanel.anchoredPosition;
         Vector2 targetLeftPos = new Vector2(leftTargetX, startLeftPos.y);
@@ -312,6 +364,8 @@ public class PauseManager : MonoBehaviour
 
         leftPanel.anchoredPosition = targetLeftPos;
         panelCG.alpha = 1f;
+        panelCG.interactable = true;
+        panelCG.blocksRaycasts = true;
         isTransitioning = false;
     }
 
@@ -320,6 +374,9 @@ public class PauseManager : MonoBehaviour
         isTransitioning = true;
         CanvasGroup panelCG = currentRightPanel;
         if (panelCG == null) { isTransitioning = false; yield break; }
+
+        panelCG.interactable = false;
+        panelCG.blocksRaycasts = false;
 
         Vector2 startLeftPos = leftPanel.anchoredPosition;
         Vector2 targetLeftPos = new Vector2(leftStartX, startLeftPos.y);
@@ -340,24 +397,160 @@ public class PauseManager : MonoBehaviour
         leftPanel.anchoredPosition = targetLeftPos;
         panelCG.alpha = 0f;
         panelCG.gameObject.SetActive(false);
+
+        panelCG.interactable = false;
+        panelCG.blocksRaycasts = false;
+
         currentRightPanel = null;
         isTransitioning = false;
     }
 
-    private void HideRightPanelInstantly()
+    private IEnumerator FadePausePanelIn()
+    {
+        float elapsed = 0f;
+
+        if (leftPanelCG == null)
+        {
+            isTransitioning = false;
+            yield break;
+        }
+
+        while (elapsed < pausePanelFadeDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+
+            float t = Mathf.Clamp01(elapsed / pausePanelFadeDuration);
+            float ease = t * t * (3f - 2f * t);
+
+            leftPanelCG.alpha = ease;
+
+            yield return null;
+        }
+
+        leftPanelCG.alpha = 1f;
+        leftPanelCG.interactable = true;
+        leftPanelCG.blocksRaycasts = true;
+
+        isTransitioning = false;
+        pausePanelFadeCoroutine = null;
+    }
+
+    private IEnumerator FadePausePanelOutAndResume()
+    {
+        isTransitioning = true;
+
+        if (leftPanelCG == null)
+        {
+            FinishResumeInstantly();
+            yield break;
+        }
+
+        leftPanelCG.interactable = false;
+        leftPanelCG.blocksRaycasts = false;
+
+        // Запоминаем правую панель, если она была открыта.
+        CanvasGroup rightPanelToFade = currentRightPanel;
+
+        if (rightPanelToFade != null)
+        {
+            rightPanelToFade.interactable = false;
+            rightPanelToFade.blocksRaycasts = false;
+        }
+
+        // Плавно скрываем блюр.
+        if (blurVolume != null)
+            StartCoroutine(FadeBlur(blurVolume.weight, 0f, blurFadeDuration));
+
+        float startLeftAlpha = leftPanelCG.alpha;
+        float startRightAlpha = rightPanelToFade != null ? rightPanelToFade.alpha : 0f;
+
+        float elapsed = 0f;
+
+        while (elapsed < pausePanelFadeDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+
+            float t = Mathf.Clamp01(elapsed / pausePanelFadeDuration);
+            float ease = t * t * (3f - 2f * t);
+
+            leftPanelCG.alpha = Mathf.Lerp(startLeftAlpha, 0f, ease);
+
+            if (rightPanelToFade != null)
+                rightPanelToFade.alpha = Mathf.Lerp(startRightAlpha, 0f, ease);
+
+            yield return null;
+        }
+
+        leftPanelCG.alpha = 0f;
+
+        if (rightPanelToFade != null)
+        {
+            rightPanelToFade.alpha = 0f;
+            rightPanelToFade.gameObject.SetActive(false);
+        }
+
+        currentRightPanel = null;
+
+        if (leftPanel != null)
+        {
+            leftPanel.gameObject.SetActive(false);
+
+            // ВАЖНО:
+            // возвращаем в центр только ПОСЛЕ скрытия,
+            // поэтому игрок не увидит обратный сдвиг.
+            leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
+        }
+
+        FinishResumeInstantly();
+    }
+
+    private void FinishResumeInstantly()
+    {
+        isPaused = false;
+        isTransitioning = false;
+
+        Time.timeScale = 1f;
+
+        if (playerController != null)
+            playerController.canControl = true;
+
+        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
+        pausePanelFadeCoroutine = null;
+    }
+
+    private void FindLeftPanelCanvasGroup()
+    {
+        if (leftPanelCG != null)
+            return;
+
+        if (leftPanel != null)
+            leftPanelCG = leftPanel.GetComponent<CanvasGroup>();
+    }
+
+    private void HideRightPanelInstantly(bool resetLeftPanelPosition = true)
     {
         SetPanelActive(savePanelCG, false);
         SetPanelActive(downloadPanelCG, false);
         SetPanelActive(settingsPanelCG, false);
+
         currentRightPanel = null;
-        leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
+
+        if (resetLeftPanelPosition && leftPanel != null)
+            leftPanel.anchoredPosition = new Vector2(leftStartX, leftPanel.anchoredPosition.y);
     }
 
     private void SetPanelActive(CanvasGroup cg, bool active)
     {
-        if (cg == null) return;
+        if (cg == null)
+            return;
+
         cg.gameObject.SetActive(active);
         cg.alpha = active ? 1f : 0f;
+        cg.interactable = active;
+        cg.blocksRaycasts = active;
     }
 
     private IEnumerator FadeBlur(float from, float to, float duration)

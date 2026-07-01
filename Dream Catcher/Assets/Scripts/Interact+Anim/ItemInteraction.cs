@@ -9,47 +9,125 @@ public class ItemInteraction : MonoBehaviour, IInteractable
     public DialogueManager dialogueManager;
     public List<DialogueManager.DialogueLine> dialogueLines;
 
+    [Header("One Time Outline")]
+    [Tooltip("Уникальный ID предмета. Если пустой, будет взят outlineId из InteractionOutline.")]
+    public string itemId;
+
+    public bool hideOutlineAfterFirstInteraction = true;
+
     [Header("Auto Find")]
     public bool autoFindReferences = true;
     public string dialogueManagerObjectName = "DialogueManager";
 
     private InteractionOutline outline;
-    private bool outlineHidden = false;
+    private bool wasInspected = false;
     private static FirstInteractionHint hintManager;
 
     void Start()
     {
         outline = GetComponent<InteractionOutline>();
 
+        ResolveItemId();
         FindReferences();
 
         if (hintManager == null)
             hintManager = FindObjectOfType<FirstInteractionHint>();
+
+        RefreshInspectedState();
     }
 
     public void Interact()
     {
         FindReferences();
+        ResolveItemId();
 
         if (dialogueManager != null && dialogueLines != null && dialogueLines.Count > 0)
         {
             // Запускаем диалог
             dialogueManager.StartDialogue(dialogueLines);
 
-            // Скрываем обводку при первом взаимодействии
-            if (!outlineHidden && outline != null)
-            {
-                outline.HideOutline();
-                outlineHidden = true;
-            }
+            // Помечаем предмет как осмотренный и скрываем обводку.
+            MarkItemInspectedOnce();
 
             // Запускаем ожидание окончания диалога, затем показываем подсказку
             StartCoroutine(ShowHintAfterDialogue());
         }
         else
         {
-            Debug.LogWarning($"На {gameObject.name} не заданы диалоговые строки или DialogueManager", this);
+            Debug.LogWarning("На " + gameObject.name + " не заданы диалоговые строки или DialogueManager", this);
         }
+    }
+
+    public void RefreshInspectedState()
+    {
+        ResolveItemId();
+
+        if (string.IsNullOrEmpty(itemId))
+            return;
+
+        wasInspected = ItemInteractionState.IsInspected(itemId);
+
+        if (wasInspected && hideOutlineAfterFirstInteraction)
+            HideItemOutline();
+    }
+
+    private void MarkItemInspectedOnce()
+    {
+        ResolveItemId();
+
+        if (string.IsNullOrEmpty(itemId))
+        {
+            Debug.LogWarning("ItemInteraction: itemId пустой на объекте " + gameObject.name, this);
+            return;
+        }
+
+        // Если предмет уже был осмотрен в сохранении — просто синхронизируем локальное состояние.
+        if (ItemInteractionState.IsInspected(itemId))
+        {
+            wasInspected = true;
+
+            if (hideOutlineAfterFirstInteraction)
+                HideItemOutline();
+
+            return;
+        }
+
+        if (wasInspected)
+            return;
+
+        wasInspected = true;
+        ItemInteractionState.MarkInspected(itemId);
+
+        if (hideOutlineAfterFirstInteraction)
+            HideItemOutline();
+    }
+
+    private void HideItemOutline()
+    {
+        string outlineId = GetOutlineId();
+
+        if (!string.IsNullOrEmpty(outlineId))
+            InteractionOutlineRegistry.Hide(outlineId);
+
+        if (outline != null)
+            outline.HideOutline();
+    }
+
+    private string GetOutlineId()
+    {
+        if (outline != null && !string.IsNullOrEmpty(outline.outlineId))
+            return outline.outlineId;
+
+        return itemId;
+    }
+
+    private void ResolveItemId()
+    {
+        if (outline == null)
+            outline = GetComponent<InteractionOutline>();
+
+        if (string.IsNullOrEmpty(itemId) && outline != null)
+            itemId = outline.outlineId;
     }
 
     private IEnumerator ShowHintAfterDialogue()
