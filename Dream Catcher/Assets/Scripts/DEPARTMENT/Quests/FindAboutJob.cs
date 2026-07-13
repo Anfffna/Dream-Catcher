@@ -8,6 +8,7 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 {
     [Header("Quest Settings")]
     public string questIdToComplete = "find_about_job";
+    public string questIdToAddAfterSecondDialogue = "find_workplace";
 
     [Header("Activation")]
     public float activationDelay = 2f;
@@ -404,9 +405,9 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         }
 
         keysWorldObject.localScale = keysWorldOriginalLocalScale;
-        SetObjectCollidersEnabled(keysWorldObject.gameObject, true);
+        SetObjectCollidersEnabled(keysWorldObject.gameObject, false);
 
-        Debug.Log("Ключи исчезли из руки и появились в мире.");
+        Debug.Log("Ключи исчезли из руки и появились в мире, но пока не интерактивны.");
     }
 
     private bool IsAnimatorState(AnimatorStateInfo info, string stateName, int stateHash)
@@ -556,7 +557,15 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
 
-        ShowInteractionDot();
+        HideInteractionDot();
+
+        FindReferences();
+
+        if (questManager != null && !string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
+        {
+            questManager.AddQuest(questIdToAddAfterSecondDialogue);
+            Debug.Log($"Добавлено новое задание: {questIdToAddAfterSecondDialogue}");
+        }
 
         isCompleted = true;
         gameObject.layer = defaultLayer;

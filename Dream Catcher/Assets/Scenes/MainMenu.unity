@@ -4019,8 +4019,26 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: quests.Array.data[0].tag
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[5].title
+      value: "\u041D\u0430\u0439\u0442\u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0435
+        \u043C\u0435\u0441\u0442\u043E"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[5].questId
+      value: find_workplace
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[5].description
+      value: "\u041D\u0435\u0443\u0436\u0435\u043B\u0438 \u0432\u0441\u0435 \u0442\u0430\u043A
+        \u043F\u0440\u043E\u0441\u0442\u043E.."
       objectReference: {fileID: 0}
     - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: quests.Array.data[2].outlineIds.Array.size

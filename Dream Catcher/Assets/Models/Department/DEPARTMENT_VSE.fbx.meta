@@ -1,0 +1,350 @@
+fileFormatVersion: 2
+guid: bfb0f2027c2696f41ad2adf06fd792e8
+ModelImporter:
+  serializedVersion: 24200
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_01
+    second: {fileID: 2100000, guid: 305a1ec35d89fae4187d268a5f4de967, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_02
+    second: {fileID: 2100000, guid: 177df7050bd08a942ba8b76d7272b4a8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Aluminum_body1
+    second: {fileID: 2100000, guid: 00f07cd1b4cc4554da3fc6699b787424, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Antique_Light_Switch_Type_B_Brass1
+    second: {fileID: 2100000, guid: 1d64602c74f10334d94c89438221660e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Antique_Light_Switch_Type_B_Metallic1
+    second: {fileID: 2100000, guid: 2760173e12360e54dafec13cddd754f6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Bench_66_Material
+    second: {fileID: 2100000, guid: 2ba12973fa20fcc41864eeea745de06c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Black 1
+    second: {fileID: 2100000, guid: c93424eb8fc93934dbc8b5fa76a05674, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Black 2
+    second: {fileID: 2100000, guid: 0d191e32bd8f0e148938c9cfaea69031, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Body
+    second: {fileID: 2100000, guid: 9da3ee8a7a6acc841a85acd7ed4e37f7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Books
+    second: {fileID: 2100000, guid: 9eb8af3ea7e808845a3801901509733f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Chair
+    second: {fileID: 2100000, guid: 90bef1bb4a0373341899d89a707f7670, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_D1
+    second: {fileID: 2100000, guid: 35c3fae31aaa45645b2977675dc629a7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_DefaultMaterial1
+    second: {fileID: 2100000, guid: 82b4799ceb99e494cacca007f4f7bff5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Glass
+    second: {fileID: 2100000, guid: fc9a49994c886a441a073cc3aae5094c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Gold
+    second: {fileID: 2100000, guid: 35da84cd7d1a7e74190a811608575d29, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_MI_Lockers
+    second: {fileID: 2100000, guid: 51e82266c7a241a4ab2caed89edcab3a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Material.003
+    second: {fileID: 2100000, guid: cb3e4ab01069acf4aa6d33638d881371, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Plant A
+    second: {fileID: 2100000, guid: 459ba87b19d50f0459f1be41f6d33aef, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Pot A
+    second: {fileID: 2100000, guid: 140865a2a42521844be1fdab4980941a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Shelf
+    second: {fileID: 2100000, guid: d45d6de4d25609d4e913812bc38f9196, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_Wood_Plywood_Knots1
+    second: {fileID: 2100000, guid: 848adc4f5faa72f4baf423c0b8b44404, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament__4
+    second: {fileID: 2100000, guid: 648ae31908c7d7840a9698a37f16379f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament__5
+    second: {fileID: 2100000, guid: 567608003108aac4d9cf1a4f3561c705, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament__6
+    second: {fileID: 2100000, guid: ea93a9c5bd48fc0419503a7d04c3c108, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_blinn1
+    second: {fileID: 2100000, guid: d5464eedfac7e2f409f55172bd79bdfc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_blinn2
+    second: {fileID: 2100000, guid: 96a176cb053c6b74c843bb3afe7ef7bd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_blinn3
+    second: {fileID: 2100000, guid: b998ed03dd693964f8efb391613cc6af, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_blinn4
+    second: {fileID: 2100000, guid: fefdd16ef01c2fc4fae75b1be11cb321, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_blinn5
+    second: {fileID: 2100000, guid: d26d0cac778dcaa40846618723d9017a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_desk_initialShadingGroup1
+    second: {fileID: 2100000, guid: 2f2115a6f37816c46a1d88d1b5409503, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert10
+    second: {fileID: 2100000, guid: 19cd919b61b0c9a4080cbb95799aaa40, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert11
+    second: {fileID: 2100000, guid: 92ac340d527681f47aa4e3fdc70e68d0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert12
+    second: {fileID: 2100000, guid: 83aee259b5851524085cd3a97ad0068c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert4
+    second: {fileID: 2100000, guid: 2dbb0f3fe62531b45b6aeb6ca941af62, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert5
+    second: {fileID: 2100000, guid: 2cec1b8cd9a01e24890ee428701f1274, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert6
+    second: {fileID: 2100000, guid: 848b444488faf6c4b895c4e3b21a4504, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_lambert7
+    second: {fileID: 2100000, guid: 25fe1089ce92ea5429db53d4ec25be4f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_mat0
+    second: {fileID: 2100000, guid: a84264655af3f4f4093276555e97408c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_metal1
+    second: {fileID: 2100000, guid: bf4ceed1e35668e44847f07145314ef8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_metall
+    second: {fileID: 2100000, guid: 3030134e91a66554c925c0c43b8027be, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_phong1
+    second: {fileID: 2100000, guid: 708ac0f2965da384c82438eb9bca94cd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_phongE1
+    second: {fileID: 2100000, guid: ff516d43a6c4d544dbe29f9e43e12d14, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_plant_001
+    second: {fileID: 2100000, guid: 84ae7fc8c3289d04bab7c74d920f4210, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_plastic3_2
+    second: {fileID: 2100000, guid: 77495aa4197075c4e90c412cabbd51e7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_plasticBench.001
+    second: {fileID: 2100000, guid: cb1afb5e306681e46a10ceff28f9d157, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_screen1
+    second: {fileID: 2100000, guid: 1052c5703d8ff924391073f3afc479a7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_soil A
+    second: {fileID: 2100000, guid: 968af16788892b94d84e3ac713f408b2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gotovi_departament_tkan
+    second: {fileID: 2100000, guid: 4faf59c24a36f2d49bc31f8fdc6a85d8, type: 2}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

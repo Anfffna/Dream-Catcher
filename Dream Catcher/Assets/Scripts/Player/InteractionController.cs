@@ -88,6 +88,7 @@ public class InteractionController : MonoBehaviour
 
         if (interactionDot != null)
         {
+            interactionDot.enabled = false;
             interactionDot.gameObject.SetActive(false);
             interactionDot.color = defaultDotColor;
         }
@@ -127,6 +128,8 @@ public class InteractionController : MonoBehaviour
                 if (interactionDot != null)
                 {
                     interactionDot.gameObject.SetActive(true);
+                    interactionDot.enabled = true;
+
                     Color dotColor = GetDotColorForObject(hit.collider.gameObject);
                     interactionDot.color = dotColor;
                 }
