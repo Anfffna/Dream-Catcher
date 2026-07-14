@@ -198,17 +198,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         // После полного окончания первого диалога запускаем анимацию GivesKey
         TriggerGivesKeyAnimation();
-
-        FindReferences();
-
-        if (questManager != null && questManager.IsQuestActive(questIdToComplete))
-        {
-            questManager.CompleteQuest(questIdToComplete);
-            Debug.Log($"Задание '{questIdToComplete}' завершено после первого диалога.");
-        }
-
-        // ВАЖНО: второй диалог разблокируется не здесь,
-        // а только после полного завершения GivesKeySequence().
     }
 
     private void TriggerGivesKeyAnimation()
@@ -276,6 +265,9 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (keysInHandObject != null && hideKeysOnStart)
             keysInHandObject.SetActive(false);
 
+        if (ShouldNotHideWorldKeysOnStart())
+            return;
+
         if (keysWorldObject != null)
         {
             keysWorldOriginalLocalScale = keysWorldObject.localScale;
@@ -288,6 +280,25 @@ public class FindAboutJob : MonoBehaviour, IInteractable
                 SetObjectCollidersEnabled(keysWorldObject.gameObject, false);
             }
         }
+    }
+
+    private bool ShouldNotHideWorldKeysOnStart()
+    {
+        FindReferences();
+
+        if (questManager == null)
+            return false;
+
+        if (string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
+            return false;
+
+        if (questManager.IsQuestActive(questIdToAddAfterSecondDialogue))
+            return true;
+
+        if (questManager.IsQuestCompleted(questIdToAddAfterSecondDialogue))
+            return true;
+
+        return false;
     }
 
     private void StartKeysTransferCoroutine()
@@ -560,6 +571,15 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         HideInteractionDot();
 
         FindReferences();
+
+        if (questManager != null && !string.IsNullOrEmpty(questIdToComplete))
+        {
+            if (questManager.IsQuestActive(questIdToComplete))
+            {
+                questManager.CompleteQuest(questIdToComplete);
+                Debug.Log($"Задание '{questIdToComplete}' завершено после второго диалога.");
+            }
+        }
 
         if (questManager != null && !string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
         {
