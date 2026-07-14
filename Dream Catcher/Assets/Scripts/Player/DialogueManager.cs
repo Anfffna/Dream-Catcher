@@ -107,7 +107,7 @@ public class DialogueManager : MonoBehaviour
         if (blockMovementForCurrentDialogue && playerController != null)
         {
             originalCanMoveState = playerController.canMove;
-            playerController.canMove = false;
+            playerController.SetMovementEnabled(false);
             wasMovementLocked = true;
         }
 
@@ -257,7 +257,7 @@ public class DialogueManager : MonoBehaviour
 
         if (wasMovementLocked && playerController != null)
         {
-            playerController.canMove = originalCanMoveState;
+            playerController.SetMovementEnabled(originalCanMoveState);
             wasMovementLocked = false;
         }
         blockMovementForCurrentDialogue = false;

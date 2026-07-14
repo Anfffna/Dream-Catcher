@@ -74,7 +74,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f852dd39718e4fb488187a4802b834d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  walkSpeed: 1.5
+  walkSpeed: 1.6
   runSpeed: 2.5
   gravity: -9.81
   cameraTransform: {fileID: 4339383670072154271}

@@ -92,6 +92,19 @@ public class PlayerController : MonoBehaviour
         firstControlFrame = true;
     }
 
+    public void SetMovementEnabled(bool enabled)
+    {
+        canMove = enabled;
+
+        if (!enabled)
+        {
+            velocity = Vector3.zero;
+
+            if (footstepSource != null && footstepSource.isPlaying)
+                footstepSource.Stop();
+        }
+    }
+
     public void ResetMovementAfterTeleport()
     {
         velocity = Vector3.zero;
@@ -153,6 +166,16 @@ public class PlayerController : MonoBehaviour
         if (footstepSource == null)
             return;
 
+        // ≈сли управление или движение отключено,
+        // звуки шагов не должны воспроизводитьс€.
+        if (!canControl || !canMove || controller == null || !controller.enabled)
+        {
+            if (footstepSource.isPlaying)
+                footstepSource.Stop();
+
+            return;
+        }
+
         bool isMoving =
             Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f ||
             Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.1f;
@@ -170,8 +193,9 @@ public class PlayerController : MonoBehaviour
         }
 
         AudioClip targetClip = isRunning ? runClip : walkClip;
-        footstepSource.volume =
-            isRunning ? runVolume : walkVolume;
+        float targetVolume = isRunning ? runVolume : walkVolume;
+
+        footstepSource.volume = targetVolume;
 
         if (footstepSource.clip != targetClip)
         {
@@ -180,14 +204,10 @@ public class PlayerController : MonoBehaviour
             footstepSource.loop = true;
             footstepSource.Play();
         }
-
         else if (!footstepSource.isPlaying)
         {
             footstepSource.loop = true;
             footstepSource.Play();
         }
-
-        footstepSource.volume =
-            isRunning ? runVolume : walkVolume;
     }
 }

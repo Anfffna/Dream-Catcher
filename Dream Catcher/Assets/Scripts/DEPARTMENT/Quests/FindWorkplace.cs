@@ -1,16 +1,18 @@
 using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 
 public class FindWorkplace : MonoBehaviour, IInteractable
 {
     [Header("Quest Settings")]
     public QuestUIManager questUIManager;
     public string questId = "find_workplace";
-    public string nextQuestId = "";
+
+    [Header("Turnstile")]
+    public WorkplaceTurnstile workplaceTurnstile;
+    public bool autoFindTurnstileIfMissing = true;
 
     [Header("Auto Find")]
-    public bool autoFindReferences = true;
+    public bool autoFindQuestUIManager = true;
     public string questUIManagerObjectName = "QuestUIManager";
 
     [Header("Pickup")]
@@ -20,11 +22,16 @@ public class FindWorkplace : MonoBehaviour, IInteractable
     [Header("Audio")]
     public AudioSource audioSource;
 
+    [Header("Save State Marker")]
+    public string keysTakenMarkerQuestId = "workplace_keys_taken";
+    public bool completeKeysTakenMarkerImmediately = true;
+
     [Header("Layer")]
     public bool setLayerRecursively = true;
 
     private bool isAvailable = false;
     private bool isPickedUp = false;
+    private bool pickupRoutineStarted = false;
 
     private int defaultLayer;
     private int interactableLayer;
@@ -45,20 +52,20 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         allColliders = GetComponentsInChildren<Collider>(true);
         allRenderers = GetComponentsInChildren<Renderer>(true);
 
-        // До старта квеста ключи могут быть видимыми,
-        // но они не должны быть интерактивными.
         DisableInteractionOnly();
     }
 
     void Update()
     {
-        if (questUIManager == null)
+        if (questUIManager == null || workplaceTurnstile == null)
             FindReferences();
 
         if (isPickedUp)
             return;
 
-        if (!isAvailable && questUIManager != null && questUIManager.IsQuestActive(questId))
+        if (!isAvailable &&
+            questUIManager != null &&
+            questUIManager.IsQuestActive(questId))
         {
             EnableKeysInteraction();
         }
@@ -66,8 +73,10 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (!isAvailable || isPickedUp)
+        if (!isAvailable || isPickedUp || pickupRoutineStarted)
             return;
+
+        pickupRoutineStarted = true;
 
         if (audioSource != null)
             audioSource.Play();
@@ -131,20 +140,45 @@ public class FindWorkplace : MonoBehaviour, IInteractable
             }
         }
 
-        FindReferences();
-
-        if (questUIManager != null)
+        if (workplaceTurnstile != null)
         {
-            questUIManager.CompleteQuest(questId);
-
-            if (!string.IsNullOrEmpty(nextQuestId))
-                questUIManager.AddQuest(nextQuestId);
+            workplaceTurnstile.UnlockTurnstile();
+            Debug.Log("Ключи подобраны. Турникет разблокирован. Задание пока НЕ завершено.");
+            MarkKeysAsTakenForSave();
+        }
+       
+        else
+        {
+            Debug.LogWarning("Ключи подобраны, но WorkplaceTurnstile не назначен.");
         }
 
         if (deactivateAfterPickup)
             gameObject.SetActive(false);
+    }
 
-        Debug.Log($"Ключи подобраны. Задание завершено: {questId}");
+    private void MarkKeysAsTakenForSave()
+    {
+        FindReferences();
+
+        if (questUIManager == null)
+            return;
+
+        if (string.IsNullOrEmpty(keysTakenMarkerQuestId))
+            return;
+
+        if (!questUIManager.IsQuestActive(keysTakenMarkerQuestId) &&
+            !questUIManager.IsQuestCompleted(keysTakenMarkerQuestId))
+        {
+            questUIManager.AddQuest(keysTakenMarkerQuestId);
+        }
+
+        if (completeKeysTakenMarkerImmediately &&
+            !questUIManager.IsQuestCompleted(keysTakenMarkerQuestId))
+        {
+            questUIManager.CompleteQuest(keysTakenMarkerQuestId);
+        }
+
+        Debug.Log($"Маркер подобранных ключей записан: {keysTakenMarkerQuestId}");
     }
 
     private void SetCollidersEnabled(bool enabled)
@@ -182,21 +216,24 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     private void FindReferences()
     {
-        if (!autoFindReferences)
-            return;
-
-        if (questUIManager == null)
-            questUIManager = QuestUIManager.Instance;
-
-        if (questUIManager == null)
+        if (autoFindQuestUIManager)
         {
-            GameObject obj = GameObject.Find(questUIManagerObjectName);
+            if (questUIManager == null)
+                questUIManager = QuestUIManager.Instance;
 
-            if (obj != null)
-                questUIManager = obj.GetComponent<QuestUIManager>();
+            if (questUIManager == null)
+            {
+                GameObject obj = GameObject.Find(questUIManagerObjectName);
+
+                if (obj != null)
+                    questUIManager = obj.GetComponent<QuestUIManager>();
+            }
+
+            if (questUIManager == null)
+                questUIManager = FindObjectOfType<QuestUIManager>();
         }
 
-        if (questUIManager == null)
-            questUIManager = FindObjectOfType<QuestUIManager>();
+        if (autoFindTurnstileIfMissing && workplaceTurnstile == null)
+            workplaceTurnstile = FindObjectOfType<WorkplaceTurnstile>();
     }
 }

@@ -119,21 +119,9 @@ public class InviteDoor : MonoBehaviour
     private IEnumerator DialogueThenClose()
     {
         FindReferences();
-        // Отключаем звуки шагов перед блокировкой движения
-        if (playerController != null && playerController.footstepSource != null)
-        {
-            playerController.footstepSource.Stop();          // остановить, если играет
-            playerController.footstepSource.enabled = false; // отключить источник
-        }
 
         dialogueManager.StartDialogue(workerLines, true);   // движение заблокировано
         yield return new WaitUntil(() => dialogueManager.DialogueActive == false);
-
-        // Включаем звуки шагов обратно
-        if (playerController != null && playerController.footstepSource != null)
-        {
-            playerController.footstepSource.enabled = true;
-        }
 
         // Закрываем дверь
         if (doorInteractable != null)

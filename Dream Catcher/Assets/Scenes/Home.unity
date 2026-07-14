@@ -1372,7 +1372,7 @@ Light:
   m_InnerSpotAngle: 53.51077
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -1539,7 +1539,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -2095,7 +2095,7 @@ Light:
   m_InnerSpotAngle: 53.51077
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -2436,7 +2436,7 @@ Light:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 319603233}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 0.9411765, g: 0.81960785, b: 0.3882353, a: 1}
@@ -3101,7 +3101,7 @@ Light:
   m_InnerSpotAngle: 53.51077
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -3849,7 +3849,7 @@ Light:
   m_InnerSpotAngle: 53.51077
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -10999,6 +10999,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1589497245}
   m_Mesh: {fileID: 5352174215070181648, guid: a849213af34ec8a4e91b6dd7d26aee26, type: 3}
+--- !u!1 &1592036757
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1592036759}
+  - component: {fileID: 1592036758}
+  m_Layer: 0
+  m_Name: SceneSpeedPlayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1592036758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1592036757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0450810cd0dfcba4790883f6a99702bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScenePlayerSettings
+  walkSpeed: 1.6
+  runSpeed: 2.5
+  applyOnStart: 1
+  waitFramesBeforeApply: 3
+--- !u!4 &1592036759
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1592036757}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 16.98439, y: 0.17754, z: -15.67609}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &1610071385 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 2627596078083935626, guid: 6ed13682f74e7b841ae24ff4369b5949, type: 3}
@@ -15343,6 +15391,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 2953759041800383813, guid: 6ed13682f74e7b841ae24ff4369b5949, type: 3}
+      propertyPath: walkSpeed
+      value: 1.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5604219203304315727, guid: 6ed13682f74e7b841ae24ff4369b5949, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -15772,6 +15828,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 330585546}
   - {fileID: 410087041}
+  - {fileID: 1592036759}
   - {fileID: 8038454658605907632}
   - {fileID: 395025381}
   - {fileID: 1114284479}

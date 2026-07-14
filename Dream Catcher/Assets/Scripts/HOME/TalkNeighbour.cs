@@ -35,7 +35,7 @@ public class TalkNeighbour : MonoBehaviour, IInteractable
         {
             HideInteractionDot();
 
-            dialogueManager.StartDialogue(dialogueLines);
+            dialogueManager.StartDialogue(dialogueLines, true);
             StartCoroutine(AfterDialogue());
         }
         else
