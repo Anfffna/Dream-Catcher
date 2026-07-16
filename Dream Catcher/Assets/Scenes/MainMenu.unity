@@ -4018,6 +4018,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4204706470492720578, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: selectedIndex
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4204706470492720578, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: testQuestIds.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 4204706470492720578, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: 'testQuestIds.Array.data[5]'
+      value: find_workplace
+      objectReference: {fileID: 0}
     - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: quests.Array.size
       value: 6

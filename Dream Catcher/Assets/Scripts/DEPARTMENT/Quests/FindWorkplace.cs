@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class FindWorkplace : MonoBehaviour, IInteractable
 {
@@ -11,9 +12,22 @@ public class FindWorkplace : MonoBehaviour, IInteractable
     public WorkplaceTurnstile workplaceTurnstile;
     public bool autoFindTurnstileIfMissing = true;
 
+    [Header("Completion Trigger")]
+    public Collider completionTrigger;
+    public bool completeOnlyAfterKeysTaken = true;
+    public bool completeQuestImmediatelyOnTrigger = true;
+    public string playerTag = "Player";
+
+    [Header("Completion Dialogue")]
+    public DialogueManager dialogueManager;
+    public List<DialogueManager.DialogueLine> completionDialogueLines = new List<DialogueManager.DialogueLine>();
+    public bool blockMovementDuringCompletionDialogue = true;
+
     [Header("Auto Find")]
     public bool autoFindQuestUIManager = true;
     public string questUIManagerObjectName = "QuestUIManager";
+    public bool autoFindDialogueManager = true;
+    public string dialogueManagerObjectName = "DialogueManager";
 
     [Header("Pickup")]
     public float disappearDuration = 0.4f;
@@ -32,6 +46,7 @@ public class FindWorkplace : MonoBehaviour, IInteractable
     private bool isAvailable = false;
     private bool isPickedUp = false;
     private bool pickupRoutineStarted = false;
+    private bool completionStarted = false;
 
     private int defaultLayer;
     private int interactableLayer;
@@ -52,12 +67,14 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         allColliders = GetComponentsInChildren<Collider>(true);
         allRenderers = GetComponentsInChildren<Renderer>(true);
 
+        SetupCompletionTrigger();
         DisableInteractionOnly();
+        KeepCompletionTriggerNonInteractive();
     }
 
     void Update()
     {
-        if (questUIManager == null || workplaceTurnstile == null)
+        if (questUIManager == null || workplaceTurnstile == null || dialogueManager == null)
             FindReferences();
 
         if (isPickedUp)
@@ -84,12 +101,107 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         StartCoroutine(PickupRoutine());
     }
 
+    public void HandleCompletionTriggerEnter(Collider other)
+    {
+        if (completionStarted)
+            return;
+
+        if (other == null)
+            return;
+
+        if (!IsPlayer(other))
+            return;
+
+        if (questUIManager == null)
+            FindReferences();
+
+        if (questUIManager == null)
+            return;
+
+        if (!questUIManager.IsQuestActive(questId))
+            return;
+
+        if (completeOnlyAfterKeysTaken && !AreKeysTaken())
+            return;
+
+        completionStarted = true;
+
+        StartCoroutine(CompleteWorkplaceRoutine());
+    }
+
+    private IEnumerator CompleteWorkplaceRoutine()
+    {
+        FindReferences();
+
+        if (completeQuestImmediatelyOnTrigger)
+            CompleteWorkplaceQuest();
+
+        if (dialogueManager != null &&
+            completionDialogueLines != null &&
+            completionDialogueLines.Count > 0)
+        {
+            dialogueManager.StartDialogue(completionDialogueLines, blockMovementDuringCompletionDialogue);
+
+            while (dialogueManager != null && dialogueManager.DialogueActive)
+                yield return null;
+        }
+
+        if (!completeQuestImmediatelyOnTrigger)
+            CompleteWorkplaceQuest();
+
+        if (completionTrigger != null)
+            completionTrigger.enabled = false;
+    }
+
+    private void CompleteWorkplaceQuest()
+    {
+        FindReferences();
+
+        if (questUIManager == null)
+            return;
+
+        if (!string.IsNullOrEmpty(questId) && questUIManager.IsQuestActive(questId))
+        {
+            questUIManager.CompleteQuest(questId);
+            Debug.Log($"Задание '{questId}' завершено после входа в зону рабочего места.");
+        }
+    }
+
+    private bool AreKeysTaken()
+    {
+        if (questUIManager == null)
+            return false;
+
+        if (string.IsNullOrEmpty(keysTakenMarkerQuestId))
+            return isPickedUp;
+
+        if (questUIManager.IsQuestActive(keysTakenMarkerQuestId))
+            return true;
+
+        if (questUIManager.IsQuestCompleted(keysTakenMarkerQuestId))
+            return true;
+
+        return isPickedUp;
+    }
+
+    private bool IsPlayer(Collider other)
+    {
+        if (other.CompareTag(playerTag))
+            return true;
+
+        if (other.transform.root != null && other.transform.root.CompareTag(playerTag))
+            return true;
+
+        return false;
+    }
+
     private void EnableKeysInteraction()
     {
         isAvailable = true;
 
         SetLayer(interactableLayer);
         SetCollidersEnabled(true);
+        KeepCompletionTriggerNonInteractive();
 
         Debug.Log($"Ключи активированы для задания: {questId}");
     }
@@ -146,7 +258,6 @@ public class FindWorkplace : MonoBehaviour, IInteractable
             Debug.Log("Ключи подобраны. Турникет разблокирован. Задание пока НЕ завершено.");
             MarkKeysAsTakenForSave();
         }
-       
         else
         {
             Debug.LogWarning("Ключи подобраны, но WorkplaceTurnstile не назначен.");
@@ -181,6 +292,57 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         Debug.Log($"Маркер подобранных ключей записан: {keysTakenMarkerQuestId}");
     }
 
+    private void SetupCompletionTrigger()
+    {
+        if (completionTrigger == null)
+            return;
+
+        completionTrigger.enabled = true;
+        completionTrigger.isTrigger = true;
+
+        KeepCompletionTriggerNonInteractive();
+
+        FindWorkplaceCompletionTriggerProxy proxy =
+            completionTrigger.GetComponent<FindWorkplaceCompletionTriggerProxy>();
+
+        if (proxy == null)
+            proxy = completionTrigger.gameObject.AddComponent<FindWorkplaceCompletionTriggerProxy>();
+
+        proxy.owner = this;
+
+        Rigidbody rb = completionTrigger.GetComponent<Rigidbody>();
+
+        if (rb == null)
+            rb = completionTrigger.gameObject.AddComponent<Rigidbody>();
+
+        rb.isKinematic = true;
+        rb.useGravity = false;
+    }
+
+    private void KeepCompletionTriggerNonInteractive()
+    {
+        if (completionTrigger == null)
+            return;
+
+        int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+
+        if (ignoreRaycastLayer != -1)
+            SetLayerRecursiveOnly(completionTrigger.transform, ignoreRaycastLayer);
+
+        completionTrigger.enabled = true;
+        completionTrigger.isTrigger = true;
+    }
+
+    private void SetLayerRecursiveOnly(Transform root, int layer)
+    {
+        root.gameObject.layer = layer;
+
+        foreach (Transform child in root)
+        {
+            SetLayerRecursiveOnly(child, layer);
+        }
+    }
+
     private void SetCollidersEnabled(bool enabled)
     {
         if (allColliders == null)
@@ -188,9 +350,16 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
         foreach (Collider col in allColliders)
         {
-            if (col != null)
-                col.enabled = enabled;
+            if (col == null)
+                continue;
+
+            if (completionTrigger != null && col == completionTrigger)
+                continue;
+
+            col.enabled = enabled;
         }
+
+        KeepCompletionTriggerNonInteractive();
     }
 
     private void SetLayer(int layer)
@@ -206,12 +375,20 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     private void SetLayerRecursive(Transform root, int layer)
     {
+        if (completionTrigger != null)
+        {
+            if (root == completionTrigger.transform || root.IsChildOf(completionTrigger.transform))
+                return;
+        }
+
         root.gameObject.layer = layer;
 
         foreach (Transform child in root)
         {
             SetLayerRecursive(child, layer);
         }
+
+        KeepCompletionTriggerNonInteractive();
     }
 
     private void FindReferences()
@@ -235,5 +412,36 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
         if (autoFindTurnstileIfMissing && workplaceTurnstile == null)
             workplaceTurnstile = FindObjectOfType<WorkplaceTurnstile>();
+
+        if (autoFindDialogueManager)
+        {
+            if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
+            {
+                GameObject obj = GameObject.Find(dialogueManagerObjectName);
+
+                if (obj != null)
+                    dialogueManager = obj.GetComponent<DialogueManager>();
+            }
+
+            if (dialogueManager == null)
+                dialogueManager = FindObjectOfType<DialogueManager>();
+        }
+    }
+}
+
+public class FindWorkplaceCompletionTriggerProxy : MonoBehaviour
+{
+    public FindWorkplace owner;
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (owner != null)
+            owner.HandleCompletionTriggerEnter(other);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (owner != null)
+            owner.HandleCompletionTriggerEnter(other);
     }
 }
