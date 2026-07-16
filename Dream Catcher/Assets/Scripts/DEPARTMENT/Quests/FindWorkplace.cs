@@ -8,6 +8,9 @@ public class FindWorkplace : MonoBehaviour, IInteractable
     public QuestUIManager questUIManager;
     public string questId = "find_workplace";
 
+    [Header("Key Object")]
+    public GameObject keysObjectToHide;
+
     [Header("Turnstile")]
     public WorkplaceTurnstile workplaceTurnstile;
     public bool autoFindTurnstileIfMissing = true;
@@ -54,6 +57,9 @@ public class FindWorkplace : MonoBehaviour, IInteractable
     private Collider[] allColliders;
     private Renderer[] allRenderers;
 
+    private Vector3 keysOriginalLocalScale;
+    private bool keysOriginalScaleSaved = false;
+
     void Start()
     {
         defaultLayer = LayerMask.NameToLayer("Default");
@@ -64,8 +70,8 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        allColliders = GetComponentsInChildren<Collider>(true);
-        allRenderers = GetComponentsInChildren<Renderer>(true);
+        CacheKeyObjectParts();
+        SaveKeysOriginalScale();
 
         SetupCompletionTrigger();
         DisableInteractionOnly();
@@ -222,7 +228,16 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         SetLayer(defaultLayer);
         SetCollidersEnabled(false);
 
-        Vector3 startScale = transform.localScale;
+        GameObject target = GetKeysTargetObject();
+
+        if (target == null)
+        {
+            Debug.LogWarning("FindWorkplace: keysObjectToHide не назначен и объект ключей не найден.");
+            yield break;
+        }
+
+        Transform targetTransform = target.transform;
+        Vector3 startScale = targetTransform.localScale;
 
         float elapsed = 0f;
 
@@ -236,12 +251,12 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
             float smoothT = t * t * (3f - 2f * t);
 
-            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, smoothT);
+            targetTransform.localScale = Vector3.Lerp(startScale, Vector3.zero, smoothT);
 
             yield return null;
         }
 
-        transform.localScale = Vector3.zero;
+        targetTransform.localScale = Vector3.zero;
 
         if (allRenderers != null)
         {
@@ -264,7 +279,7 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         }
 
         if (deactivateAfterPickup)
-            gameObject.SetActive(false);
+            target.SetActive(false);
     }
 
     private void MarkKeysAsTakenForSave()
@@ -345,8 +360,10 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     private void SetCollidersEnabled(bool enabled)
     {
+        CacheKeyObjectParts();
+
         if (allColliders == null)
-            allColliders = GetComponentsInChildren<Collider>(true);
+            return;
 
         foreach (Collider col in allColliders)
         {
@@ -364,13 +381,18 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     private void SetLayer(int layer)
     {
+        GameObject target = GetKeysTargetObject();
+
+        if (target == null)
+            return;
+
         if (!setLayerRecursively)
         {
-            gameObject.layer = layer;
+            target.layer = layer;
             return;
         }
 
-        SetLayerRecursive(transform, layer);
+        SetLayerRecursive(target.transform, layer);
     }
 
     private void SetLayerRecursive(Transform root, int layer)
@@ -389,6 +411,62 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         }
 
         KeepCompletionTriggerNonInteractive();
+    }
+
+    private GameObject GetKeysTargetObject()
+    {
+        if (keysObjectToHide != null)
+            return keysObjectToHide;
+
+        return gameObject;
+    }
+
+    private void CacheKeyObjectParts()
+    {
+        GameObject target = GetKeysTargetObject();
+
+        if (target == null)
+        {
+            allColliders = null;
+            allRenderers = null;
+            return;
+        }
+
+        allColliders = target.GetComponentsInChildren<Collider>(true);
+        allRenderers = target.GetComponentsInChildren<Renderer>(true);
+    }
+
+    private void SaveKeysOriginalScale()
+    {
+        GameObject target = GetKeysTargetObject();
+
+        if (target == null)
+            return;
+
+        keysOriginalLocalScale = target.transform.localScale;
+        keysOriginalScaleSaved = true;
+    }
+
+    private void RestoreKeysScale()
+    {
+        GameObject target = GetKeysTargetObject();
+
+        if (target == null)
+            return;
+
+        if (!keysOriginalScaleSaved)
+            SaveKeysOriginalScale();
+
+        target.transform.localScale = keysOriginalLocalScale;
+
+        if (allRenderers != null)
+        {
+            foreach (Renderer rend in allRenderers)
+            {
+                if (rend != null)
+                    rend.enabled = true;
+            }
+        }
     }
 
     private void FindReferences()
