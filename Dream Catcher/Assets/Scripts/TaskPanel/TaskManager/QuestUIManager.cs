@@ -238,6 +238,50 @@ public class QuestUIManager : MonoBehaviour
             QuestWorldStateApplier.ApplyAllInScene();
     }
 
+    public void CompleteMarkerQuestSilent(string questId)
+    {
+        if (string.IsNullOrEmpty(questId))
+        {
+            Debug.LogWarning("QuestUIManager: попытка тихо завершить marker с пустым questId.");
+            return;
+        }
+
+        bool previousRestoringState = isRestoring;
+        isRestoring = true;
+
+        // Если маркер вдруг был активным — убираем его из активных.
+        if (activeQuestIds.Contains(questId))
+            activeQuestIds.Remove(questId);
+
+        // Если вдруг успел создаться UI-объект активного задания — убираем.
+        if (activeQuestObjects.ContainsKey(questId))
+        {
+            GameObject questObject = activeQuestObjects[questId];
+
+            if (questObject != null)
+                Destroy(questObject);
+
+            activeQuestObjects.Remove(questId);
+        }
+
+        // На всякий случай выключаем outline, если он был.
+        if (questById.ContainsKey(questId))
+            SetQuestOutlines(questById[questId], false);
+
+        // Главное: записываем сразу как completed.
+        if (!completedQuestIds.Contains(questId))
+            completedQuestIds.Add(questId);
+
+        if (currentSummaryQuestId == questId)
+            ClearSummary();
+
+        isRestoring = previousRestoringState;
+
+        QuestWorldStateApplier.ApplyAllInScene();
+
+        Debug.Log("QuestUIManager: тихо завершён marker quest: " + questId);
+    }
+
     private void AddQuestToArchive(QuestData quest)
     {
         if (quest == null)

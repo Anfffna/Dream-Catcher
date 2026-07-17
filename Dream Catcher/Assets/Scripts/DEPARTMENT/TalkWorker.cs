@@ -245,16 +245,10 @@ public class TalkWorker : MonoBehaviour, IInteractable
         if (string.IsNullOrEmpty(disappearedMarkerQuestId))
             return;
 
-        if (!questUIManager.IsQuestActive(disappearedMarkerQuestId) &&
-            !questUIManager.IsQuestCompleted(disappearedMarkerQuestId))
-        {
-            questUIManager.AddQuest(disappearedMarkerQuestId);
-        }
-
         if (completeDisappearedMarkerImmediately &&
             !questUIManager.IsQuestCompleted(disappearedMarkerQuestId))
         {
-            questUIManager.CompleteQuest(disappearedMarkerQuestId);
+            questUIManager.CompleteMarkerQuestSilent(disappearedMarkerQuestId);
         }
 
         Debug.Log($"TalkWorker: сохранён маркер исчезновения работника: {disappearedMarkerQuestId}");
