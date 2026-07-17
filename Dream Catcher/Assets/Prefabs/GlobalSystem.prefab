@@ -987,7 +987,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7564130852449088893
 Transform:
   m_ObjectHideFlags: 0
@@ -1022,7 +1022,8 @@ MonoBehaviour:
   - check_the_mailbox
   - go_to_depart
   - find_about_job
-  selectedIndex: 0
+  - find_workplace
+  selectedIndex: 5
 --- !u!1 &1144426251147497079
 GameObject:
   m_ObjectHideFlags: 0
@@ -1555,6 +1556,7 @@ GameObject:
   - component: {fileID: 149964287284984039}
   - component: {fileID: 6004807092175069991}
   - component: {fileID: 997736188909885502}
+  - component: {fileID: 1517960083105310775}
   m_Layer: 5
   m_Name: PauseMenu
   m_TagString: Untagged
@@ -1606,6 +1608,8 @@ MonoBehaviour:
   slideDuration: 0.5
   leftStartX: 753
   leftTargetX: 382
+  leftPanelCG: {fileID: 1517960083105310775}
+  pausePanelFadeDuration: 0.3
   pauseKey: 27
   defaultCursor: {fileID: 2800000, guid: a3d5f1d032a92134d9861569b344b26a, type: 3}
   interactCursor: {fileID: 2800000, guid: 92a2c716075b0844c85132940c947f40, type: 3}
@@ -1625,6 +1629,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e1ff7d23eaec340a906cddb2fbf67b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ButtonsPauseMenu
+--- !u!225 &1517960083105310775
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865056723580960092}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1871857573408233426
 GameObject:
   m_ObjectHideFlags: 0
@@ -2197,6 +2213,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2510870288667190683}
+  - {fileID: 4255986473000431715}
   m_Father: {fileID: 370276447967602706}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
@@ -2346,7 +2363,7 @@ MonoBehaviour:
     description: "\u0421\u043D\u043E\u0432\u0430 \u044F \u043F\u0440\u043E\u0441\u043F\u0430\u043B
       \u0446\u0435\u043B\u044B\u0439 \u0434\u0435\u043D\u044C."
     outlineIds:
-    - home_light_switch
+    - obj_light_switch
   - questId: find_the_key
     tag: 0
     title: "\u041D\u0430\u0439\u0442\u0438 \u043A\u043B\u044E\u0447\u0438"
@@ -2361,7 +2378,8 @@ MonoBehaviour:
     description: "\u042D\u0442\u043E \u0443\u0436\u0435 \u0432\u043E\u0448\u043B\u043E
       \u0432 \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0443. \u041D\u0430\u0432\u0435\u0440\u043D\u043E
       \u0432\u0441\u0435 \u0435\u0449\u0435 \u0436\u0434\u0443 \u043D\u043E\u0432\u043E\u0441\u0442\u0435\u0439."
-    outlineIds: []
+    outlineIds:
+    - obj_mailbox
   - questId: go_to_depart
     tag: 0
     title: "\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C\u0441\u044F \u0432
@@ -2376,12 +2394,33 @@ MonoBehaviour:
     description: "\u0418 \u043A\u0443\u0434\u0430 \u0436\u0435 \u043C\u043D\u0435
       \u043F\u043E\u0434\u0430\u0442\u044C\u0441\u044F?"
     outlineIds: []
+  - questId: find_workplace
+    tag: 0
+    title: "\u041D\u0430\u0439\u0442\u0438 \u0440\u0430\u0431\u043E\u0447\u0435\u0435
+      \u043C\u0435\u0441\u0442\u043E"
+    description: "\u041D\u0435\u0443\u0436\u0435\u043B\u0438 \u0432\u0441\u0435 \u0442\u0430\u043A
+      \u043F\u0440\u043E\u0441\u0442\u043E.."
+    outlineIds: []
+  - questId: walk_to_boss
+    tag: 0
+    title: "\u0421\u0445\u043E\u0434\u0438\u0442\u044C \u043A \u043D\u0430\u0447\u0430\u043B\u044C\u043D\u0438\u043A\u0443"
+    description: "\u041A\u0430\u043A\u043E\u0439 \u0435\u0449\u0435 \u0432 \u0436\u043E\u043F\u0443
+      \u0434\u0435\u043F\u0430\u0440\u0442\u0430\u043C\u0435\u043D\u0442 \u0441\u043D\u043E\u0432..
+      \u0418\u043D\u0442\u0440\u0438\u0433\u0443\u044E\u0449\u0435"
+    outlineIds: []
+  - questId: call_son3
+    tag: 0
+    title: "\u0421\u043E\u043D 3?"
+    description: "\u0414\u0443\u043C\u0430\u044E \u043D\u0430\u0434\u043E \u0437\u0430\u043D\u044F\u0442\u044C\u0441\u044F
+      \u044D\u0442\u0438\u043C \u0434\u043E\u043C\u0430."
+    outlineIds: []
   activeTasksContainer: {fileID: 8078570576492530403}
   taskEntryPrefab: {fileID: 1235307879506699613, guid: c7b998abc0ae6534694010023504e959, type: 3}
   archiveContent: {fileID: 1617975027140989414}
   archiveTaskEntryPrefab: {fileID: 3256688187058104908, guid: 1a8d6ef000f003148aafcc9b1e601827, type: 3}
   archiveCountText: {fileID: 2663815467542926096}
   summaryDescriptionText: {fileID: 3693367698075714265}
+  questDescriptionImagesController: {fileID: 4845209178103073964}
   taskUpdateToast: {fileID: 7849043484783398199}
 --- !u!1 &2381664983547191769
 GameObject:
@@ -2999,7 +3038,7 @@ MonoBehaviour:
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
+  m_ReverseArrangement: 1
 --- !u!1 &2778214985480830641
 GameObject:
   m_ObjectHideFlags: 0
@@ -3326,6 +3365,42 @@ MonoBehaviour:
   hidePanelOnEnd: 1
   autoFindReferences: 1
   playerObjectName: Player
+--- !u!1 &3065757850955784799
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1704212521709536438}
+  m_Layer: 5
+  m_Name: call_son3
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1704212521709536438
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3065757850955784799}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1844828507877204721}
+  m_Father: {fileID: 4255986473000431715}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &3286359419662496375
 GameObject:
   m_ObjectHideFlags: 0
@@ -3463,6 +3538,136 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &3363760735858303553
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1844828507877204721}
+  - component: {fileID: 3940500017446905053}
+  - component: {fileID: 3002626697030306236}
+  m_Layer: 5
+  m_Name: call_son3_images
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1844828507877204721
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3363760735858303553}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1704212521709536438}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &3940500017446905053
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3363760735858303553}
+  m_CullTransparentMesh: 1
+--- !u!114 &3002626697030306236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3363760735858303553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &3364528317495649934
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4255986473000431715}
+  - component: {fileID: 4845209178103073964}
+  m_Layer: 5
+  m_Name: ImageDescriptionQuest
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4255986473000431715
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3364528317495649934}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1704212521709536438}
+  - {fileID: 7276421153414949430}
+  m_Father: {fileID: 1051583442766792549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: 0, y: 55}
+  m_SizeDelta: {x: 450, y: 440}
+  m_Pivot: {x: 0.5, y: 0}
+--- !u!114 &4845209178103073964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3364528317495649934}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9381e8b6764ccc74c84f70b0001d1f84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestDescriptionImagesController
+  questImageGroups:
+  - questId: call_son3
+    imagesRoot: {fileID: 3065757850955784799}
+  - questId: walk_to_boss
+    imagesRoot: {fileID: 5207821996970906202}
 --- !u!1 &3384898333405913877
 GameObject:
   m_ObjectHideFlags: 0
@@ -5637,6 +5842,81 @@ RectTransform:
   m_AnchoredPosition: {x: -0.9, y: 97.3}
   m_SizeDelta: {x: 358, y: 250}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &4789914542610256817
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4348033300111127193}
+  - component: {fileID: 8019954262296117547}
+  - component: {fileID: 8165633450483169621}
+  m_Layer: 5
+  m_Name: call_son3_images
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4348033300111127193
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4789914542610256817}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.4172, y: 1.4172, z: 1.4172}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7276421153414949430}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -124, y: 108}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &8019954262296117547
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4789914542610256817}
+  m_CullTransparentMesh: 1
+--- !u!114 &8165633450483169621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4789914542610256817}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &4863322826017619149
 GameObject:
   m_ObjectHideFlags: 0
@@ -5881,6 +6161,42 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &5207821996970906202
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7276421153414949430}
+  m_Layer: 5
+  m_Name: walk_to_boss
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7276421153414949430
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5207821996970906202}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4348033300111127193}
+  m_Father: {fileID: 4255986473000431715}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5224067661071524721
 GameObject:
   m_ObjectHideFlags: 0
@@ -6079,7 +6395,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractionOutlineAutoHider
   scanAllActiveCanvases: 1
   uiRoot: {fileID: 0}
-  ignoredRoots: []
+  ignoredRoots:
+  - {fileID: 660369487450186325}
   minWidthPixels: 400
   minHeightPixels: 400
   alphaThreshold: 0.05
@@ -7050,6 +7367,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1359287595983016761}
   - component: {fileID: 6649144349413030790}
+  - component: {fileID: 9088434480990618463}
   m_Layer: 0
   m_Name: GlobalSystem
   m_TagString: Untagged
@@ -7102,6 +7420,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PersistentObject
   objectID: GlobalSystem
+--- !u!114 &9088434480990618463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7570398394091705703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b94a7a60f978b604f9b8f4cb308b9595, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InitializerMainMenu
+  mainMenuSceneName: MainMenu
+  globalCanvas: {fileID: 7049952504728937441}
+  pauseManager: {fileID: 6004807092175069991}
+  taskPanelController: {fileID: 8987109114603684095}
+  showCursorInMainMenu: 1
+  hideCursorInGameplay: 1
+  debugLogs: 0
 --- !u!1 &7663404443938314874
 GameObject:
   m_ObjectHideFlags: 0

@@ -20,6 +20,7 @@ public class QuestUIManager : MonoBehaviour
 
     [Header("Summary UI")]
     public TextMeshProUGUI summaryDescriptionText;
+    public QuestDescriptionImagesController questDescriptionImagesController;
 
     [Header("Task Update Toast")]
     public TaskUpdateToast taskUpdateToast;
@@ -294,6 +295,9 @@ public class QuestUIManager : MonoBehaviour
 
         if (summaryDescriptionText != null)
             summaryDescriptionText.text = quest.description;
+
+        if (questDescriptionImagesController != null)
+            questDescriptionImagesController.ShowImagesForQuest(quest.questId);
     }
 
     public void ClearSummary()
@@ -303,6 +307,9 @@ public class QuestUIManager : MonoBehaviour
 
         if (summaryDescriptionText != null)
             summaryDescriptionText.text = "";
+
+        if (questDescriptionImagesController != null)
+            questDescriptionImagesController.HideAllImages();
     }
 
     public void ClearSummaryIfFromArchive()

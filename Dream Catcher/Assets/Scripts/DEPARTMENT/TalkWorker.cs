@@ -28,6 +28,11 @@ public class TalkWorker : MonoBehaviour, IInteractable
     public bool disableDisappearTriggerAfterUse = true;
     public string playerTag = "Player";
 
+    [Header("Disappear Save Marker")]
+    public bool useDisappearSaveMarker = true;
+    public string disappearedMarkerQuestId = "worker_disappeared_walk_to_boss";
+    public bool completeDisappearedMarkerImmediately = true;
+
     [Header("Interaction")]
     public bool allowRepeatDialogue = false;
     public bool disableInteractionAfterDialogue = true;
@@ -178,10 +183,12 @@ public class TalkWorker : MonoBehaviour, IInteractable
         if (!IsPlayer(other))
             return;
 
-        if (disappearOnlyAfterDialogueFinished && !dialogueFinished)
+        if (disappearOnlyAfterDialogueFinished && !CanDisappearNow())
             return;
 
         disappeared = true;
+
+        MarkWorkerDisappearedForSave();
 
         if (workerObjectToHide == null)
             workerObjectToHide = gameObject;
@@ -192,6 +199,65 @@ public class TalkWorker : MonoBehaviour, IInteractable
             disappearTrigger.enabled = false;
 
         Debug.Log("TalkWorker: работник исчез после входа игрока в trigger box.");
+    }
+
+    private bool CanDisappearNow()
+    {
+        if (dialogueFinished)
+            return true;
+
+        FindReferences();
+
+        if (questUIManager == null)
+            return false;
+
+        if (!string.IsNullOrEmpty(questIdToAddAfterDialogue))
+        {
+            if (questUIManager.IsQuestActive(questIdToAddAfterDialogue))
+                return true;
+
+            if (questUIManager.IsQuestCompleted(questIdToAddAfterDialogue))
+                return true;
+        }
+
+        if (useDisappearSaveMarker && !string.IsNullOrEmpty(disappearedMarkerQuestId))
+        {
+            if (questUIManager.IsQuestActive(disappearedMarkerQuestId))
+                return true;
+
+            if (questUIManager.IsQuestCompleted(disappearedMarkerQuestId))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void MarkWorkerDisappearedForSave()
+    {
+        if (!useDisappearSaveMarker)
+            return;
+
+        FindReferences();
+
+        if (questUIManager == null)
+            return;
+
+        if (string.IsNullOrEmpty(disappearedMarkerQuestId))
+            return;
+
+        if (!questUIManager.IsQuestActive(disappearedMarkerQuestId) &&
+            !questUIManager.IsQuestCompleted(disappearedMarkerQuestId))
+        {
+            questUIManager.AddQuest(disappearedMarkerQuestId);
+        }
+
+        if (completeDisappearedMarkerImmediately &&
+            !questUIManager.IsQuestCompleted(disappearedMarkerQuestId))
+        {
+            questUIManager.CompleteQuest(disappearedMarkerQuestId);
+        }
+
+        Debug.Log($"TalkWorker: сохранён маркер исчезновения работника: {disappearedMarkerQuestId}");
     }
 
     private bool IsPlayer(Collider other)
