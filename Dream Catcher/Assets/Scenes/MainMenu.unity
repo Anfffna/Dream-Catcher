@@ -3965,6 +3965,28 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.size
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[6].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[8].title
+      value: "\u041F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043A
+        \u0440\u0430\u0431\u043E\u0442\u0435"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[8].questId
+      value: get_to_work
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[8].description
+      value: "\u041F\u0440\u043E\u0449\u0435 \u0442\u0440\u0443\u0434\u043E\u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0430
+        \u0435\u0449\u0435 \u043D\u0435 \u0431\u044B\u043B\u043E.."
+      objectReference: {fileID: 0}
     - target: {fileID: 4845209178103073964, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: questImageGroups.Array.size
       value: 1

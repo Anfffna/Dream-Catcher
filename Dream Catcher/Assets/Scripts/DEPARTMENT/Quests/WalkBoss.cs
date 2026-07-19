@@ -8,6 +8,10 @@ public class WalkBoss : MonoBehaviour
     public QuestUIManager questUIManager;
     public string questId = "walk_to_boss";
 
+    [Header("Next Quest")]
+    public bool addNextQuestOnComplete = true;
+    public string nextQuestId = "get_to_work";
+
     [Header("Boss Dialogue Trigger")]
     public Collider bossDialogueTrigger;
     public bool makeBossDialogueColliderTriggerOnStart = true;
@@ -251,13 +255,39 @@ public class WalkBoss : MonoBehaviour
     {
         completionStarted = true;
 
+        FindReferences();
+
         if (questUIManager != null && questUIManager.IsQuestActive(questId))
             questUIManager.CompleteQuest(questId);
+
+        AddNextQuestAfterCompletion();
 
         appliedState = AppliedState.None;
         RefreshFromCurrentQuestState();
 
         Debug.Log("WalkBoss: игрок вышел из кабинета, задание walk_to_boss завершено.");
+    }
+
+    private void AddNextQuestAfterCompletion()
+    {
+        if (!addNextQuestOnComplete)
+            return;
+
+        if (questUIManager == null)
+            return;
+
+        if (string.IsNullOrEmpty(nextQuestId))
+            return;
+
+        if (questUIManager.IsQuestActive(nextQuestId))
+            return;
+
+        if (questUIManager.IsQuestCompleted(nextQuestId))
+            return;
+
+        questUIManager.AddQuest(nextQuestId);
+
+        Debug.Log($"WalkBoss: добавлено следующее задание '{nextQuestId}'.");
     }
 
     private void SetupBossDialogueTrigger()

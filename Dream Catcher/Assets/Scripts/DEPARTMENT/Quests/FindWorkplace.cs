@@ -292,19 +292,13 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         if (string.IsNullOrEmpty(keysTakenMarkerQuestId))
             return;
 
-        if (!questUIManager.IsQuestActive(keysTakenMarkerQuestId) &&
-            !questUIManager.IsQuestCompleted(keysTakenMarkerQuestId))
-        {
-            questUIManager.AddQuest(keysTakenMarkerQuestId);
-        }
-
         if (completeKeysTakenMarkerImmediately &&
             !questUIManager.IsQuestCompleted(keysTakenMarkerQuestId))
         {
-            questUIManager.CompleteQuest(keysTakenMarkerQuestId);
+            questUIManager.CompleteMarkerQuestSilent(keysTakenMarkerQuestId);
         }
 
-        Debug.Log($"Маркер подобранных ключей записан: {keysTakenMarkerQuestId}");
+        Debug.Log($"Маркер подобранных ключей записан скрытно: {keysTakenMarkerQuestId}");
     }
 
     private void SetupCompletionTrigger()
