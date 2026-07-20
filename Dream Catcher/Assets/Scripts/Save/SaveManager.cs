@@ -218,6 +218,10 @@ public class SaveManager : MonoBehaviour
         // “еперь ставим насто€щего оставшегос€ Player в сохранЄнную позицию.
         RestorePlayerPosition(data);
 
+        // ќб€зательно сбрасываем временные игровые режимы.
+        // ќни не должны переноситьс€ через загрузку сохранени€.
+        ResetRuntimeGameplayStateAfterLoad();
+
         yield return null;
 
         Physics.SyncTransforms();
@@ -233,6 +237,25 @@ public class SaveManager : MonoBehaviour
 
         IsLoadingSave = false;
         finishLoadingCoroutine = null;
+    }
+
+    private void ResetRuntimeGameplayStateAfterLoad()
+    {
+        PlayerController player =
+            FindObjectOfType<PlayerController>();
+
+        if (player != null)
+            player.ForceResetToNormalGameplayAfterLoad();
+
+        if (WorkSessionManager.Instance != null)
+            WorkSessionManager.Instance.ResetAfterLoad();
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
+        Debug.Log(
+            "SaveManager: Player и временные игровые режимы сброшены после загрузки."
+        );
     }
 
     private IEnumerator FinishLoadingFlagNextFrame()

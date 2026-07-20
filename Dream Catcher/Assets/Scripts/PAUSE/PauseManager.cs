@@ -439,6 +439,19 @@ public class PauseManager : MonoBehaviour
     {
         isTransitioning = true;
 
+        if (WorkSessionManager.Instance == null ||
+            !WorkSessionManager.Instance.IsWorkModeActive)
+        {
+            Cursor.SetCursor(
+                defaultCursor,
+                defaultCursorHotspot,
+                CursorMode.ForceSoftware
+            );
+
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+
         if (leftPanelCG == null)
         {
             FinishResumeInstantly();
@@ -514,9 +527,11 @@ public class PauseManager : MonoBehaviour
         if (playerController != null)
             playerController.canControl = true;
 
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        if (WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsWorkModeActive)
+        {
+            WorkSessionManager.Instance.RestoreAfterPause();
+        }
 
         pausePanelFadeCoroutine = null;
     }

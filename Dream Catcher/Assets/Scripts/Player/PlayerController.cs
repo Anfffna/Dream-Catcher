@@ -13,13 +13,13 @@ public class PlayerController : MonoBehaviour
 
     [Header("Control")]
     public bool canControl = false;
-    public bool canMove = true;   
+    public bool canMove = true;
 
     [Header("Footsteps")]
     public AudioSource footstepSource;
     public AudioClip walkClip;
     public float walkVolume = 0.5f;
-    
+
     public AudioClip runClip;
     public float runVolume = 0.8f;
 
@@ -28,29 +28,38 @@ public class PlayerController : MonoBehaviour
     private float xRotation = 0f;
     private bool firstControlFrame = false;
 
-    //void Awake()
-    //{
-    //    // Проверяем, есть ли уже другой PlayerController в сцене
-    //    PlayerController[] existing = FindObjectsOfType<PlayerController>();
-    //    if (existing.Length > 1)
-    //    {
-    //        Destroy(gameObject);
-    //        return;
-    //    }
-    //    //DontDestroyOnLoad(gameObject);
-    //}
+    // Рабочий обзор
+    private bool workLookEnabled = false;
+    private float workCenterYaw;
+    private float workYawOffset;
+    private float workYawHalfAngle = 90f;
 
-    void Start()
+    private float workMinimumPitch = -55f;
+    private float workMaximumPitch = 55f;
+
+    private float workScreenEdgeSize = 90f;
+    private float workHorizontalSpeed = 65f;
+    private float workVerticalSpeed = 55f;
+
+    private Vector3 normalCameraLocalPosition;
+    private Quaternion normalCameraLocalRotation;
+    private bool normalCameraPoseCaptured = false;
+
+    public bool IsWorkLookEnabled => workLookEnabled;
+
+    private void Start()
     {
         controller = GetComponent<CharacterController>();
+
+        CaptureNormalCameraPoseIfNeeded();
+        SyncPitchFromCamera();
     }
 
-    void Update()
+    private void Update()
     {
         if (!canControl)
         {
-            if (footstepSource != null && footstepSource.isPlaying)
-                footstepSource.Stop();
+            StopFootsteps();
 
             Input.GetAxis("Mouse X");
             Input.GetAxis("Mouse Y");
@@ -60,27 +69,20 @@ public class PlayerController : MonoBehaviour
         if (firstControlFrame)
         {
             firstControlFrame = false;
+            SyncPitchFromCamera();
 
-            // Читаем текущий поворот камеры
-            if (cameraTransform != null)
-            {
-                Vector3 camLocal = cameraTransform.localRotation.eulerAngles;
-                xRotation = camLocal.x > 180f ? camLocal.x - 360f : camLocal.x;
-            }
-
-            // НЕ меняем тело! Оставляем его поворот как есть (от bedPivot/sitPivot)
-            // Потребляем мышь
             Input.GetAxis("Mouse X");
             Input.GetAxis("Mouse Y");
             return;
         }
 
-        Look();
+        if (workLookEnabled)
+            WorkLook();
+        else
+            Look();
 
         if (controller != null && controller.enabled)
-        {
             Move();
-        }
 
         HandleFootsteps();
     }
@@ -99,10 +101,54 @@ public class PlayerController : MonoBehaviour
         if (!enabled)
         {
             velocity = Vector3.zero;
-
-            if (footstepSource != null && footstepSource.isPlaying)
-                footstepSource.Stop();
+            StopFootsteps();
         }
+    }
+
+    public void BeginWorkLook(
+        float centerYaw,
+        float horizontalHalfAngle,
+        float minimumPitch,
+        float maximumPitch,
+        float screenEdgeSize,
+        float horizontalSpeed,
+        float verticalSpeed)
+    {
+        workLookEnabled = true;
+
+        workCenterYaw = NormalizeAngle(centerYaw);
+        workYawHalfAngle =
+            Mathf.Clamp(horizontalHalfAngle, 0f, 180f);
+
+        workMinimumPitch = minimumPitch;
+        workMaximumPitch = maximumPitch;
+
+        workScreenEdgeSize =
+            Mathf.Max(1f, screenEdgeSize);
+
+        workHorizontalSpeed =
+            Mathf.Max(0f, horizontalSpeed);
+
+        workVerticalSpeed =
+            Mathf.Max(0f, verticalSpeed);
+
+        workYawOffset = Mathf.Clamp(
+            Mathf.DeltaAngle(
+                workCenterYaw,
+                transform.eulerAngles.y
+            ),
+            -workYawHalfAngle,
+            workYawHalfAngle
+        );
+
+        SyncPitchFromCamera();
+        SetMovementEnabled(false);
+    }
+
+    public void EndWorkLook()
+    {
+        workLookEnabled = false;
+        firstControlFrame = true;
     }
 
     public void ResetMovementAfterTeleport()
@@ -113,66 +159,293 @@ public class PlayerController : MonoBehaviour
         if (controller == null)
             controller = GetComponent<CharacterController>();
 
-        if (footstepSource != null && footstepSource.isPlaying)
-            footstepSource.Stop();
+        StopFootsteps();
     }
 
-    void Look()
+    public void CaptureNormalCameraPoseIfNeeded()
     {
-        float mouseX = Input.GetAxis("Mouse X") * GameSettings.MouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * GameSettings.MouseSensitivity;
+        if (normalCameraPoseCaptured)
+            return;
 
-        // Горизонтальный поворот — поворачиваем ТЕЛО игрока
+        if (cameraTransform == null)
+            return;
+
+        normalCameraLocalPosition = cameraTransform.localPosition;
+        normalCameraLocalRotation = cameraTransform.localRotation;
+        normalCameraPoseCaptured = true;
+    }
+
+    public void SetWorkLookPitch(float pitch)
+    {
+        xRotation = Mathf.Clamp(
+            pitch,
+            workMinimumPitch,
+            workMaximumPitch
+        );
+
+        ApplyCameraPitch();
+    }
+
+    public void SetCameraPitchImmediate(float pitch)
+    {
+        xRotation = Mathf.Clamp(pitch, -90f, 90f);
+        ApplyCameraPitch();
+    }
+
+    public void UpdateWorkLookSettings(
+        float centerYaw,
+        float horizontalHalfAngle,
+        float minimumPitch,
+        float maximumPitch,
+        float screenEdgeSize,
+        float horizontalSpeed,
+        float verticalSpeed)
+    {
+        if (!workLookEnabled)
+            return;
+
+        float currentWorldYaw = transform.eulerAngles.y;
+
+        workCenterYaw = NormalizeAngle(centerYaw);
+
+        workYawHalfAngle = Mathf.Clamp(
+            horizontalHalfAngle,
+            0f,
+            180f
+        );
+
+        // Защита на случай, если значения случайно переставлены местами.
+        workMinimumPitch = Mathf.Min(
+            minimumPitch,
+            maximumPitch
+        );
+
+        workMaximumPitch = Mathf.Max(
+            minimumPitch,
+            maximumPitch
+        );
+
+        workScreenEdgeSize = Mathf.Max(
+            1f,
+            screenEdgeSize
+        );
+
+        workHorizontalSpeed = Mathf.Max(
+            0f,
+            horizontalSpeed
+        );
+
+        workVerticalSpeed = Mathf.Max(
+            0f,
+            verticalSpeed
+        );
+
+        workYawOffset = Mathf.Clamp(
+            Mathf.DeltaAngle(
+                workCenterYaw,
+                currentWorldYaw
+            ),
+            -workYawHalfAngle,
+            workYawHalfAngle
+        );
+
+        xRotation = Mathf.Clamp(
+            xRotation,
+            workMinimumPitch,
+            workMaximumPitch
+        );
+
+        transform.rotation = Quaternion.Euler(
+            0f,
+            workCenterYaw + workYawOffset,
+            0f
+        );
+
+        ApplyCameraPitch();
+    }
+
+    public void ForceResetToNormalGameplayAfterLoad()
+    {
+        if (controller == null)
+            controller = GetComponent<CharacterController>();
+
+        workLookEnabled = false;
+        workYawOffset = 0f;
+
+        canControl = true;
+        canMove = true;
+        firstControlFrame = true;
+
+        velocity = Vector3.zero;
+
+        if (controller != null && !controller.enabled)
+            controller.enabled = true;
+
+        if (cameraTransform != null && normalCameraPoseCaptured)
+        {
+            cameraTransform.localPosition =
+                normalCameraLocalPosition;
+
+            cameraTransform.localRotation =
+                normalCameraLocalRotation;
+        }
+
+        SyncPitchFromCamera();
+        StopFootsteps();
+
+        Input.ResetInputAxes();
+    }
+
+    private void Look()
+    {
+        float mouseX =
+            Input.GetAxis("Mouse X") *
+            GameSettings.MouseSensitivity;
+
+        float mouseY =
+            Input.GetAxis("Mouse Y") *
+            GameSettings.MouseSensitivity;
+
         transform.Rotate(Vector3.up * mouseX);
 
-        // Вертикальный поворот — поворачиваем КАМЕРУ локально
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        if (cameraTransform != null)
-        {
-            // Берём ТЕКУЩИЙ Z камеры (не сбрасываем!)
-            float currentZ = cameraTransform.localRotation.eulerAngles.z;
-            cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, currentZ);
-        }
+        ApplyCameraPitch();
     }
 
-    void Move()
+    private void WorkLook()
     {
-        if (!canMove) return;
+        Vector3 mousePosition = Input.mousePosition;
+
+        float width = Mathf.Max(1f, Screen.width);
+        float height = Mathf.Max(1f, Screen.height);
+
+        float horizontalInput = 0f;
+        float verticalInput = 0f;
+
+        float horizontalEdge =
+            Mathf.Min(workScreenEdgeSize, width * 0.45f);
+
+        float verticalEdge =
+            Mathf.Min(workScreenEdgeSize, height * 0.45f);
+
+        if (mousePosition.x < horizontalEdge)
+        {
+            horizontalInput = -Mathf.InverseLerp(
+                horizontalEdge,
+                0f,
+                mousePosition.x
+            );
+        }
+        else if (mousePosition.x > width - horizontalEdge)
+        {
+            horizontalInput = Mathf.InverseLerp(
+                width - horizontalEdge,
+                width,
+                mousePosition.x
+            );
+        }
+
+        if (mousePosition.y < verticalEdge)
+        {
+            verticalInput = -Mathf.InverseLerp(
+                verticalEdge,
+                0f,
+                mousePosition.y
+            );
+        }
+        else if (mousePosition.y > height - verticalEdge)
+        {
+            verticalInput = Mathf.InverseLerp(
+                height - verticalEdge,
+                height,
+                mousePosition.y
+            );
+        }
+
+        workYawOffset +=
+            horizontalInput *
+            workHorizontalSpeed *
+            Time.deltaTime;
+
+        workYawOffset = Mathf.Clamp(
+            workYawOffset,
+            -workYawHalfAngle,
+            workYawHalfAngle
+        );
+
+        float finalYaw =
+            workCenterYaw + workYawOffset;
+
+        transform.rotation =
+            Quaternion.Euler(0f, finalYaw, 0f);
+
+        // Верх экрана — смотрим вверх.
+        // Низ экрана — смотрим вниз.
+        xRotation -=
+            verticalInput *
+            workVerticalSpeed *
+            Time.deltaTime;
+
+        xRotation = Mathf.Clamp(
+            xRotation,
+            workMinimumPitch,
+            workMaximumPitch
+        );
+
+        ApplyCameraPitch();
+    }
+
+    private void Move()
+    {
+        if (!canMove)
+            return;
 
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
+
         forward.y = 0f;
         right.y = 0f;
+
         forward.Normalize();
         right.Normalize();
 
         Vector3 move = right * x + forward * z;
-        float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
-        controller.Move(move * speed * Time.deltaTime);
+
+        float speed =
+            Input.GetKey(KeyCode.LeftShift)
+                ? runSpeed
+                : walkSpeed;
+
+        controller.Move(
+            move * speed * Time.deltaTime
+        );
 
         if (controller.isGrounded && velocity.y < 0)
             velocity.y = -2f;
+
         velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+
+        controller.Move(
+            velocity * Time.deltaTime
+        );
     }
 
-    void HandleFootsteps()
+    private void HandleFootsteps()
     {
         if (footstepSource == null)
             return;
 
-        // Если управление или движение отключено,
-        // звуки шагов не должны воспроизводиться.
-        if (!canControl || !canMove || controller == null || !controller.enabled)
+        if (!canControl ||
+            !canMove ||
+            controller == null ||
+            !controller.enabled)
         {
-            if (footstepSource.isPlaying)
-                footstepSource.Stop();
-
+            StopFootsteps();
             return;
         }
 
@@ -186,14 +459,15 @@ public class PlayerController : MonoBehaviour
 
         if (!isMoving)
         {
-            if (footstepSource.isPlaying)
-                footstepSource.Stop();
-
+            StopFootsteps();
             return;
         }
 
-        AudioClip targetClip = isRunning ? runClip : walkClip;
-        float targetVolume = isRunning ? runVolume : walkVolume;
+        AudioClip targetClip =
+            isRunning ? runClip : walkClip;
+
+        float targetVolume =
+            isRunning ? runVolume : walkVolume;
 
         footstepSource.volume = targetVolume;
 
@@ -209,5 +483,54 @@ public class PlayerController : MonoBehaviour
             footstepSource.loop = true;
             footstepSource.Play();
         }
+    }
+
+    private void ApplyCameraPitch()
+    {
+        if (cameraTransform == null)
+            return;
+
+        float currentZ =
+            cameraTransform.localRotation.eulerAngles.z;
+
+        cameraTransform.localRotation =
+            Quaternion.Euler(
+                xRotation,
+                0f,
+                currentZ
+            );
+    }
+
+    private void SyncPitchFromCamera()
+    {
+        if (cameraTransform == null)
+            return;
+
+        float cameraX =
+            cameraTransform.localRotation.eulerAngles.x;
+
+        xRotation =
+            cameraX > 180f
+                ? cameraX - 360f
+                : cameraX;
+    }
+
+    private void StopFootsteps()
+    {
+        if (footstepSource != null &&
+            footstepSource.isPlaying)
+        {
+            footstepSource.Stop();
+        }
+    }
+
+    private float NormalizeAngle(float angle)
+    {
+        angle %= 360f;
+
+        if (angle < 0f)
+            angle += 360f;
+
+        return angle;
     }
 }

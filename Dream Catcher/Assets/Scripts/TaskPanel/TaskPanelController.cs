@@ -106,6 +106,12 @@ public class TaskPanelController : MonoBehaviour
 
             OpenPanel();
         }
+
+        if (WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsWorkModeActive)
+        {
+            return;
+        }
     }
 
     bool IsOtherUIBlockingTaskPanel()

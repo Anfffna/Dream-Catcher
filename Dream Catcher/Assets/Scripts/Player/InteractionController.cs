@@ -63,6 +63,12 @@ public class InteractionController : MonoBehaviour
         if (TaskPanelController.Instance != null && TaskPanelController.Instance.IsPanelOpen)
             return true;
 
+        if (WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsWorkModeActive)
+        {
+            return true;
+        }
+
         // Обычные диалоги DialogueManager
         if (DialogueManager.AnyDialogueActive)
             return true;
@@ -88,8 +94,12 @@ public class InteractionController : MonoBehaviour
 
         if (interactionDot != null)
         {
+            // Сам объект всегда остаётся активным,
+            // скрываем только компонент Image.
+            if (!interactionDot.gameObject.activeSelf)
+                interactionDot.gameObject.SetActive(true);
+
             interactionDot.enabled = false;
-            interactionDot.gameObject.SetActive(false);
             interactionDot.color = defaultDotColor;
         }
     }
@@ -127,7 +137,6 @@ public class InteractionController : MonoBehaviour
 
                 if (interactionDot != null)
                 {
-                    interactionDot.gameObject.SetActive(true);
                     interactionDot.enabled = true;
 
                     Color dotColor = GetDotColorForObject(hit.collider.gameObject);
@@ -180,10 +189,34 @@ public class InteractionController : MonoBehaviour
 
         if (interactionDot == null)
         {
-            GameObject dotObj = GameObject.Find(interactionDotObjectName);
+            GameObject dotObj =
+                GameObject.Find(interactionDotObjectName);
 
             if (dotObj != null)
+            {
                 interactionDot = dotObj.GetComponent<Image>();
+            }
+            else
+            {
+                Image[] allImages = FindObjectsByType<Image>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None
+                );
+
+                for (int i = 0; i < allImages.Length; i++)
+                {
+                    if (allImages[i] == null)
+                        continue;
+
+                    if (allImages[i].gameObject.name != interactionDotObjectName)
+                        continue;
+
+                    interactionDot = allImages[i];
+                    interactionDot.gameObject.SetActive(true);
+                    interactionDot.enabled = false;
+                    break;
+                }
+            }
         }
     }
 }
