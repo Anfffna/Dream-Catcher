@@ -82,9 +82,9 @@ MonoBehaviour:
   canMove: 1
   footstepSource: {fileID: 8993039441123364192}
   walkClip: {fileID: 8300000, guid: 3c18d145699c14a46a99629bd25b4bab, type: 3}
-  walkVolume: 0.4
+  walkVolume: 0.16
   runClip: {fileID: 8300000, guid: 1c7e41951a41cc04fb959072ec034cc4, type: 3}
-  runVolume: 0.8
+  runVolume: 0.6
 --- !u!114 &1244384425435199109
 MonoBehaviour:
   m_ObjectHideFlags: 0

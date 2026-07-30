@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 
 public class FindAboutJob : MonoBehaviour, IInteractable
 {
@@ -19,42 +18,38 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
     [Header("Receptionist Animation")]
     public Animator receptionistAnimator;
-    public string givesKeyTriggerName = "GivesKey";
     public bool autoFindAnimatorInChildren = true;
 
-    [Header("Move With Chair Before GivesKey")]
-    public Transform receptionistMoveRoot;
-    public Vector3 givesKeyLocalOffset = new Vector3(0f, 0f, -0.35f);
-    public float moveBackDuration = 0.35f;
-    public bool moveBeforeGivesKeyTrigger = true;
+    [Header("Animator Triggers")]
+    public string talkTriggerName = "Talk";
+    public string givesKeyTriggerName = "GivesKey";
+    public string stopTalkTriggerName = "StopTalk";
+    public bool resetOtherTriggersBeforeSet = true;
 
-    [Header("Return After GivesKey")]
-    public bool returnAfterGivesKey = true;
-    public float returnDelayAfterGivesKey = 2f;
-    public float returnDuration = 0.35f;
+    [Header("Keys Swap By Time")]
+    [Tooltip("Ключи, которые участвуют в анимации секретутки. Они пропадут в нужный момент.")]
+    public GameObject animatedKeysObject;
 
-    [Header("Second Dialogue Unlock")]
-    public string givesKeyStateName = "GivesKey";
-    public int givesKeyLayerIndex = 0;
-    public float waitForGivesKeyEnterTimeout = 2f;
+    [Tooltip("Ключи в мире на столе. Этот объект потом назначается в FindWorkplace как Keys Object To Hide.")]
+    public GameObject worldKeysObject;
 
-    [Header("Keys Transfer During GivesKey")]
-    public GameObject keysInHandObject;
-    public Transform keysWorldObject;
-    public float keysTransferTimeInGivesKey = 4f;
-    public float keysWorldAppearDuration = 0.4f;
-    public bool hideKeysOnStart = true;
+    [Tooltip("Спрятать worldKeysObject на старте, если задание find_workplace ещё не активно/не завершено.")]
+    public bool hideWorldKeysOnStart = true;
 
-    private Vector3 keysWorldOriginalLocalScale;
-    private bool keysWorldScaleSaved = false;
-    private bool keysTransferDone = false;
-    private Coroutine keysTransferCoroutine;
+    [Tooltip("Включи, если хочешь указывать момент не секундами, а кадром клипа.")]
+    public bool useFrameNumberForKeysSwap = true;
 
-    private bool secondDialogueUnlocked = false;
+    [Tooltip("Кадр, на котором надо заменить анимированные ключи на world keys.")]
+    public int keysSwapFrame = 165;
 
-    private Vector3 receptionistStartLocalPosition;
-    private bool receptionistStartPositionSaved = false;
-    private Coroutine givesKeySequenceCoroutine;
+    [Tooltip("FPS анимации. Если Maya/Unity клип 30 fps, оставь 30.")]
+    public float animationFrameRate = 30f;
+
+    [Tooltip("Если useFrameNumberForKeysSwap выключен, используется это время в секундах.")]
+    public float keysSwapDelaySeconds = 5.5f;
+
+    [Tooltip("После появления world keys секретутка снова станет доступна для второго диалога.")]
+    public bool unlockSecondDialogueWhenKeysSwapped = true;
 
     [Header("Auto Find")]
     public bool autoFindReferences = true;
@@ -65,26 +60,32 @@ public class FindAboutJob : MonoBehaviour, IInteractable
     private bool isCompleted = false;
     private bool firstDialogueShown = false;
     private bool secondDialogueShown = false;
+    private bool secondDialogueUnlocked = false;
     private bool givesKeyAnimationTriggered = false;
+    private bool keysSwapped = false;
 
     private Collider objectCollider;
     private int defaultLayer;
     private int interactableLayer;
+
     private QuestUIManager questManager;
     private DialogueManager dialogueManager;
     private Image interactionDot;
 
-    void Start()
+    private Coroutine givesKeySequenceCoroutine;
+
+    private void Start()
     {
         objectCollider = GetComponent<Collider>();
+
         defaultLayer = LayerMask.NameToLayer("Default");
         interactableLayer = LayerMask.NameToLayer("Interactable");
 
-        gameObject.layer = defaultLayer;
-        if (objectCollider != null) objectCollider.enabled = false;
+        DisableInteraction();
 
         FindReferences();
-        PrepareKeysTransferObjects();
+        PrepareWorldKeysOnStart();
+
         StartCoroutine(ActivationRoutine());
     }
 
@@ -92,111 +93,85 @@ public class FindAboutJob : MonoBehaviour, IInteractable
     {
         yield return new WaitForSeconds(activationDelay);
 
-        FindReferences();
-
-        if (questManager == null)
+        while (!isCompleted)
         {
+            FindReferences();
+
+            if (questManager != null && questManager.IsQuestActive(questIdToComplete))
+            {
+                EnableInteraction();
+
+                Debug.Log($"FindAboutJob: объект {gameObject.name} активирован для задания {questIdToComplete}", this);
+                yield break;
+            }
+
             yield return new WaitForSeconds(2f);
-            StartCoroutine(ActivationRoutine());
-            yield break;
         }
-
-        if (questManager.IsQuestActive(questIdToComplete))
-        {
-            gameObject.layer = interactableLayer;
-
-            if (objectCollider != null)
-                objectCollider.enabled = true;
-
-            Debug.Log($"Объект {gameObject.name} активирован для задания {questIdToComplete}");
-        }
-        else
-        {
-            yield return new WaitForSeconds(2f);
-            StartCoroutine(ActivationRoutine());
-        }
-    }
-
-    private void EnsureDialogueManager()
-    {
-        FindReferences();
     }
 
     public void Interact()
     {
         FindReferences();
 
-        if (isCompleted) return;
-
-        EnsureDialogueManager();
+        if (isCompleted)
+            return;
 
         if (questManager == null || dialogueManager == null)
             return;
 
-        if (!firstDialogueShown && !questManager.IsQuestActive(questIdToComplete))
-        {
-            Debug.Log($"Задание '{questIdToComplete}' не активно или уже завершено.");
+        if (dialogueManager.DialogueActive)
             return;
-        }
 
-        if (dialogueManager.DialogueActive) return;
-
-        if (firstDialogueShown && !secondDialogueShown && !secondDialogueUnlocked)
+        if (!questManager.IsQuestActive(questIdToComplete))
         {
-            HideInteractionDot();
+            Debug.Log($"FindAboutJob: задание '{questIdToComplete}' не активно или уже завершено.", this);
             return;
         }
 
         if (!firstDialogueShown)
         {
-            if (firstDialogueLines != null && firstDialogueLines.Count > 0)
-            {
-                HideInteractionDot();
-
-                dialogueManager.StartDialogue(firstDialogueLines, true);
-                firstDialogueShown = true;
-
-                StartCoroutine(WaitForFirstDialogueAndCompleteQuest());
-            }
+            StartFirstDialogue();
+            return;
         }
-        else if (!secondDialogueShown)
+
+        if (!secondDialogueShown)
         {
-            if (secondDialogueLines != null && secondDialogueLines.Count > 0)
+            if (!secondDialogueUnlocked)
             {
                 HideInteractionDot();
-
-                dialogueManager.StartDialogue(secondDialogueLines, true);
-                secondDialogueShown = true;
-
-                StartCoroutine(WaitForSecondDialogueAndDisableInteraction());
+                return;
             }
+
+            StartSecondDialogue();
         }
     }
 
-    private IEnumerator ShowDotAfterDialogue()
+    private void StartFirstDialogue()
     {
-        while (dialogueManager != null && dialogueManager.DialogueActive)
-            yield return null;
+        if (firstDialogueLines == null || firstDialogueLines.Count == 0)
+            return;
 
-        ShowInteractionDot();
+        firstDialogueShown = true;
+        secondDialogueUnlocked = false;
+
+        HideInteractionDot();
+        DisableInteraction();
+
+        PlayTalkAnimation();
+
+        dialogueManager.StartDialogue(firstDialogueLines, true);
+
+        StartCoroutine(WaitForFirstDialogueAndStartGivesKey());
     }
 
-    private IEnumerator WaitForFirstDialogueAndCompleteQuest()
+    private IEnumerator WaitForFirstDialogueAndStartGivesKey()
     {
-        // Ждём, пока первый диалог полностью закончится
         while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
 
-        // Пока идёт GivesKey-анимация, второй интерактив запрещён
-        secondDialogueUnlocked = false;
         HideInteractionDot();
+        DisableInteraction();
 
-        gameObject.layer = defaultLayer;
-
-        if (objectCollider != null)
-            objectCollider.enabled = false;
-
-        // После полного окончания первого диалога запускаем анимацию GivesKey
         TriggerGivesKeyAnimation();
     }
 
@@ -215,360 +190,95 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
     private IEnumerator GivesKeySequence()
     {
-        SaveReceptionistStartPosition();
-
         HideInteractionDot();
-
-        gameObject.layer = defaultLayer;
-
-        if (objectCollider != null)
-            objectCollider.enabled = false;
+        DisableInteraction();
 
         if (receptionistAnimator == null)
         {
-            Debug.LogWarning($"Animator для анимации '{givesKeyTriggerName}' не назначен на объекте {gameObject.name}.");
+            Debug.LogWarning($"FindAboutJob: Animator не назначен на объекте {gameObject.name}. Ключи будут показаны без анимации.", this);
+            SwapAnimatedKeysToWorldKeys();
+            yield break;
+        }
 
+        PlayGivesKeyAnimation();
+
+        Debug.Log($"FindAboutJob: запущен Trigger {givesKeyTriggerName}", this);
+
+        float delay = GetKeysSwapDelay();
+
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+        else
+            yield return null;
+
+        SwapAnimatedKeysToWorldKeys();
+    }
+
+    private float GetKeysSwapDelay()
+    {
+        if (!useFrameNumberForKeysSwap)
+            return Mathf.Max(0f, keysSwapDelaySeconds);
+
+        if (animationFrameRate <= 0f)
+            return Mathf.Max(0f, keysSwapDelaySeconds);
+
+        return Mathf.Max(0f, keysSwapFrame / animationFrameRate);
+    }
+
+    private void SwapAnimatedKeysToWorldKeys()
+    {
+        if (keysSwapped)
+            return;
+
+        keysSwapped = true;
+
+        if (animatedKeysObject != null)
+            animatedKeysObject.SetActive(false);
+
+        if (worldKeysObject != null)
+            worldKeysObject.SetActive(true);
+
+        if (unlockSecondDialogueWhenKeysSwapped)
             UnlockSecondDialogueInteraction();
-            yield break;
-        }
 
-        if (receptionistMoveRoot != null && moveBeforeGivesKeyTrigger)
-        {
-            Vector3 targetPosition = receptionistStartLocalPosition + givesKeyLocalOffset;
-            yield return MoveLocalPosition(receptionistMoveRoot, targetPosition, moveBackDuration);
-        }
-
-        receptionistAnimator.SetTrigger(givesKeyTriggerName);
-        Debug.Log($"Запущен Animator Trigger: {givesKeyTriggerName}");
-        StartKeysTransferCoroutine();
-
-        if (receptionistMoveRoot != null && !moveBeforeGivesKeyTrigger)
-        {
-            Vector3 targetPosition = receptionistStartLocalPosition + givesKeyLocalOffset;
-            yield return MoveLocalPosition(receptionistMoveRoot, targetPosition, moveBackDuration);
-        }
-
-        // Ждём, пока Animator реально проиграет состояние GivesKey
-        yield return WaitForAnimatorStateComplete(givesKeyStateName, givesKeyLayerIndex);
-
-        if (returnAfterGivesKey && receptionistMoveRoot != null)
-        {
-            yield return MoveLocalPosition(receptionistMoveRoot, receptionistStartLocalPosition, returnDuration);
-        }
-
-        // Только теперь второй диалог снова доступен
-        UnlockSecondDialogueInteraction();
-    }
-
-    private void PrepareKeysTransferObjects()
-    {
-        if (keysInHandObject != null && hideKeysOnStart)
-            keysInHandObject.SetActive(false);
-
-        if (ShouldNotHideWorldKeysOnStart())
-            return;
-
-        if (keysWorldObject != null)
-        {
-            keysWorldOriginalLocalScale = keysWorldObject.localScale;
-            keysWorldScaleSaved = true;
-
-            if (hideKeysOnStart)
-            {
-                keysWorldObject.localScale = Vector3.zero;
-                keysWorldObject.gameObject.SetActive(false);
-                SetObjectCollidersEnabled(keysWorldObject.gameObject, false);
-            }
-        }
-    }
-
-    private bool ShouldNotHideWorldKeysOnStart()
-    {
-        FindReferences();
-
-        if (questManager == null)
-            return false;
-
-        if (string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
-            return false;
-
-        if (questManager.IsQuestActive(questIdToAddAfterSecondDialogue))
-            return true;
-
-        if (questManager.IsQuestCompleted(questIdToAddAfterSecondDialogue))
-            return true;
-
-        return false;
-    }
-
-    private void StartKeysTransferCoroutine()
-    {
-        if (keysTransferDone)
-            return;
-
-        if (keysTransferCoroutine != null)
-            StopCoroutine(keysTransferCoroutine);
-
-        keysTransferCoroutine = StartCoroutine(KeysTransferRoutine());
-    }
-
-    private IEnumerator KeysTransferRoutine()
-    {
-        if (receptionistAnimator == null)
-            yield break;
-
-        int stateHash = Animator.StringToHash(givesKeyStateName);
-        bool enteredState = false;
-        float timer = 0f;
-
-        // Ждём, пока Animator войдёт в состояние guestKey/GivesKey
-        while (!enteredState && timer < waitForGivesKeyEnterTimeout)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(givesKeyLayerIndex);
-            AnimatorStateInfo nextInfo = receptionistAnimator.GetNextAnimatorStateInfo(givesKeyLayerIndex);
-
-            enteredState =
-                IsAnimatorState(currentInfo, givesKeyStateName, stateHash) ||
-                IsAnimatorState(nextInfo, givesKeyStateName, stateHash);
-
-            timer += Time.deltaTime;
-            yield return null;
-        }
-
-        if (!enteredState)
-        {
-            Debug.LogWarning($"Ключи не показались в руке: Animator не вошёл в состояние '{givesKeyStateName}'.");
-            yield break;
-        }
-
-        // Ждём, пока состояние станет текущим
-        while (true)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(givesKeyLayerIndex);
-
-            if (IsAnimatorState(currentInfo, givesKeyStateName, stateHash))
-                break;
-
-            yield return null;
-        }
-
-        // В самом начале второй анимации показываем ключи в руке
-        if (keysInHandObject != null)
-            keysInHandObject.SetActive(true);
-
-        // Ждём 4 секунды внутри этой анимации
-        while (true)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(givesKeyLayerIndex);
-
-            if (!IsAnimatorState(currentInfo, givesKeyStateName, stateHash))
-            {
-                Debug.LogWarning($"Состояние '{givesKeyStateName}' закончилось раньше, чем наступила {keysTransferTimeInGivesKey} секунда.");
-                yield break;
-            }
-
-            float secondsInState = currentInfo.normalizedTime * currentInfo.length;
-
-            if (secondsInState >= keysTransferTimeInGivesKey)
-                break;
-
-            yield return null;
-        }
-
-        // На 4-й секунде ключи исчезают из руки
-        if (keysInHandObject != null)
-            keysInHandObject.SetActive(false);
-
-        // И появляются там, где уже стоит keysWorldObject
-        yield return RevealWorldKeysObject();
-
-        keysTransferDone = true;
-    }
-
-    private IEnumerator RevealWorldKeysObject()
-    {
-        if (keysWorldObject == null)
-            yield break;
-
-        if (!keysWorldScaleSaved)
-        {
-            keysWorldOriginalLocalScale = keysWorldObject.localScale;
-            keysWorldScaleSaved = true;
-        }
-
-        keysWorldObject.gameObject.SetActive(true);
-        keysWorldObject.localScale = Vector3.zero;
-
-        SetObjectCollidersEnabled(keysWorldObject.gameObject, false);
-
-        float elapsed = 0f;
-
-        while (elapsed < keysWorldAppearDuration)
-        {
-            elapsed += Time.deltaTime;
-
-            float t = Mathf.Clamp01(elapsed / keysWorldAppearDuration);
-            float smoothT = t * t * (3f - 2f * t);
-
-            keysWorldObject.localScale = Vector3.Lerp(Vector3.zero, keysWorldOriginalLocalScale, smoothT);
-
-            yield return null;
-        }
-
-        keysWorldObject.localScale = keysWorldOriginalLocalScale;
-        SetObjectCollidersEnabled(keysWorldObject.gameObject, false);
-
-        Debug.Log("Ключи исчезли из руки и появились в мире, но пока не интерактивны.");
-    }
-
-    private bool IsAnimatorState(AnimatorStateInfo info, string stateName, int stateHash)
-    {
-        return info.shortNameHash == stateHash || info.IsName(stateName);
-    }
-
-    private void SetObjectCollidersEnabled(GameObject targetObject, bool enabled)
-    {
-        if (targetObject == null)
-            return;
-
-        Collider[] colliders = targetObject.GetComponentsInChildren<Collider>(true);
-
-        foreach (Collider col in colliders)
-        {
-            if (col != null)
-                col.enabled = enabled;
-        }
-    }
-
-    private IEnumerator WaitForAnimatorStateComplete(string stateName, int layerIndex)
-    {
-        if (receptionistAnimator == null)
-            yield break;
-
-        int stateHash = Animator.StringToHash(stateName);
-        bool enteredState = false;
-        float timer = 0f;
-
-        // Ждём, пока Animator войдёт в состояние GivesKey
-        while (!enteredState && timer < waitForGivesKeyEnterTimeout)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(layerIndex);
-            AnimatorStateInfo nextInfo = receptionistAnimator.GetNextAnimatorStateInfo(layerIndex);
-
-            enteredState =
-                currentInfo.shortNameHash == stateHash ||
-                nextInfo.shortNameHash == stateHash ||
-                currentInfo.IsName(stateName) ||
-                nextInfo.IsName(stateName);
-
-            timer += Time.deltaTime;
-            yield return null;
-        }
-
-        if (!enteredState)
-        {
-            Debug.LogWarning($"Animator не вошёл в состояние '{stateName}'. Проверь имя State в Animator.");
-            yield break;
-        }
-
-        // Если состояние пока только next state, ждём, пока оно станет current state
-        while (true)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(layerIndex);
-
-            bool isCurrentState =
-                currentInfo.shortNameHash == stateHash ||
-                currentInfo.IsName(stateName);
-
-            if (isCurrentState)
-                break;
-
-            yield return null;
-        }
-
-        // Ждём, пока состояние полностью проиграется и Animator выйдет из него
-        while (true)
-        {
-            AnimatorStateInfo currentInfo = receptionistAnimator.GetCurrentAnimatorStateInfo(layerIndex);
-
-            bool isCurrentState =
-                currentInfo.shortNameHash == stateHash ||
-                currentInfo.IsName(stateName);
-
-            bool isTransitioning = receptionistAnimator.IsInTransition(layerIndex);
-
-            if (!isCurrentState && !isTransitioning)
-                break;
-
-            if (isCurrentState && currentInfo.normalizedTime >= 1f && !isTransitioning)
-                break;
-
-            yield return null;
-        }
+        Debug.Log("FindAboutJob: анимированные ключи скрыты, world keys показаны.", this);
     }
 
     private void UnlockSecondDialogueInteraction()
     {
         secondDialogueUnlocked = true;
 
-        gameObject.layer = interactableLayer;
-
-        if (objectCollider != null)
-            objectCollider.enabled = true;
-
+        EnableInteraction();
         ShowInteractionDot();
 
-        Debug.Log("Второй диалог теперь доступен после завершения GivesKey-анимации.");
+        Debug.Log("FindAboutJob: второй диалог теперь доступен после появления ключей.", this);
     }
 
-    private void SaveReceptionistStartPosition()
+    private void StartSecondDialogue()
     {
-        if (receptionistStartPositionSaved)
+        if (secondDialogueLines == null || secondDialogueLines.Count == 0)
             return;
 
-        if (receptionistMoveRoot == null)
-            return;
+        secondDialogueShown = true;
 
-        receptionistStartLocalPosition = receptionistMoveRoot.localPosition;
-        receptionistStartPositionSaved = true;
+        HideInteractionDot();
+        DisableInteraction();
+
+        PlayTalkAnimation();
+
+        dialogueManager.StartDialogue(secondDialogueLines, true);
+
+        StartCoroutine(WaitForSecondDialogueAndCompleteQuest());
     }
 
-    private IEnumerator MoveLocalPosition(Transform target, Vector3 endPosition, float duration)
-    {
-        if (target == null)
-            yield break;
-
-        Vector3 startPosition = target.localPosition;
-
-        if (duration <= 0f)
-        {
-            target.localPosition = endPosition;
-            yield break;
-        }
-
-        float time = 0f;
-
-        while (time < duration)
-        {
-            time += Time.deltaTime;
-            float t = Mathf.Clamp01(time / duration);
-
-            // плавнее, чем просто линейно
-            float smoothT = t * t * (3f - 2f * t);
-
-            target.localPosition = Vector3.Lerp(startPosition, endPosition, smoothT);
-            yield return null;
-        }
-
-        target.localPosition = endPosition;
-    }
-
-    private IEnumerator WaitForSecondDialogueAndDisableInteraction()
+    private IEnumerator WaitForSecondDialogueAndCompleteQuest()
     {
         while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
 
         HideInteractionDot();
+
+        StopTalkAnimation();
 
         FindReferences();
 
@@ -577,23 +287,129 @@ public class FindAboutJob : MonoBehaviour, IInteractable
             if (questManager.IsQuestActive(questIdToComplete))
             {
                 questManager.CompleteQuest(questIdToComplete);
-                Debug.Log($"Задание '{questIdToComplete}' завершено после второго диалога.");
+                Debug.Log($"FindAboutJob: задание '{questIdToComplete}' завершено после второго диалога.", this);
             }
         }
 
         if (questManager != null && !string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
         {
-            questManager.AddQuest(questIdToAddAfterSecondDialogue);
-            Debug.Log($"Добавлено новое задание: {questIdToAddAfterSecondDialogue}");
+            if (!questManager.IsQuestActive(questIdToAddAfterSecondDialogue) &&
+                !questManager.IsQuestCompleted(questIdToAddAfterSecondDialogue))
+            {
+                questManager.AddQuest(questIdToAddAfterSecondDialogue);
+                Debug.Log($"FindAboutJob: добавлено новое задание: {questIdToAddAfterSecondDialogue}", this);
+            }
         }
 
         isCompleted = true;
-        gameObject.layer = defaultLayer;
+        DisableInteraction();
+
+        Debug.Log($"FindAboutJob: второй диалог для {questIdToComplete} завершён. Объект больше не интерактивен.", this);
+    }
+
+    private void PlayTalkAnimation()
+    {
+        if (receptionistAnimator == null)
+            return;
+
+        if (resetOtherTriggersBeforeSet)
+        {
+            if (!string.IsNullOrEmpty(givesKeyTriggerName))
+                receptionistAnimator.ResetTrigger(givesKeyTriggerName);
+
+            if (!string.IsNullOrEmpty(stopTalkTriggerName))
+                receptionistAnimator.ResetTrigger(stopTalkTriggerName);
+        }
+
+        if (!string.IsNullOrEmpty(talkTriggerName))
+            receptionistAnimator.SetTrigger(talkTriggerName);
+    }
+
+    private void PlayGivesKeyAnimation()
+    {
+        if (receptionistAnimator == null)
+            return;
+
+        if (resetOtherTriggersBeforeSet)
+        {
+            if (!string.IsNullOrEmpty(talkTriggerName))
+                receptionistAnimator.ResetTrigger(talkTriggerName);
+
+            if (!string.IsNullOrEmpty(stopTalkTriggerName))
+                receptionistAnimator.ResetTrigger(stopTalkTriggerName);
+        }
+
+        if (!string.IsNullOrEmpty(givesKeyTriggerName))
+            receptionistAnimator.SetTrigger(givesKeyTriggerName);
+    }
+
+    private void StopTalkAnimation()
+    {
+        if (receptionistAnimator == null)
+            return;
+
+        if (resetOtherTriggersBeforeSet)
+        {
+            if (!string.IsNullOrEmpty(talkTriggerName))
+                receptionistAnimator.ResetTrigger(talkTriggerName);
+
+            if (!string.IsNullOrEmpty(givesKeyTriggerName))
+                receptionistAnimator.ResetTrigger(givesKeyTriggerName);
+        }
+
+        if (!string.IsNullOrEmpty(stopTalkTriggerName))
+            receptionistAnimator.SetTrigger(stopTalkTriggerName);
+    }
+
+    private void PrepareWorldKeysOnStart()
+    {
+        if (!hideWorldKeysOnStart)
+            return;
+
+        if (worldKeysObject == null)
+            return;
+
+        if (ShouldKeepWorldKeysVisibleOnStart())
+            return;
+
+        worldKeysObject.SetActive(false);
+    }
+
+    private bool ShouldKeepWorldKeysVisibleOnStart()
+    {
+        FindReferences();
+
+        if (questManager == null)
+            return false;
+
+        if (!string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
+        {
+            if (questManager.IsQuestActive(questIdToAddAfterSecondDialogue))
+                return true;
+
+            if (questManager.IsQuestCompleted(questIdToAddAfterSecondDialogue))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void EnableInteraction()
+    {
+        if (interactableLayer != -1)
+            gameObject.layer = interactableLayer;
+
+        if (objectCollider != null)
+            objectCollider.enabled = true;
+    }
+
+    private void DisableInteraction()
+    {
+        if (defaultLayer != -1)
+            gameObject.layer = defaultLayer;
 
         if (objectCollider != null)
             objectCollider.enabled = false;
-
-        Debug.Log($"Второй диалог для {questIdToComplete} завершён. Объект больше не интерактивен.");
     }
 
     private void HideInteractionDot()
@@ -617,7 +433,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (!autoFindReferences)
             return;
 
-        // QuestUIManager
         if (questManager == null)
             questManager = QuestUIManager.Instance;
 
@@ -632,7 +447,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (questManager == null)
             questManager = FindObjectOfType<QuestUIManager>();
 
-        // DialogueManager — ищем именно обычный DialogueManager, не LoadingDialogueManager
         if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
         {
             GameObject obj = GameObject.Find(dialogueManagerObjectName);
@@ -655,7 +469,6 @@ public class FindAboutJob : MonoBehaviour, IInteractable
             }
         }
 
-        // InteractionDot
         if (interactionDot == null)
         {
             GameObject obj = GameObject.Find(interactionDotObjectName);
@@ -664,10 +477,7 @@ public class FindAboutJob : MonoBehaviour, IInteractable
                 interactionDot = obj.GetComponent<Image>();
         }
 
-        // Animator регистраторши
         if (receptionistAnimator == null && autoFindAnimatorInChildren)
-        {
             receptionistAnimator = GetComponentInChildren<Animator>();
-        }
     }
 }

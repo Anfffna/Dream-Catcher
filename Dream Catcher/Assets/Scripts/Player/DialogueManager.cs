@@ -15,6 +15,13 @@ public class DialogueManager : MonoBehaviour
         public bool useCustomColor = false;
         public string colorHex = "#A997C9";
 
+        [Header("Voice Audio")]
+        [Tooltip("Если включено, во время этой реплики будет играть зацикленная озвучка.")]
+        public bool useAudio = false;
+
+        [Tooltip("AudioSource с бормотанием персонажа. Можно назначать только на тех репликах, где Use Audio включён.")]
+        public AudioSource voiceAudioSource;
+
         [Header("After Click Pause")]
         [Tooltip("Задержка в секундах после клика (диалоговое окно исчезнет), затем появится следующая реплика. 0 = сразу. Клики во время паузы не работают.")]
         public float clickPauseDelay = 0f;
@@ -30,6 +37,13 @@ public class DialogueManager : MonoBehaviour
     public bool hidePanelOnStart = true;
     public bool hidePanelOnEnd = true;
 
+    [Header("Voice Settings")]
+    [Tooltip("Если у реплики Use Audio включён, но Voice Audio Source не назначен, будет использован этот AudioSource.")]
+    public AudioSource defaultVoiceAudioSource;
+
+    [Tooltip("Если включено, DialogueManager принудительно ставит loop = true на используемый AudioSource.")]
+    public bool forceVoiceLoop = true;
+
     [Header("Auto Find")]
     public bool autoFindReferences = true;
     public string playerObjectName = "Player";
@@ -37,18 +51,24 @@ public class DialogueManager : MonoBehaviour
     private int currentLineIndex = 0;
     private bool isTyping = false;
     private bool dialogueActive = false;
+
     public static int ActiveDialogueCount { get; private set; }
     public static bool AnyDialogueActive => ActiveDialogueCount > 0;
+
     private bool registeredAsActiveDialogue = false;
-    private bool waitingForClickAfterTyping = false; // текст полностью показан, ждём клик для паузы
+    private bool waitingForClickAfterTyping = false;
     private Coroutine typingCoroutine;
     private Coroutine pauseCoroutine;
     private bool isWaitingForClickPause = false;
-    private bool skipProtection = false; // защита от двойного клика при пропуске печати
+    private bool skipProtection = false;
+
     private PlayerController playerController;
     private bool wasMovementLocked = false;
     private bool originalCanMoveState = false;
     private bool blockMovementForCurrentDialogue = false;
+
+    private AudioSource currentVoiceAudioSource;
+    private readonly List<AudioSource> pausedByDialogueSources = new List<AudioSource>();
 
     public bool DialogueActive => dialogueActive;
 
@@ -58,6 +78,7 @@ public class DialogueManager : MonoBehaviour
 
         if (hidePanelOnStart && dialoguePanel != null)
             dialoguePanel.SetActive(false);
+
         if (dialogueText != null)
             dialogueText.text = "";
     }
@@ -65,19 +86,19 @@ public class DialogueManager : MonoBehaviour
     void Update()
     {
         if (!dialogueActive) return;
-        if (isWaitingForClickPause) return; // во время паузы клики игнорируем
-        if (skipProtection) return; // защита после скипа: кратковременно не принимаем клики
+        if (isWaitingForClickPause) return;
+        if (skipProtection) return;
 
         if (Input.GetMouseButtonDown(0))
         {
-            // Если идёт печать – пропускаем
+            // Если идёт печать — пропускаем печать и прерываем озвучку этой реплики.
             if (isTyping)
             {
                 SkipTyping();
                 return;
             }
 
-            // Если текст полностью показан и ждём клик – запускаем паузу
+            // Если текст полностью показан и ждём клик — запускаем паузу/следующую реплику.
             if (waitingForClickAfterTyping)
             {
                 StartClickPauseAndNext();
@@ -94,6 +115,8 @@ public class DialogueManager : MonoBehaviour
     {
         FindReferences();
 
+        PauseCurrentVoiceAudio();
+
         dialogueLines = lines;
         blockMovementForCurrentDialogue = blockMovement;
 
@@ -103,7 +126,7 @@ public class DialogueManager : MonoBehaviour
         dialogueActive = true;
         RegisterActiveDialogue();
 
-        // Блокируем движение, если требуется
+        // Блокируем движение, если требуется.
         if (blockMovementForCurrentDialogue && playerController != null)
         {
             originalCanMoveState = playerController.canMove;
@@ -119,11 +142,13 @@ public class DialogueManager : MonoBehaviour
     private void ShowNextLine()
     {
         currentLineIndex++;
+
         if (currentLineIndex >= dialogueLines.Count)
         {
             EndDialogue();
             return;
         }
+
         waitingForClickAfterTyping = false;
         ShowDialoguePanel(true);
         ShowLine(dialogueLines[currentLineIndex]);
@@ -133,11 +158,15 @@ public class DialogueManager : MonoBehaviour
     {
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
+
         if (pauseCoroutine != null)
             StopCoroutine(pauseCoroutine);
+
         isWaitingForClickPause = false;
         waitingForClickAfterTyping = false;
         skipProtection = false;
+
+        HandleVoiceForLine(line);
 
         string finalText = GetFinalText(line);
         typingCoroutine = StartCoroutine(TypeLine(finalText));
@@ -146,8 +175,10 @@ public class DialogueManager : MonoBehaviour
     private string GetFinalText(DialogueLine line)
     {
         if (line == null) return "";
+
         if (line.useCustomColor)
             return "<color=" + line.colorHex + ">" + line.text + "</color>";
+
         return line.text;
     }
 
@@ -158,9 +189,11 @@ public class DialogueManager : MonoBehaviour
         dialogueText.maxVisibleCharacters = 0;
 
         float delay = lettersPerSecond <= 0f ? 0f : 1f / lettersPerSecond;
+
         for (int i = 1; i <= line.Length; i++)
         {
             dialogueText.maxVisibleCharacters = i;
+
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
             else
@@ -169,7 +202,9 @@ public class DialogueManager : MonoBehaviour
 
         isTyping = false;
         typingCoroutine = null;
-        // Печать завершена, теперь ждём клик игрока для паузы
+
+        // Печать завершена, теперь ждём клик игрока.
+        // Озвучку НЕ останавливаем тут: она продолжает бормотать, пока игрок не кликнет.
         waitingForClickAfterTyping = true;
     }
 
@@ -185,11 +220,14 @@ public class DialogueManager : MonoBehaviour
             dialogueText.maxVisibleCharacters = fullText.Length;
         }
 
+        // При скипе печати озвучка этой реплики прерывается/ставится на паузу.
+        PauseCurrentVoiceAudio();
+
         isTyping = false;
         typingCoroutine = null;
         waitingForClickAfterTyping = true;
 
-        // Включаем защиту от двойного клика на 0.2 секунды
+        // Защита от двойного клика на 0.2 секунды.
         if (!skipProtection)
             StartCoroutine(SkipProtectionRoutine());
     }
@@ -203,6 +241,9 @@ public class DialogueManager : MonoBehaviour
 
     private void StartClickPauseAndNext()
     {
+        // При переходе с реплики озвучка прерывается.
+        PauseCurrentVoiceAudio();
+
         float delay = dialogueLines[currentLineIndex].clickPauseDelay;
         waitingForClickAfterTyping = false;
 
@@ -221,15 +262,109 @@ public class DialogueManager : MonoBehaviour
     private IEnumerator ClickPauseRoutine(float delay)
     {
         yield return new WaitForSeconds(delay);
+
         isWaitingForClickPause = false;
         pauseCoroutine = null;
+
         ShowNextLine();
     }
 
     private void ShowDialoguePanel(bool show)
     {
+        if (!show)
+            PauseCurrentVoiceAudio();
+
         if (dialoguePanel != null && dialoguePanel.activeSelf != show)
             dialoguePanel.SetActive(show);
+    }
+
+    private void HandleVoiceForLine(DialogueLine line)
+    {
+        if (line == null)
+        {
+            PauseCurrentVoiceAudio();
+            return;
+        }
+
+        if (!line.useAudio)
+        {
+            PauseCurrentVoiceAudio();
+            return;
+        }
+
+        AudioSource source = line.voiceAudioSource;
+
+        if (source == null)
+            source = defaultVoiceAudioSource;
+
+        if (source == null)
+        {
+            PauseCurrentVoiceAudio();
+            return;
+        }
+
+        if (source.clip == null)
+        {
+            PauseCurrentVoiceAudio();
+            return;
+        }
+
+        if (currentVoiceAudioSource != null && currentVoiceAudioSource != source)
+            PauseVoiceAudio(currentVoiceAudioSource);
+
+        currentVoiceAudioSource = source;
+
+        if (forceVoiceLoop)
+            currentVoiceAudioSource.loop = true;
+
+        PlayOrResumeVoiceAudio(currentVoiceAudioSource);
+    }
+
+    private void PlayOrResumeVoiceAudio(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        if (source.clip == null)
+            return;
+
+        if (source.isPlaying)
+            return;
+
+        if (pausedByDialogueSources.Contains(source))
+        {
+            source.UnPause();
+            pausedByDialogueSources.Remove(source);
+        }
+        else
+        {
+            source.Play();
+        }
+    }
+
+    private void PauseCurrentVoiceAudio()
+    {
+        if (currentVoiceAudioSource == null)
+            return;
+
+        PauseVoiceAudio(currentVoiceAudioSource);
+    }
+
+    private void PauseVoiceAudio(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        if (source.clip == null)
+            return;
+
+        if (source.isPlaying)
+        {
+            source.Pause();
+
+            if (!pausedByDialogueSources.Contains(source))
+                pausedByDialogueSources.Add(source);
+        }
     }
 
     private void RegisterActiveDialogue()
@@ -252,6 +387,8 @@ public class DialogueManager : MonoBehaviour
 
     private void EndDialogue()
     {
+        PauseCurrentVoiceAudio();
+
         dialogueActive = false;
         UnregisterActiveDialogue();
 
@@ -260,12 +397,15 @@ public class DialogueManager : MonoBehaviour
             playerController.SetMovementEnabled(originalCanMoveState);
             wasMovementLocked = false;
         }
+
         blockMovementForCurrentDialogue = false;
 
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
+
         if (pauseCoroutine != null)
             StopCoroutine(pauseCoroutine);
+
         pauseCoroutine = null;
         isWaitingForClickPause = false;
         waitingForClickAfterTyping = false;
@@ -277,6 +417,7 @@ public class DialogueManager : MonoBehaviour
             dialogueText.text = "";
             dialogueText.maxVisibleCharacters = 99999;
         }
+
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);
     }
@@ -300,6 +441,8 @@ public class DialogueManager : MonoBehaviour
 
     private void OnDisable()
     {
+        PauseCurrentVoiceAudio();
+
         if (dialogueActive)
         {
             dialogueActive = false;
@@ -309,6 +452,8 @@ public class DialogueManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        PauseCurrentVoiceAudio();
+
         if (dialogueActive)
         {
             dialogueActive = false;
