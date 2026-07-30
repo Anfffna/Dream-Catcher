@@ -5846,7 +5846,7 @@ MonoBehaviour:
   clearColor: {r: 0.093620524, g: 0.09913138, b: 0.10188681, a: 1}
   tvNoiseClip: {fileID: 8300000, guid: 35fe571af8c90fe468b67f84846d760a, type: 3}
   noiseStartVolume: 0
-  noiseTargetVolume: 0.7
+  noiseTargetVolume: 0.5
   noiseFadeInDuration: 5
   noiseFadeOutDuration: 0.7
   newsVolume: 1
@@ -12892,7 +12892,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 4532d5e1ad0d3a441a3e31bc01a32228, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.25
+  m_Volume: 0.35
   m_Pitch: 1
   Loop: 1
   Mute: 0

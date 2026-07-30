@@ -4413,6 +4413,30 @@ PrefabInstance:
       value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[0].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[1].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[2].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[3].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[4].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: quests.Array.data[5].tag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653527175455944823, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: quests.Array.data[6].tag
       value: 0
       objectReference: {fileID: 0}
