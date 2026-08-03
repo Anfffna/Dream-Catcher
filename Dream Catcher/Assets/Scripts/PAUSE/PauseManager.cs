@@ -89,6 +89,18 @@ public class PauseManager : MonoBehaviour
 
     void Update()
     {
+        /*если игрок сидит в рабочем режиме, курсор нельзя блокировать в центре*/
+        if (DialogueManager.AnyDialogueActive)
+        {
+            bool playerIsSeated =
+                WorkSessionManager.Instance != null &&
+                WorkSessionManager.Instance.IsSeated;
+
+            if (!playerIsSeated)
+                ForceGameplayCursorLocked();
+            return;
+        }
+
         if (IsPauseBlocked())
         {
             ForceGameplayCursorLocked();
@@ -114,6 +126,11 @@ public class PauseManager : MonoBehaviour
 
     public void PauseGame()
     {
+        if (DialogueManager.AnyDialogueActive)
+        {
+            return;
+        }
+
         if (IsPauseBlocked())
         {
             ForceGameplayCursorLocked();
@@ -657,9 +674,6 @@ public class PauseManager : MonoBehaviour
             return true;
 
         if (LoadingManager.IsLoadingScreenBlockingPause())
-            return true;
-
-        if (DialogueManager.AnyDialogueActive)
             return true;
 
         return false;

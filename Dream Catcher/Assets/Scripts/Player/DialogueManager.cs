@@ -54,6 +54,7 @@ public class DialogueManager : MonoBehaviour
 
     public static int ActiveDialogueCount { get; private set; }
     public static bool AnyDialogueActive => ActiveDialogueCount > 0;
+    public int CurrentLineIndex => currentLineIndex;
 
     private bool registeredAsActiveDialogue = false;
     private bool waitingForClickAfterTyping = false;
@@ -118,7 +119,15 @@ public class DialogueManager : MonoBehaviour
         PauseCurrentVoiceAudio();
 
         dialogueLines = lines;
-        blockMovementForCurrentDialogue = blockMovement;
+        /*Во время работы игрок уже сидит:
+         * Поэтому DialogueManager не должен повторно блокировать управление через SetMovementEnabled*/
+        bool playerIsSeated =
+            WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsSeated;
+
+        blockMovementForCurrentDialogue =
+            blockMovement &&
+            !playerIsSeated;
 
         if (dialogueLines == null || dialogueLines.Count == 0) return;
 
@@ -420,6 +429,24 @@ public class DialogueManager : MonoBehaviour
 
         if (hidePanelOnEnd && dialoguePanel != null)
             dialoguePanel.SetActive(false);
+
+        if (WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsSeated)
+        {
+            if (WorkSessionManager.Instance.seatController != null)
+            {
+                WorkSessionManager.Instance
+                    .seatController
+                    .RestoreWorkControlAfterPause();
+            }
+
+            if (WorkSessionManager.Instance.cursorController != null)
+            {
+                WorkSessionManager.Instance
+                    .cursorController
+                    .ShowWorkCursor();
+            }
+        }
     }
 
     private void FindReferences()
