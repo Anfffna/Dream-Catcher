@@ -586,6 +586,59 @@ public class WorkComputerController :
         }
     }
 
+    public void PrepareCanvasForTest()
+    {
+        // Останавливаем возможную загрузку компьютера.
+        if (bootCoroutine != null)
+        {
+            StopCoroutine(bootCoroutine);
+            bootCoroutine = null;
+        }
+
+        if (outlineCoroutine != null)
+        {
+            StopCoroutine(outlineCoroutine);
+            outlineCoroutine = null;
+        }
+
+        if (videoPlayer != null)
+        {
+            videoPlayer.Stop();
+            videoPlayer.isLooping = false;
+        }
+
+        // Сразу устанавливаем компьютер в конечное рабочее состояние.
+        currentState = ComputerState.Desktop;
+
+        // В тестовом режиме полностью скрываем предыдущие экраны.
+        if (physicalScreenObject != null)
+            physicalScreenObject.SetActive(false);
+
+        if (videoScreenQuad != null)
+            videoScreenQuad.SetActive(false);
+
+        // Показываем готовый World Space Canvas.
+        if (computerWorldCanvas != null)
+            computerWorldCanvas.SetActive(true);
+
+        if (computerWorldCanvasGroup != null)
+        {
+            computerWorldCanvasGroup.alpha = 1f;
+
+            // Кнопки включатся только после завершения зума.
+            computerWorldCanvasGroup.interactable = false;
+            computerWorldCanvasGroup.blocksRaycasts = false;
+        }
+
+        zoomClickAvailable = false;
+
+        // Монитор больше не должен ловить 3D-клики.
+        SetInteractionLayer(false);
+
+        if (interactionOutline != null)
+            interactionOutline.HideOutline();
+    }
+
     private void ShowPhysicalScreen()
     {
         if (physicalScreenObject != null)

@@ -253,6 +253,15 @@ public class ZoomComputerWork : MonoBehaviour
         {
             mouseInteractionController.enabled = false;
         }
+
+        // После отключения 3D-взаимодействия возвращаем обычный курсор.
+        if (WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.cursorController != null)
+        {
+            WorkSessionManager.Instance
+                .cursorController
+                .SetDefaultCursor();
+        }
     }
 
     private Quaternion CalculateTargetRotation()

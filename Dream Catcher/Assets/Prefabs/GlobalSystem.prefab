@@ -2533,7 +2533,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -270}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &3055845547947259325
@@ -3363,6 +3363,8 @@ MonoBehaviour:
   lettersPerSecond: 25
   hidePanelOnStart: 1
   hidePanelOnEnd: 1
+  defaultVoiceAudioSource: {fileID: 0}
+  forceVoiceLoop: 1
   autoFindReferences: 1
   playerObjectName: Player
 --- !u!1 &3065757850955784799
@@ -8076,6 +8078,8 @@ MonoBehaviour:
   lettersPerSecond: 25
   hidePanelOnStart: 1
   hidePanelOnEnd: 1
+  defaultVoiceAudioSource: {fileID: 0}
+  forceVoiceLoop: 1
   autoFindReferences: 1
   playerObjectName: Player
 --- !u!1 &8775366937243821151

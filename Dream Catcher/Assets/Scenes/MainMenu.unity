@@ -4200,6 +4200,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 215394291084138694, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: m_Name
+      value: Loading_Color
+      objectReference: {fileID: 0}
+    - target: {fileID: 479873610127602283, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: m_Name
+      value: LoadingCanvas_Black
+      objectReference: {fileID: 0}
     - target: {fileID: 631227744820127034, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: volumeSlider
       value: 
