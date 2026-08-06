@@ -44,7 +44,6 @@ public class LoadingSpinnerController : MonoBehaviour
 
     public void Show()
     {
-        gameObject.SetActive(true); // <-- ÂÎÒ ÝÒÎ ÂÀÆÍÎ
         StopAllCoroutines();
         StartCoroutine(Fade(0f, 1f, fadeDuration));
     }

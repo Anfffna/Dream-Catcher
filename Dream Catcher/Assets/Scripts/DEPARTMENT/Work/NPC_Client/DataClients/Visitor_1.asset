@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e65fb666f074b24fb0d9f1ba31d77db, type: 3}
+  m_Name: Visitor_1
+  m_EditorClassIdentifier: Assembly-CSharp::VisitorCaseData
+  visitorId: visitor_001
+  clientName: "\u0418\u0412\u0410\u041D\u041E\u0412 \u041C.\u041C."
+  registrationNumber: 4567-345-26
+  recordDate: 07/08/2007
+  occupation: "\u041C\u041B\u0410\u0414\u0428\u0418\u0419 \u0410\u041D\u0410\u041B\u0418\u0422\u0418\u041A"

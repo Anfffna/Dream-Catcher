@@ -94,10 +94,18 @@ public class MainMenuController : MonoBehaviour
             }
         }
 
-        if (GlobalLoadingManager.Instance != null)
-            GlobalLoadingManager.Instance.StartLoading(firstSceneName);
+        if (LoadingManager.Instance != null)
+        {
+            LoadingManager.Instance.StartLoading(
+                firstSceneName
+            );
+        }
         else
-            SceneManager.LoadScene(firstSceneName);
+        {
+            SceneManager.LoadScene(
+                firstSceneName
+            );
+        }
     }
 
     public void OnContinueButton()

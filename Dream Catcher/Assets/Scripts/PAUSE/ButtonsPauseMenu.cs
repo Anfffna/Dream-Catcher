@@ -44,14 +44,17 @@ public class ButtonsPauseMenu : MonoBehaviour
         // Сбрасываем выделение индикаторов
         IndicatorHover.ResetSelection();
 
-        // Загружаем главное меню
-        if (GlobalLoadingManager.Instance != null)
+        if (LoadingManager.Instance != null)
         {
-            GlobalLoadingManager.Instance.StartLoading("MainMenu");
+            LoadingManager.Instance.StartLoading(
+                "MainMenu"
+            );
         }
         else
         {
-            SceneManager.LoadScene("MainMenu");
+            SceneManager.LoadScene(
+                "MainMenu"
+            );
         }
     }
 }

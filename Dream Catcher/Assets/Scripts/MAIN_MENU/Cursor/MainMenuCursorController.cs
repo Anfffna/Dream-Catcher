@@ -1,60 +1,135 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class MainMenuCursorController : MonoBehaviour
+public class MainMenuCursorController :
+    MonoBehaviour
 {
-    [Header("Custom Cursors")]
-    public Texture2D defaultCursor;
-    public Texture2D interactCursor;
+    [Header("Курсоры")]
+    [SerializeField] private Texture2D defaultCursor;
+    [SerializeField] private Texture2D interactCursor;
 
-    [Header("Cursor Hotspot")]
-    public Vector2 defaultCursorHotspot = Vector2.zero;
-    public Vector2 interactCursorHotspot = Vector2.zero;
+    [Header("Активная точка курсора")]
+    [SerializeField]
+    private Vector2 defaultCursorHotspot =
+        Vector2.zero;
 
-    void Start()
+    [SerializeField]
+    private Vector2 interactCursorHotspot =
+        Vector2.zero;
+
+    private IEnumerator Start()
     {
-        // Показываем курсор и разблокируем
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        SetDefaultCursor();
+        Cursor.SetCursor(
+            defaultCursor,
+            defaultCursorHotspot,
+            CursorMode.ForceSoftware
+        );
 
-        // Находим все кнопки в сцене и добавляем EventTrigger для смены курсора
+        // На всём протяжении загрузки каждый кадр
+        // принудительно удерживаем курсор скрытым.
+        while (LoadingManager.Instance != null &&
+               LoadingManager.Instance.IsLoading)
+        {
+            Cursor.visible = false;
+            Cursor.lockState =
+                CursorLockMode.Locked;
+
+            yield return null;
+        }
+
+        // Загрузочный Canvas уже закончил исчезновение.
+        yield return null;
+
+        Cursor.lockState =
+            CursorLockMode.None;
+
+        Cursor.visible = true;
+
+        SetDefaultCursor();
         AddCursorEventsToButtons();
     }
 
-    void SetDefaultCursor()
+    private void SetDefaultCursor()
     {
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
+        Cursor.SetCursor(
+            defaultCursor,
+            defaultCursorHotspot,
+            CursorMode.ForceSoftware
+        );
     }
 
-    void SetInteractCursor()
+    private void SetInteractCursor()
     {
-        Cursor.SetCursor(interactCursor, interactCursorHotspot, CursorMode.ForceSoftware);
+        Cursor.SetCursor(
+            interactCursor,
+            interactCursorHotspot,
+            CursorMode.ForceSoftware
+        );
     }
 
-    void AddCursorEventsToButtons()
+    private void AddCursorEventsToButtons()
     {
-        // Находим все объекты с компонентом Button (включая дочерние)
-        Button[] buttons = FindObjectsOfType<Button>(true);
-        foreach (Button btn in buttons)
+        Button[] buttons =
+            FindObjectsByType<Button>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+        for (int i = 0;
+             i < buttons.Length;
+             i++)
         {
-            // Добавляем EventTrigger, если его нет
-            EventTrigger trigger = btn.gameObject.GetComponent<EventTrigger>();
+            Button button = buttons[i];
+
+            if (button == null)
+                continue;
+
+            EventTrigger trigger =
+                button.GetComponent<EventTrigger>();
+
             if (trigger == null)
-                trigger = btn.gameObject.AddComponent<EventTrigger>();
+            {
+                trigger =
+                    button.gameObject
+                        .AddComponent<EventTrigger>();
+            }
 
-            // Создаём вход для PointerEnter
-            EventTrigger.Entry entryEnter = new EventTrigger.Entry();
-            entryEnter.eventID = EventTriggerType.PointerEnter;
-            entryEnter.callback.AddListener((data) => { SetInteractCursor(); });
-            trigger.triggers.Add(entryEnter);
+            if (trigger.triggers == null)
+            {
+                trigger.triggers =
+                    new System.Collections.Generic
+                        .List<EventTrigger.Entry>();
+            }
 
-            // Создаём вход для PointerExit
-            EventTrigger.Entry entryExit = new EventTrigger.Entry();
-            entryExit.eventID = EventTriggerType.PointerExit;
-            entryExit.callback.AddListener((data) => { SetDefaultCursor(); });
-            trigger.triggers.Add(entryExit);
+            EventTrigger.Entry enterEntry =
+                new EventTrigger.Entry();
+
+            enterEntry.eventID =
+                EventTriggerType.PointerEnter;
+
+            enterEntry.callback.AddListener(
+                _ => SetInteractCursor()
+            );
+
+            trigger.triggers.Add(
+                enterEntry
+            );
+
+            EventTrigger.Entry exitEntry =
+                new EventTrigger.Entry();
+
+            exitEntry.eventID =
+                EventTriggerType.PointerExit;
+
+            exitEntry.callback.AddListener(
+                _ => SetDefaultCursor()
+            );
+
+            trigger.triggers.Add(
+                exitEntry
+            );
         }
     }
 }

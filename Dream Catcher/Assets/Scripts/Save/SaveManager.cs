@@ -168,13 +168,17 @@ public class SaveManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
         SceneManager.sceneLoaded += OnSceneLoadedAfterSaveLoad;
 
-        if (GlobalLoadingManager.Instance != null)
+        if (LoadingManager.Instance != null)
         {
-            GlobalLoadingManager.Instance.StartLoading(pendingLoadData.sceneName);
+            LoadingManager.Instance.StartLoading(
+                pendingLoadData.sceneName
+            );
         }
         else
         {
-            SceneManager.LoadScene(pendingLoadData.sceneName);
+            SceneManager.LoadScene(
+                pendingLoadData.sceneName
+            );
         }
     }
 

@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class ClientNPCController : MonoBehaviour, IInteractable
 {
+    [Header("Данные клиента")]
+    [Tooltip("Карточка данных этого конкретного клиента.")]
+    [SerializeField] private VisitorCaseData visitorData;
+
+    [Tooltip("Панель информации клиента на экране направления.")]
+    [SerializeField] private ClientInfoPanelController clientInfoPanel;
+
     [Header("Анимация")]
     [SerializeField]
     private Animator animator;
@@ -211,6 +218,7 @@ public class ClientNPCController : MonoBehaviour, IInteractable
             return;
 
         FindReferences();
+        ApplyClientInformation();
 
         if (animator == null)
         {
@@ -415,6 +423,18 @@ public class ClientNPCController : MonoBehaviour, IInteractable
             );
     }
 
+    public void ApplyClientInformation()
+    {
+        if (visitorData == null ||
+            clientInfoPanel == null)
+        {
+            return;
+        }
+
+        clientInfoPanel.ShowClient(
+            visitorData
+        );
+    }
 
     private IEnumerator WaitForDialogueToFinish()
     {

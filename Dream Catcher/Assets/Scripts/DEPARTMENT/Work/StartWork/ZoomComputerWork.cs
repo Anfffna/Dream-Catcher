@@ -3,7 +3,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
-public class ZoomComputerWork : MonoBehaviour
+public class ZoomComputerWork :
+    MonoBehaviour
 {
     [Header("Цель")]
     [Tooltip("Точка в центре экрана компьютера.")]
@@ -12,42 +13,76 @@ public class ZoomComputerWork : MonoBehaviour
     [Header("Автопоиск игрока")]
     [SerializeField] private PlayerController playerController;
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private WorkMouseInteractionController mouseInteractionController;
+
+    [SerializeField]
+    private WorkMouseInteractionController
+        mouseInteractionController;
 
     [Tooltip("Обычный ручной зум игрока.")]
     [SerializeField] private MonoBehaviour manualZoomComponent;
 
-    [SerializeField] private string playerObjectName = "Player";
+    [SerializeField]
+    private string playerObjectName =
+        "Player";
 
     [Tooltip("Точное имя класса обычного ручного зума.")]
-    [SerializeField] private string manualZoomTypeName = "CameraZoom";
+    [SerializeField]
+    private string manualZoomTypeName =
+        "CameraZoom";
+
+    [Header("Рабочие системы")]
+    [Tooltip("Контроллер компьютера.")]
+    [SerializeField]
+    private WorkComputerController computerController;
+
+    [Tooltip("Главный контроллер рабочей смены.")]
+    [SerializeField]
+    private WorkSessionManager sessionManager;
 
     [Header("Настройки зума")]
-    [Tooltip("Продолжительность плавного приближения.")]
-    [SerializeField] private float zoomDuration = 0.7f;
+    [Tooltip("Продолжительность приближения и обратного перехода.")]
+    [SerializeField]
+    private float zoomDuration =
+        0.7f;
 
     [Tooltip("Чем меньше значение, тем сильнее приближение.")]
-    [SerializeField] private float targetFieldOfView = 28f;
+    [SerializeField]
+    private float targetFieldOfView =
+        28f;
 
     [Tooltip("Заблокировать движение камеры после начала зума.")]
-    [SerializeField] private bool lockPlayerLook = true;
+    [SerializeField]
+    private bool lockPlayerLook =
+        true;
 
     [Tooltip("Отключить обычный ручной зум игрока.")]
-    [SerializeField] private bool disableManualZoom = true;
+    [SerializeField]
+    private bool disableManualZoom =
+        true;
 
     [Tooltip("Отключить клики по объектам игрового мира.")]
-    [SerializeField] private bool disableWorldInteraction = true;
+    [SerializeField]
+    private bool disableWorldInteraction =
+        true;
 
-    [Header("События")]
+    [Header("События приближения")]
     [Tooltip("Вызывается перед началом приближения.")]
     [SerializeField] private UnityEvent onZoomStarted;
 
     [Tooltip("Вызывается после достижения конечного зума.")]
     [SerializeField] private UnityEvent onZoomReached;
 
-    private Coroutine zoomCoroutine;
+    [Header("События возврата")]
+    [Tooltip("Вызывается перед началом возврата к рабочему виду.")]
+    [SerializeField] private UnityEvent onReturnStarted;
+
+    [Tooltip("Вызывается после полного возврата к рабочему виду.")]
+    [SerializeField] private UnityEvent onReturnReached;
+
+    private Coroutine transitionCoroutine;
 
     private bool zoomInProgress;
+    private bool returnInProgress;
     private bool zoomLocked;
     private bool initialStateCaptured;
 
@@ -61,7 +96,23 @@ public class ZoomComputerWork : MonoBehaviour
 
     public bool ZoomActive =>
         zoomInProgress ||
+        returnInProgress ||
         zoomLocked;
+
+    public bool IsZoomedIn =>
+        zoomLocked &&
+        !zoomInProgress &&
+        !returnInProgress;
+
+    public bool IsTransitioning =>
+        zoomInProgress ||
+        returnInProgress;
+
+    public float TransitionDuration =>
+        Mathf.Max(
+            0f,
+            zoomDuration
+        );
 
     private void Awake()
     {
@@ -76,7 +127,7 @@ public class ZoomComputerWork : MonoBehaviour
             return;
         }
 
-        // Удерживаем камеру на экране после окончания приближения.
+        // Удерживаем камеру на экране после приближения.
         playerCamera.fieldOfView =
             targetFieldOfView;
 
@@ -86,10 +137,13 @@ public class ZoomComputerWork : MonoBehaviour
 
     private void OnDisable()
     {
-        if (zoomCoroutine != null)
+        if (transitionCoroutine != null)
         {
-            StopCoroutine(zoomCoroutine);
-            zoomCoroutine = null;
+            StopCoroutine(
+                transitionCoroutine
+            );
+
+            transitionCoroutine = null;
         }
 
         RestoreInitialState();
@@ -98,14 +152,36 @@ public class ZoomComputerWork : MonoBehaviour
     public void StartZoom()
     {
         if (zoomInProgress ||
+            returnInProgress ||
             zoomLocked ||
-            zoomCoroutine != null)
+            transitionCoroutine != null)
         {
             return;
         }
 
-        zoomCoroutine =
-            StartCoroutine(ZoomRoutine());
+        transitionCoroutine =
+            StartCoroutine(
+                ZoomRoutine()
+            );
+    }
+
+    public bool ReturnToWorkView()
+    {
+        if (!zoomLocked ||
+            zoomInProgress ||
+            returnInProgress ||
+            transitionCoroutine != null ||
+            !initialStateCaptured)
+        {
+            return false;
+        }
+
+        transitionCoroutine =
+            StartCoroutine(
+                ReturnRoutine()
+            );
+
+        return true;
     }
 
     private IEnumerator ZoomRoutine()
@@ -115,7 +191,7 @@ public class ZoomComputerWork : MonoBehaviour
         if (playerCamera == null ||
             zoomTarget == null)
         {
-            zoomCoroutine = null;
+            transitionCoroutine = null;
             yield break;
         }
 
@@ -123,6 +199,7 @@ public class ZoomComputerWork : MonoBehaviour
         DisableConflictingControl();
 
         zoomInProgress = true;
+        returnInProgress = false;
 
         onZoomStarted?.Invoke();
 
@@ -135,64 +212,153 @@ public class ZoomComputerWork : MonoBehaviour
         fixedCameraRotation =
             CalculateTargetRotation();
 
-        if (zoomDuration <= 0f)
-        {
-            playerCamera.fieldOfView =
-                targetFieldOfView;
+        yield return AnimateCamera(
+            startFieldOfView,
+            targetFieldOfView,
+            startRotation,
+            fixedCameraRotation
+        );
 
-            playerCamera.transform.rotation =
-                fixedCameraRotation;
-        }
-        else
-        {
-            float elapsed = 0f;
+        playerCamera.fieldOfView =
+            targetFieldOfView;
 
-            while (elapsed < zoomDuration)
-            {
-                elapsed +=
-                    Time.unscaledDeltaTime;
-
-                float t =
-                    Mathf.Clamp01(
-                        elapsed / zoomDuration
-                    );
-
-                float smoothT =
-                    Mathf.SmoothStep(
-                        0f,
-                        1f,
-                        t
-                    );
-
-                playerCamera.fieldOfView =
-                    Mathf.Lerp(
-                        startFieldOfView,
-                        targetFieldOfView,
-                        smoothT
-                    );
-
-                playerCamera.transform.rotation =
-                    Quaternion.Slerp(
-                        startRotation,
-                        fixedCameraRotation,
-                        smoothT
-                    );
-
-                yield return null;
-            }
-
-            playerCamera.fieldOfView =
-                targetFieldOfView;
-
-            playerCamera.transform.rotation =
-                fixedCameraRotation;
-        }
+        playerCamera.transform.rotation =
+            fixedCameraRotation;
 
         zoomInProgress = false;
         zoomLocked = true;
-        zoomCoroutine = null;
+        transitionCoroutine = null;
 
         onZoomReached?.Invoke();
+    }
+
+    private IEnumerator ReturnRoutine()
+    {
+        FindReferences();
+
+        if (playerCamera == null)
+        {
+            RestoreInitialState();
+            transitionCoroutine = null;
+            yield break;
+        }
+
+        returnInProgress = true;
+        zoomInProgress = false;
+
+        // Перестаём принудительно удерживать камеру на мониторе.
+        zoomLocked = false;
+
+        if (computerController != null)
+        {
+            computerController
+                .BeginReturnToWorkView();
+        }
+
+        ShowWorkHudAndCursor();
+
+        onReturnStarted?.Invoke();
+
+        float startFieldOfView =
+            playerCamera.fieldOfView;
+
+        Quaternion startRotation =
+            playerCamera.transform.rotation;
+
+        yield return AnimateCamera(
+            startFieldOfView,
+            initialFieldOfView,
+            startRotation,
+            initialCameraRotation
+        );
+
+        playerCamera.fieldOfView =
+            initialFieldOfView;
+
+        playerCamera.transform.rotation =
+            initialCameraRotation;
+
+        RestoreCapturedControlState();
+
+        returnInProgress = false;
+        zoomInProgress = false;
+        zoomLocked = false;
+        initialStateCaptured = false;
+        transitionCoroutine = null;
+
+        if (computerController != null)
+        {
+            computerController
+                .CompleteReturnToWorkView();
+        }
+
+        onReturnReached?.Invoke();
+    }
+
+    private IEnumerator AnimateCamera(
+        float startFieldOfView,
+        float endFieldOfView,
+        Quaternion startRotation,
+        Quaternion endRotation)
+    {
+        float duration =
+            Mathf.Max(
+                0f,
+                zoomDuration
+            );
+
+        if (duration <= 0f)
+        {
+            playerCamera.fieldOfView =
+                endFieldOfView;
+
+            playerCamera.transform.rotation =
+                endRotation;
+
+            yield break;
+        }
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed +=
+                Time.unscaledDeltaTime;
+
+            float t =
+                Mathf.Clamp01(
+                    elapsed / duration
+                );
+
+            float smoothT =
+                Mathf.SmoothStep(
+                    0f,
+                    1f,
+                    t
+                );
+
+            playerCamera.fieldOfView =
+                Mathf.Lerp(
+                    startFieldOfView,
+                    endFieldOfView,
+                    smoothT
+                );
+
+            playerCamera.transform.rotation =
+                Quaternion.Slerp(
+                    startRotation,
+                    endRotation,
+                    smoothT
+                );
+
+            yield return null;
+        }
+
+        playerCamera.fieldOfView =
+            endFieldOfView;
+
+        playerCamera.transform.rotation =
+            endRotation;
     }
 
     private void CaptureInitialState()
@@ -203,6 +369,7 @@ public class ZoomComputerWork : MonoBehaviour
             return;
         }
 
+        // Сохраняется именно текущий сидячий вид перед каждым зумом.
         initialFieldOfView =
             playerCamera.fieldOfView;
 
@@ -237,7 +404,8 @@ public class ZoomComputerWork : MonoBehaviour
         if (lockPlayerLook &&
             playerController != null)
         {
-            playerController.canControl = false;
+            playerController.canControl =
+                false;
         }
 
         FindManualZoom();
@@ -245,20 +413,79 @@ public class ZoomComputerWork : MonoBehaviour
         if (disableManualZoom &&
             manualZoomComponent != null)
         {
-            manualZoomComponent.enabled = false;
+            manualZoomComponent.enabled =
+                false;
         }
 
         if (disableWorldInteraction &&
             mouseInteractionController != null)
         {
-            mouseInteractionController.enabled = false;
+            mouseInteractionController.enabled =
+                false;
         }
 
-        // После отключения 3D-взаимодействия возвращаем обычный курсор.
-        if (WorkSessionManager.Instance != null &&
-            WorkSessionManager.Instance.cursorController != null)
+        if (sessionManager != null &&
+            sessionManager.cursorController != null)
         {
-            WorkSessionManager.Instance
+            sessionManager
+                .cursorController
+                .SetDefaultCursor();
+        }
+    }
+
+    private void RestoreCapturedControlState()
+    {
+        if (playerController != null &&
+            lockPlayerLook)
+        {
+            playerController.canControl =
+                previousCanControl;
+        }
+
+        if (manualZoomComponent != null &&
+            disableManualZoom)
+        {
+            manualZoomComponent.enabled =
+                previousManualZoomEnabled;
+        }
+
+        if (mouseInteractionController != null &&
+            disableWorldInteraction)
+        {
+            mouseInteractionController.enabled =
+                previousMouseInteractionEnabled;
+        }
+    }
+
+    private void ShowWorkHudAndCursor()
+    {
+        if (sessionManager == null)
+        {
+            sessionManager =
+                WorkSessionManager.Instance;
+        }
+
+        if (sessionManager == null ||
+            !sessionManager.IsSeated)
+        {
+            return;
+        }
+
+        // HUD сам использует собственное плавное появление.
+        if (sessionManager.hudManager != null)
+        {
+            sessionManager
+                .hudManager
+                .Show();
+        }
+
+        if (sessionManager.cursorController != null)
+        {
+            sessionManager
+                .cursorController
+                .ShowWorkCursor();
+
+            sessionManager
                 .cursorController
                 .SetDefaultCursor();
         }
@@ -297,28 +524,10 @@ public class ZoomComputerWork : MonoBehaviour
                 initialCameraRotation;
         }
 
-        if (playerController != null &&
-            lockPlayerLook)
-        {
-            playerController.canControl =
-                previousCanControl;
-        }
-
-        if (manualZoomComponent != null &&
-            disableManualZoom)
-        {
-            manualZoomComponent.enabled =
-                previousManualZoomEnabled;
-        }
-
-        if (mouseInteractionController != null &&
-            disableWorldInteraction)
-        {
-            mouseInteractionController.enabled =
-                previousMouseInteractionEnabled;
-        }
+        RestoreCapturedControlState();
 
         zoomInProgress = false;
+        returnInProgress = false;
         zoomLocked = false;
         initialStateCaptured = false;
     }
@@ -370,6 +579,30 @@ public class ZoomComputerWork : MonoBehaviour
                     );
         }
 
+        if (computerController == null)
+        {
+            computerController =
+                FindFirstObjectByType
+                    <WorkComputerController>(
+                        FindObjectsInactive.Include
+                    );
+        }
+
+        if (sessionManager == null)
+        {
+            sessionManager =
+                WorkSessionManager.Instance;
+        }
+
+        if (sessionManager == null)
+        {
+            sessionManager =
+                FindFirstObjectByType
+                    <WorkSessionManager>(
+                        FindObjectsInactive.Include
+                    );
+        }
+
         FindManualZoom();
     }
 
@@ -387,7 +620,7 @@ public class ZoomComputerWork : MonoBehaviour
                     true
                 );
 
-        // Сначала ищем ручной зум по точному имени класса.
+        // Сначала ищем обычный зум по точному имени класса.
         for (int i = 0;
              i < components.Length;
              i++)

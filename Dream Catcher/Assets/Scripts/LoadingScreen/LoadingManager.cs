@@ -1,12 +1,60 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class LoadingManager : MonoBehaviour
 {
-    public static LoadingManager Instance { get; private set; }
-    public static bool LoadingBlocksPause { get; private set; }
+    public static LoadingManager Instance
+    {
+        get;
+        private set;
+    }
+
+    public static bool LoadingBlocksPause
+    {
+        get;
+        private set;
+    }
+
+    [Header("Цветной экран загрузки")]
+    [Tooltip("Общий родитель цветного интерфейса загрузки.")]
+    [SerializeField] private GameObject loadingRoot;
+
+    [Tooltip("Canvas Group общего родителя загрузки.")]
+    [SerializeField] private CanvasGroup loadingRootCanvasGroup;
+
+    [Tooltip("Цветной фон загрузки.")]
+    [SerializeField] private GameObject loadingBackground;
+
+    [Tooltip("Canvas Group цветного фона.")]
+    [SerializeField] private CanvasGroup loadingBackgroundCanvasGroup;
+
+    [Tooltip("Цветное изображение поверх фона.")]
+    [SerializeField] private GameObject loadingImage;
+
+    [Tooltip("Canvas Group цветного изображения.")]
+    [SerializeField] private CanvasGroup loadingImageCanvasGroup;
+
+    [Header("Индикатор загрузки")]
+    [SerializeField] private LoadingSpinnerController loadingSpinner;
+
+    [Header("Плавность")]
+    [Tooltip("Время появления и исчезновения каждого слоя.")]
+    [SerializeField] private float fadeDuration = 0.5f;
+
+    [Header("Игрок")]
+    [SerializeField] private PlayerController playerController;
+
+    [Header("Автоматический поиск")]
+    [SerializeField] private bool autoFindReferences = true;
+
+    [SerializeField] private string playerObjectName = "Player";
+
+    private Coroutine loadingCoroutine;
+    private bool isLoading;
+
+    public bool IsLoading => isLoading;
 
     public static bool IsLoadingScreenBlockingPause()
     {
@@ -16,160 +64,470 @@ public class LoadingManager : MonoBehaviour
         if (Instance == null)
             return false;
 
-        if (Instance.loadingBackgroundCanvasGroup != null &&
-            Instance.loadingBackgroundCanvasGroup.alpha > 0.001f)
+        if (Instance.isLoading)
             return true;
+
+        if (Instance.loadingRootCanvasGroup != null &&
+            Instance.loadingRootCanvasGroup.alpha > 0.001f &&
+            Instance.loadingRootCanvasGroup.blocksRaycasts)
+        {
+            return true;
+        }
 
         return false;
     }
 
-    [Header("Loading Screen UI")]
-    public GameObject loadingBackground;
-    public GameObject loadingImage;
-    public CanvasGroup loadingBackgroundCanvasGroup;
-    public CanvasGroup loadingImageCanvasGroup;
-
-    [Header("Loading Spinner")]
-    public LoadingSpinnerController loadingSpinner; 
-
-    [Header("Fade Settings")]
-    public float fadeDuration = 0.5f;
-
-    [Header("Player")]
-    public PlayerController playerController;
-
-    [Header("Auto Find")]
-    public bool autoFindReferences = true;
-    public string playerObjectName = "Player";
-
-    void Awake()
+    private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null &&
+            Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
-        LoadingBlocksPause = false;
-        FindReferences();
 
-        // Ищем спиннер автоматически, если ссылка не задана или объект уничтожен
-        if (loadingSpinner == null)
-        {
-            loadingSpinner = FindObjectOfType<LoadingSpinnerController>();
-            if (loadingSpinner != null)
-                Debug.Log("Спиннер найден автоматически: " + loadingSpinner.name);
-            else
-                Debug.LogWarning("Спиннер не найден!");
-        }
+        Instance = this;
+
+        FindReferences();
+        HideLoadingVisualsInstantly();
+    }
+
+    public void StartLoading(
+        string sceneName)
+    {
+        StartLoadingInternal(
+            sceneName,
+            null,
+            null,
+            0f
+        );
     }
 
     public void StartLoading(
         string sceneName,
         DialogueManager dialogueManager,
-        List<DialogueManager.DialogueLine> dialogueLines,
-        float showImageDelay = 1f
-    )
+        List<DialogueManager.DialogueLine>
+            dialogueLines,
+        float showImageDelay = 1f)
     {
-        FindReferences();
+        StartLoadingInternal(
+            sceneName,
+            dialogueManager,
+            dialogueLines,
+            showImageDelay
+        );
+    }
 
-        if (loadingSpinner == null)
-            loadingSpinner = FindObjectOfType<LoadingSpinnerController>();
+    private void StartLoadingInternal(
+        string sceneName,
+        DialogueManager dialogueManager,
+        List<DialogueManager.DialogueLine>
+            dialogueLines,
+        float showImageDelay)
+    {
+        if (isLoading ||
+            string.IsNullOrWhiteSpace(sceneName))
+        {
+            return;
+        }
 
-        StartCoroutine(LoadingSequence(sceneName, dialogueManager, dialogueLines, showImageDelay));
+        if (loadingCoroutine != null)
+        {
+            StopCoroutine(loadingCoroutine);
+            loadingCoroutine = null;
+        }
+
+        loadingCoroutine =
+            StartCoroutine(
+                LoadingSequence(
+                    sceneName,
+                    dialogueManager,
+                    dialogueLines,
+                    showImageDelay
+                )
+            );
     }
 
     private IEnumerator LoadingSequence(
-        string sceneName,
-        DialogueManager dialogueManager,
-        List<DialogueManager.DialogueLine> dialogueLines,
-        float showImageDelay
-    )
+    string sceneName,
+    DialogueManager dialogueManager,
+    List<DialogueManager.DialogueLine>
+        dialogueLines,
+    float showImageDelay)
     {
+        isLoading = true;
         LoadingBlocksPause = true;
-        // 1. Показываем фон и картинку
-        yield return StartCoroutine(FadeIn(loadingBackgroundCanvasGroup, loadingBackground));
-        yield return StartCoroutine(FadeIn(loadingImageCanvasGroup, loadingImage));
 
-        // 2. Отключаем звуки шагов
+        Cursor.lockState =
+            CursorLockMode.Locked;
+
+        Cursor.visible = false;
+
         FindReferences();
-        if (playerController != null && playerController.footstepSource != null)
+        PrepareLoadingVisuals();
+
+        // Сначала плавно показываем цветной фон.
+        yield return StartCoroutine(
+            FadeIn(
+                loadingBackgroundCanvasGroup
+            )
+        );
+
+        // Затем плавно показываем цветную картинку.
+        yield return StartCoroutine(
+            FadeIn(
+                loadingImageCanvasGroup
+            )
+        );
+
+        DisablePlayerFootsteps();
+
+        AsyncOperation asyncLoad =
+            SceneManager.LoadSceneAsync(
+                sceneName
+            );
+
+        if (asyncLoad == null)
         {
-            playerController.footstepSource.Stop();
-            playerController.footstepSource.enabled = false;
+            FinishLoadingImmediately();
+            yield break;
         }
 
-        // 3. Запускаем асинхронную загрузку
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
         asyncLoad.allowSceneActivation = false;
 
-        // 4. Ждём задержку перед диалогом
-        yield return new WaitForSeconds(showImageDelay);
-
-        // 5. Запускаем диалог загрузки (если есть)
-        if (dialogueManager != null && dialogueLines != null && dialogueLines.Count > 0)
+        if (showImageDelay > 0f)
         {
-            dialogueManager.StartDialogue(dialogueLines);
-            yield return new WaitUntil(() => !dialogueManager.DialogueActive);
+            yield return
+                new WaitForSecondsRealtime(
+                    showImageDelay
+                );
         }
 
-        // Показываем спиннер (плавно)
+        bool hasLoadingDialogue =
+            dialogueManager != null &&
+            dialogueLines != null &&
+            dialogueLines.Count > 0;
+
+        if (hasLoadingDialogue)
+        {
+            dialogueManager.StartDialogue(
+                dialogueLines
+            );
+
+            yield return new WaitUntil(
+                () =>
+                    dialogueManager == null ||
+                    !dialogueManager.DialogueActive
+            );
+        }
+
         if (loadingSpinner != null)
             loadingSpinner.Show();
 
-        // 6. Ждём, пока сцена не загрузится
         while (asyncLoad.progress < 0.9f)
             yield return null;
 
-        // 7. Активируем новую сцену
         asyncLoad.allowSceneActivation = true;
-        yield return null;
-        FindReferences();
 
-        // Скрываем спиннер (плавно)
-        if (loadingSpinner != null)
-            loadingSpinner.Hide();
+        while (!asyncLoad.isDone)
+            yield return null;
 
-        // 8. Плавно скрываем картинки
-        yield return StartCoroutine(FadeOut(loadingImageCanvasGroup, loadingImage));
-        yield return StartCoroutine(FadeOut(loadingBackgroundCanvasGroup, loadingBackground));
-
-        LoadingBlocksPause = false;
-        // 9. Включаем звуки шагов обратно
-        if (playerController != null && playerController.footstepSource != null)
-            playerController.footstepSource.enabled = true;
-    }
-
-    private IEnumerator FadeIn(CanvasGroup canvasGroup, GameObject obj)
-    {
-        if (canvasGroup == null || obj == null) yield break;
-
-        obj.SetActive(true);
-        canvasGroup.alpha = 0f;
-        float timer = 0f;
-        while (timer < fadeDuration)
+        // При загрузке сохранения ждём,
+        // пока SaveManager закончит восстановление.
+        while (SaveManager.Instance != null &&
+               SaveManager.Instance.IsLoadingSave)
         {
-            timer += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(0f, 1f, timer / fadeDuration);
             yield return null;
         }
+
+        yield return null;
+
+        FindReferences();
+
+        if (loadingSpinner != null)
+            loadingSpinner.HideSmooth();
+
+        // Сначала скрываем картинку.
+        yield return StartCoroutine(
+            FadeOut(
+                loadingImageCanvasGroup
+            )
+        );
+
+        // Затем скрываем фон.
+        yield return StartCoroutine(
+            FadeOut(
+                loadingBackgroundCanvasGroup
+            )
+        );
+
+        HideLoadingVisualsInstantly();
+        EnablePlayerFootsteps();
+
+        // Один полностью отрисованный кадр:
+        // загрузочный UI уже невидим,
+        // но курсор всё ещё запрещено показывать.
+        yield return null;
+
+        LoadingBlocksPause = false;
+        isLoading = false;
+        loadingCoroutine = null;
+    }
+
+    private void PrepareLoadingVisuals()
+    {
+        EnsureLoadingHierarchyActive();
+
+        if (loadingRootCanvasGroup != null)
+        {
+            loadingRootCanvasGroup.alpha = 1f;
+            loadingRootCanvasGroup.interactable = false;
+            loadingRootCanvasGroup.blocksRaycasts = true;
+        }
+
+        PrepareLayer(
+            loadingBackgroundCanvasGroup
+        );
+
+        PrepareLayer(
+            loadingImageCanvasGroup
+        );
+    }
+
+    private void PrepareLayer(
+    CanvasGroup canvasGroup)
+    {
+        if (canvasGroup == null)
+            return;
+
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = true;
+    }
+
+    private IEnumerator FadeIn(
+    CanvasGroup canvasGroup)
+    {
+        if (canvasGroup == null)
+            yield break;
+
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = true;
+
+        float duration =
+            Mathf.Max(0f, fadeDuration);
+
+        if (duration <= 0f)
+        {
+            canvasGroup.alpha = 1f;
+            yield break;
+        }
+
+        float startAlpha =
+            canvasGroup.alpha;
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed +=
+                Time.unscaledDeltaTime;
+
+            float t =
+                Mathf.Clamp01(
+                    elapsed / duration
+                );
+
+            float smoothT =
+                Mathf.SmoothStep(
+                    0f,
+                    1f,
+                    t
+                );
+
+            canvasGroup.alpha =
+                Mathf.Lerp(
+                    startAlpha,
+                    1f,
+                    smoothT
+                );
+
+            yield return null;
+        }
+
         canvasGroup.alpha = 1f;
     }
 
-    private IEnumerator FadeOut(CanvasGroup canvasGroup, GameObject obj)
+    private IEnumerator FadeOut(
+    CanvasGroup canvasGroup)
     {
-        if (canvasGroup == null || obj == null) yield break;
+        if (canvasGroup == null)
+            yield break;
 
-        float timer = 0f;
-        float startAlpha = canvasGroup.alpha;
-        while (timer < fadeDuration)
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = true;
+
+        float duration =
+            Mathf.Max(0f, fadeDuration);
+
+        if (duration <= 0f)
         {
-            timer += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, timer / fadeDuration);
+            HideLayer(canvasGroup);
+            yield break;
+        }
+
+        float startAlpha =
+            canvasGroup.alpha;
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed +=
+                Time.unscaledDeltaTime;
+
+            float t =
+                Mathf.Clamp01(
+                    elapsed / duration
+                );
+
+            float smoothT =
+                Mathf.SmoothStep(
+                    0f,
+                    1f,
+                    t
+                );
+
+            canvasGroup.alpha =
+                Mathf.Lerp(
+                    startAlpha,
+                    0f,
+                    smoothT
+                );
+
             yield return null;
         }
+
+        HideLayer(canvasGroup);
+    }
+
+    private void HideLoadingVisualsInstantly()
+    {
+        EnsureLoadingHierarchyActive();
+
+        HideLayer(
+            loadingImageCanvasGroup
+        );
+
+        HideLayer(
+            loadingBackgroundCanvasGroup
+        );
+
+        if (loadingRootCanvasGroup != null)
+        {
+            loadingRootCanvasGroup.alpha = 0f;
+            loadingRootCanvasGroup.interactable = false;
+            loadingRootCanvasGroup.blocksRaycasts = false;
+        }
+
+        if (loadingSpinner != null)
+            loadingSpinner.Hide();
+    }
+
+    private void EnsureLoadingHierarchyActive()
+    {
+        if (loadingRoot != null &&
+            !loadingRoot.activeSelf)
+        {
+            loadingRoot.SetActive(true);
+        }
+
+        if (loadingBackground != null &&
+            !loadingBackground.activeSelf)
+        {
+            loadingBackground.SetActive(true);
+        }
+
+        if (loadingImage != null &&
+            !loadingImage.activeSelf)
+        {
+            loadingImage.SetActive(true);
+        }
+
+        if (loadingSpinner == null)
+            return;
+
+        Transform current =
+            loadingSpinner.transform;
+
+        while (current != null)
+        {
+            if (!current.gameObject.activeSelf)
+                current.gameObject.SetActive(true);
+
+            if (loadingRoot != null &&
+                current.gameObject == loadingRoot)
+            {
+                break;
+            }
+
+            current = current.parent;
+        }
+    }
+
+    private void HideLayer(
+    CanvasGroup canvasGroup)
+    {
+        if (canvasGroup == null)
+            return;
+
         canvasGroup.alpha = 0f;
-        obj.SetActive(false);
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+    }
+
+    private void DisablePlayerFootsteps()
+    {
+        FindReferences();
+
+        if (playerController == null ||
+            playerController.footstepSource == null)
+        {
+            return;
+        }
+
+        playerController
+            .footstepSource
+            .Stop();
+
+        playerController
+            .footstepSource
+            .enabled = false;
+    }
+
+    private void EnablePlayerFootsteps()
+    {
+        FindReferences();
+
+        if (playerController == null ||
+            playerController.footstepSource == null)
+        {
+            return;
+        }
+
+        playerController
+            .footstepSource
+            .enabled = true;
+    }
+
+    private void FinishLoadingImmediately()
+    {
+        HideLoadingVisualsInstantly();
+        EnablePlayerFootsteps();
+
+        LoadingBlocksPause = false;
+        isLoading = false;
+        loadingCoroutine = null;
     }
 
     private void FindReferences()
@@ -179,23 +537,72 @@ public class LoadingManager : MonoBehaviour
 
         if (playerController == null)
         {
-            GameObject playerObj = GameObject.Find(playerObjectName);
+            GameObject playerObject =
+                GameObject.Find(
+                    playerObjectName
+                );
 
-            if (playerObj != null)
-                playerController = playerObj.GetComponent<PlayerController>();
+            if (playerObject != null)
+            {
+                playerController =
+                    playerObject
+                        .GetComponent
+                            <PlayerController>();
+            }
         }
 
         if (playerController == null)
-            playerController = FindObjectOfType<PlayerController>();
-    }
+        {
+            playerController =
+                FindFirstObjectByType
+                    <PlayerController>(
+                        FindObjectsInactive.Include
+                    );
+        }
 
-    private void OnDisable()
-    {
-        LoadingBlocksPause = false;
+        if (loadingSpinner == null)
+        {
+            loadingSpinner =
+                FindFirstObjectByType
+                    <LoadingSpinnerController>(
+                        FindObjectsInactive.Include
+                    );
+        }
+
+        if (loadingRootCanvasGroup == null &&
+            loadingRoot != null)
+        {
+            loadingRootCanvasGroup =
+                loadingRoot
+                    .GetComponent<CanvasGroup>();
+        }
+
+        if (loadingBackgroundCanvasGroup == null &&
+            loadingBackground != null)
+        {
+            loadingBackgroundCanvasGroup =
+                loadingBackground
+                    .GetComponent<CanvasGroup>();
+        }
+
+        if (loadingImageCanvasGroup == null &&
+            loadingImage != null)
+        {
+            loadingImageCanvasGroup =
+                loadingImage
+                    .GetComponent<CanvasGroup>();
+        }
     }
 
     private void OnDestroy()
     {
+        // Уничтожение дубликата не должно менять состояние
+        // настоящего глобального менеджера.
+        if (Instance != this)
+            return;
+
         LoadingBlocksPause = false;
+        isLoading = false;
+        Instance = null;
     }
 }

@@ -764,6 +764,79 @@ public class WorkComputerController :
         computerWorldCanvasGroup.blocksRaycasts = true;
     }
 
+    public void BeginReturnToWorkView()
+    {
+        if (currentState !=
+            ComputerState.Desktop)
+        {
+            return;
+        }
+
+        if (computerCanvasFadeCoroutine != null)
+        {
+            StopCoroutine(
+                computerCanvasFadeCoroutine
+            );
+
+            computerCanvasFadeCoroutine = null;
+        }
+
+        // Интерфейс остаётся виден на поверхности монитора,
+        // но больше не перехватывает клики издалека.
+        if (computerWorldCanvasGroup != null)
+        {
+            computerWorldCanvasGroup.alpha =
+                1f;
+
+            computerWorldCanvasGroup.interactable =
+                false;
+
+            computerWorldCanvasGroup.blocksRaycasts =
+                false;
+        }
+
+        zoomClickAvailable = false;
+
+        // Пока камера отъезжает, монитор ещё нельзя нажать.
+        SetInteractionLayer(false);
+
+        if (interactionOutline != null)
+            interactionOutline.HideOutline();
+    }
+
+    public void CompleteReturnToWorkView()
+    {
+        if (currentState !=
+            ComputerState.Desktop)
+        {
+            return;
+        }
+
+        // Canvas остаётся видимым на мониторе.
+        if (computerWorldCanvas != null)
+        {
+            computerWorldCanvas.SetActive(
+                true
+            );
+        }
+
+        if (computerWorldCanvasGroup != null)
+        {
+            computerWorldCanvasGroup.alpha =
+                1f;
+
+            computerWorldCanvasGroup.interactable =
+                false;
+
+            computerWorldCanvasGroup.blocksRaycasts =
+                false;
+        }
+
+        // После завершения перехода монитор снова
+        // можно нажать для нового приближения.
+        EnableMonitorZoomClick();
+    }
+
     private void ShowVideoScreen()
     {
         if (physicalScreenObject != null)

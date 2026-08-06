@@ -34,6 +34,20 @@ public class ComputerCanvasTestMode :
             yield break;
         }
 
+        // Ждём полного исчезновения загрузочного экрана.
+        while (LoadingManager.Instance != null &&
+               LoadingManager.Instance.IsLoading)
+        {
+            yield return null;
+        }
+
+        yield return null;
+        yield return null;
+
+        // Даём PauseManager завершить последний кадр блокировки курсора.
+        yield return null;
+        yield return null;
+
         // Ждём завершения загрузки сохранения и сброса старого состояния.
         if (delayAfterSceneLoad > 0f)
         {
@@ -95,6 +109,18 @@ public class ComputerCanvasTestMode :
 
         // Запускаем настоящий зум из уже правильной сидячей позиции.
         zoomComputerWork.StartZoom();
+
+        // В тестовом режиме курсор должен точно остаться видимым.
+        if (sessionManager.cursorController != null)
+        {
+            sessionManager
+                .cursorController
+                .ShowWorkCursor();
+
+            sessionManager
+                .cursorController
+                .SetDefaultCursor();
+        }
 #endif
     }
 
