@@ -3,8 +3,6 @@ using UnityEngine.SceneManagement;
 
 public class LastGameplaySceneMemory : MonoBehaviour
 {
-    public static LastGameplaySceneMemory Instance;
-
     [Header("Scene Names")]
     public string mainMenuSceneName = "MainMenu";
 
@@ -13,18 +11,6 @@ public class LastGameplaySceneMemory : MonoBehaviour
 
     [Header("Debug")]
     public bool debugLogs = false;
-
-    private void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
 
     private void OnEnable()
     {
@@ -45,6 +31,9 @@ public class LastGameplaySceneMemory : MonoBehaviour
         PlayerPrefs.Save();
 
         if (debugLogs)
-            Debug.Log($"LastGameplaySceneMemory: последн€€ игрова€ сцена = {scene.name}", this);
+            Debug.Log(
+                $"LastGameplaySceneMemory: последн€€ игрова€ сцена = {scene.name}",
+                this
+            );
     }
 }

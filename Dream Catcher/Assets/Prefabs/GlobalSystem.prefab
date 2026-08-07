@@ -7591,7 +7591,7 @@ GameObject:
   - component: {fileID: 1359287595983016761}
   - component: {fileID: 6649144349413030790}
   - component: {fileID: 9088434480990618463}
-  - component: {fileID: 5034690052233841895}
+  - component: {fileID: 1030359583866798517}
   m_Layer: 0
   m_Name: GlobalSystem
   m_TagString: Untagged
@@ -7663,7 +7663,7 @@ MonoBehaviour:
   showCursorInMainMenu: 1
   hideCursorInGameplay: 1
   debugLogs: 0
---- !u!114 &5034690052233841895
+--- !u!114 &1030359583866798517
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8411,6 +8411,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1950982859121519431}
   - component: {fileID: 1720287660090059054}
+  - component: {fileID: 7477881372156057704}
   m_Layer: 0
   m_Name: DialogueManager
   m_TagString: Untagged
@@ -8455,6 +8456,26 @@ MonoBehaviour:
   forceVoiceLoop: 1
   autoFindReferences: 1
   playerObjectName: Player
+--- !u!114 &7477881372156057704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8666879373128423369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9267fdbde18e7eb4a91f035331ba3869, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClientQuestionDialogueController
+  dialogueManager: {fileID: 1720287660090059054}
+  questionChoicesRoot: {fileID: 4885182382396602430}
+  complaintsButton: {fileID: 1220532234762703427}
+  complaintsButtonText: {fileID: 4287112539233365357}
+  personalQuestionButton: {fileID: 5472400463675144000}
+  personalQuestionButtonText: {fileID: 5864777047505393306}
+  normalQuestionTextColor: {r: 0.6627451, g: 0.5921569, b: 0.7882353, a: 1}
+  askedQuestionTextColor: {r: 0.38431373, g: 0.34509805, b: 0.4509804, a: 1}
 --- !u!1 &8775366937243821151
 GameObject:
   m_ObjectHideFlags: 0
