@@ -224,25 +224,55 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
-        // --- ПРАВИЛЬНЫЙ ПОРЯДОК СКРЫТИЯ КУРСОРА ---
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
-        // ------------------------------------------
-
         cursorIsDefault = false;
         cursorIsInteract = false;
 
-        if (playerController != null &&
-            (PauseManager.Instance == null || !PauseManager.Instance.IsPaused))
+        bool workModeActive =
+            WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsWorkModeActive;
+
+        if (workModeActive)
         {
-            playerController.canControl = true;
+            // Возвращаем рабочее управление
+            // и рабочий курсор на монитор.
+            WorkSessionManager.Instance
+                .RestoreAfterPause();
+        }
+        else
+        {
+            // В обычном игровом режиме
+            // курсор снова скрывается.
+            Cursor.SetCursor(
+                defaultCursor,
+                defaultCursorHotspot,
+                CursorMode.ForceSoftware
+            );
+
+            Cursor.visible = false;
+            Cursor.lockState =
+                CursorLockMode.Locked;
+
+            if (playerController != null &&
+                (PauseManager.Instance == null ||
+                 !PauseManager.Instance.IsPaused))
+            {
+                playerController.canControl =
+                    true;
+            }
         }
 
         if (fadeCoroutine != null)
+        {
             StopCoroutine(fadeCoroutine);
+        }
 
-        fadeCoroutine = StartCoroutine(FadePanelAndBlur(0f, 0f));
+        fadeCoroutine =
+            StartCoroutine(
+                FadePanelAndBlur(
+                    0f,
+                    0f
+                )
+            );
     }
 
     private void ClosePanelInstant()

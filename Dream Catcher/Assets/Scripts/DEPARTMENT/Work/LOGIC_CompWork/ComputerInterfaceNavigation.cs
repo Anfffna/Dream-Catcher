@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,18 +30,18 @@ public class ComputerInterfaceNavigation :
         public GameObject page;
 
         [Header("Обычное состояние")]
-        [Tooltip("PNG кнопки, когда вкладка не выбрана.")]
+        [Tooltip("PNG невыбранной вкладки.")]
         public Sprite normalSprite;
 
-        [Tooltip("Цвет текста, когда вкладка не выбрана.")]
+        [Tooltip("Цвет текста невыбранной вкладки.")]
         public Color normalTextColor =
             Color.white;
 
         [Header("Выбранное состояние")]
-        [Tooltip("PNG кнопки текущей открытой вкладки.")]
+        [Tooltip("PNG выбранной вкладки.")]
         public Sprite selectedSprite;
 
-        [Tooltip("Цвет текста текущей открытой вкладки.")]
+        [Tooltip("Цвет текста выбранной вкладки.")]
         public Color selectedTextColor =
             Color.black;
     }
@@ -56,12 +57,18 @@ public class ComputerInterfaceNavigation :
     }
 
     [Header("Основные вкладки")]
-    [SerializeField] private TabEntry sleepRecordingTab;
-    [SerializeField] private TabEntry electronicDirectionTab;
+    [SerializeField]
+    private TabEntry sleepRecordingTab;
+
+    [SerializeField]
+    private TabEntry electronicDirectionTab;
 
     [Header("Дополнительные окна")]
-    [SerializeField] private PopupEntry directivesPopup;
-    [SerializeField] private PopupEntry instructionPopup;
+    [SerializeField]
+    private PopupEntry directivesPopup;
+
+    [SerializeField]
+    private PopupEntry instructionPopup;
 
     [Tooltip("Закрывать инструкцию при любом следующем клике.")]
     [SerializeField]
@@ -73,8 +80,15 @@ public class ComputerInterfaceNavigation :
     private bool directivesOpen;
     private bool instructionOpen;
 
-    // Кадр, в котором была нажата кнопка директив или инструкции.
-    private int popupButtonHandledFrame = -1;
+    private int popupButtonHandledFrame =
+        -1;
+
+    public event Action
+        ElectronicDirectionOpened;
+
+    public bool IsElectronicDirectionSelected =>
+        currentTab ==
+        MainTab.ElectronicDirection;
 
     private void Awake()
     {
@@ -93,24 +107,19 @@ public class ComputerInterfaceNavigation :
 
     private void LateUpdate()
     {
-        if (!closeInstructionOnAnyClick)
+        if (!closeInstructionOnAnyClick ||
+            !instructionOpen ||
+            !Input.GetMouseButtonUp(0))
+        {
             return;
+        }
 
-        if (!instructionOpen)
-            return;
-
-        if (!Input.GetMouseButtonUp(0))
-            return;
-
-        // Не закрываем инструкцию тем же кликом,
-        // которым нажали её кнопку или кнопку директив.
         if (popupButtonHandledFrame ==
             Time.frameCount)
         {
             return;
         }
 
-        // Любой другой клик закрывает только инструкцию.
         instructionOpen = false;
 
         ApplyPopupState();
@@ -154,15 +163,11 @@ public class ComputerInterfaceNavigation :
 
         if (directivesOpen)
         {
-            // Повторный клик по директивам
-            // закрывает оба окна одновременно.
             directivesOpen = false;
             instructionOpen = false;
         }
         else
         {
-            // Открываем директивы,
-            // а инструкцию закрываем в том же обновлении.
             directivesOpen = true;
             instructionOpen = false;
         }
@@ -178,12 +183,9 @@ public class ComputerInterfaceNavigation :
         popupButtonHandledFrame =
             Time.frameCount;
 
-        // Первый клик открывает,
-        // повторный клик закрывает.
         instructionOpen =
             !instructionOpen;
 
-        // Директивы при этом остаются как были.
         ApplyPopupState();
     }
 
@@ -206,11 +208,16 @@ public class ComputerInterfaceNavigation :
 
         ApplyMainTabState();
 
-        // Окна закрываются только при настоящем
-        // переходе на другую вкладку.
-        if (tabChanged)
+        if (!tabChanged)
+            return;
+
+        CloseAllPopups();
+
+        if (newTab ==
+            MainTab.ElectronicDirection)
         {
-            CloseAllPopups();
+            ElectronicDirectionOpened
+                ?.Invoke();
         }
     }
 
@@ -294,9 +301,7 @@ public class ComputerInterfaceNavigation :
             return;
         }
 
-        popup.window.SetActive(
-            active
-        );
+        popup.window.SetActive(active);
     }
 
     private bool HasWindow(
@@ -347,14 +352,12 @@ public class ComputerInterfaceNavigation :
         if (sleepRecordingTab != null &&
             sleepRecordingTab.button != null)
         {
-            sleepRecordingTab.button
-                .onClick
+            sleepRecordingTab.button.onClick
                 .RemoveListener(
                     ShowSleepRecordingTab
                 );
 
-            sleepRecordingTab.button
-                .onClick
+            sleepRecordingTab.button.onClick
                 .AddListener(
                     ShowSleepRecordingTab
                 );
@@ -363,14 +366,12 @@ public class ComputerInterfaceNavigation :
         if (electronicDirectionTab != null &&
             electronicDirectionTab.button != null)
         {
-            electronicDirectionTab.button
-                .onClick
+            electronicDirectionTab.button.onClick
                 .RemoveListener(
                     ShowElectronicDirectionTab
                 );
 
-            electronicDirectionTab.button
-                .onClick
+            electronicDirectionTab.button.onClick
                 .AddListener(
                     ShowElectronicDirectionTab
                 );
@@ -379,14 +380,12 @@ public class ComputerInterfaceNavigation :
         if (directivesPopup != null &&
             directivesPopup.button != null)
         {
-            directivesPopup.button
-                .onClick
+            directivesPopup.button.onClick
                 .RemoveListener(
                     ToggleDirectives
                 );
 
-            directivesPopup.button
-                .onClick
+            directivesPopup.button.onClick
                 .AddListener(
                     ToggleDirectives
                 );
@@ -395,14 +394,12 @@ public class ComputerInterfaceNavigation :
         if (instructionPopup != null &&
             instructionPopup.button != null)
         {
-            instructionPopup.button
-                .onClick
+            instructionPopup.button.onClick
                 .RemoveListener(
                     ToggleInstruction
                 );
 
-            instructionPopup.button
-                .onClick
+            instructionPopup.button.onClick
                 .AddListener(
                     ToggleInstruction
                 );
@@ -414,8 +411,7 @@ public class ComputerInterfaceNavigation :
         if (sleepRecordingTab != null &&
             sleepRecordingTab.button != null)
         {
-            sleepRecordingTab.button
-                .onClick
+            sleepRecordingTab.button.onClick
                 .RemoveListener(
                     ShowSleepRecordingTab
                 );
@@ -424,8 +420,7 @@ public class ComputerInterfaceNavigation :
         if (electronicDirectionTab != null &&
             electronicDirectionTab.button != null)
         {
-            electronicDirectionTab.button
-                .onClick
+            electronicDirectionTab.button.onClick
                 .RemoveListener(
                     ShowElectronicDirectionTab
                 );
@@ -434,8 +429,7 @@ public class ComputerInterfaceNavigation :
         if (directivesPopup != null &&
             directivesPopup.button != null)
         {
-            directivesPopup.button
-                .onClick
+            directivesPopup.button.onClick
                 .RemoveListener(
                     ToggleDirectives
                 );
@@ -444,8 +438,7 @@ public class ComputerInterfaceNavigation :
         if (instructionPopup != null &&
             instructionPopup.button != null)
         {
-            instructionPopup.button
-                .onClick
+            instructionPopup.button.onClick
                 .RemoveListener(
                     ToggleInstruction
                 );

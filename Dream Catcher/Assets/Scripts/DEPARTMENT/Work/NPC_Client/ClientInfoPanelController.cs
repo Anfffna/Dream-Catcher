@@ -4,54 +4,35 @@ using UnityEngine;
 public class ClientInfoPanelController :
     MonoBehaviour
 {
-    [Header("Текстовые поля")]
+    [Header("Тексты направления")]
 
     [Tooltip("Текст с именем клиента.")]
-    [SerializeField] private TMP_Text clientNameText;
+    [SerializeField]
+    private TMP_Text clientNameText;
 
     [Tooltip("Текст с регистрационным номером.")]
-    [SerializeField] private TMP_Text registrationNumberText;
+    [SerializeField]
+    private TMP_Text registrationNumberText;
 
     [Tooltip("Текст с датой записи.")]
-    [SerializeField] private TMP_Text recordDateText;
-
-    [Tooltip("Текст с должностью или местом работы.")]
-    [SerializeField] private TMP_Text occupationText;
-
-    [Header("Текущий клиент")]
-
-    [Tooltip("Данные клиента, которые временно используются для проверки.")]
-    [SerializeField] private VisitorCaseData currentClient;
-
-    [Tooltip("Автоматически показывать назначенного клиента при включении панели.")]
     [SerializeField]
-    private bool showAssignedClientOnEnable =
-        true;
+    private TMP_Text recordDateText;
 
-    [Header("Подписи перед значениями")]
-
-    [Tooltip("Текст перед именем клиента. Можно оставить пустым.")]
+    [Tooltip("Текст с должностью клиента.")]
     [SerializeField]
-    private string clientNamePrefix =
-        "";
+    private TMP_Text occupationText;
 
-    [Tooltip("Текст перед регистрационным номером. Можно оставить пустым.")]
-    [SerializeField]
-    private string registrationNumberPrefix =
-        "";
+    private VisitorCaseData currentClient;
 
-    [Tooltip("Текст перед датой записи. Можно оставить пустым.")]
-    [SerializeField]
-    private string recordDatePrefix =
-        "";
-
-    [Tooltip("Текст перед должностью. Можно оставить пустым.")]
-    [SerializeField]
-    private string occupationPrefix =
-        "";
+    private VisitorCaseData.VisitorCaseVariant
+        currentVariant;
 
     public VisitorCaseData CurrentClient =>
         currentClient;
+
+    public VisitorCaseData.VisitorCaseVariant
+        CurrentVariant =>
+            currentVariant;
 
     private void Awake()
     {
@@ -60,107 +41,89 @@ public class ClientInfoPanelController :
 
     private void OnEnable()
     {
-        if (showAssignedClientOnEnable)
-            RefreshClientInformation();
+        FindMissingReferences();
+
+        if (currentClient != null)
+        {
+            ShowClient(
+                currentClient,
+                currentVariant
+            );
+        }
     }
 
     public void ShowClient(
-        VisitorCaseData clientData)
+        VisitorCaseData clientData,
+        VisitorCaseData.VisitorCaseVariant
+            variantData)
     {
         currentClient = clientData;
-
-        RefreshClientInformation();
-    }
-
-    public void ClearClient()
-    {
-        currentClient = null;
-
-        ClearTexts();
-    }
-
-    private void RefreshClientInformation()
-    {
-        FindMissingReferences();
+        currentVariant = variantData;
 
         if (currentClient == null)
         {
-            ClearTexts();
+            ClearClient();
             return;
         }
 
+        CurrentClientContext.SetCurrentCase(
+            currentClient,
+            currentVariant
+        );
+
+        FindMissingReferences();
+
         SetText(
             clientNameText,
-            clientNamePrefix,
             currentClient.ClientName
         );
 
         SetText(
             registrationNumberText,
-            registrationNumberPrefix,
-            currentClient.RegistrationNumber
+            currentClient
+                .ResolveRegistrationNumber(
+                    currentVariant
+                )
         );
 
         SetText(
             recordDateText,
-            recordDatePrefix,
-            currentClient.RecordDate
+            currentClient
+                .ResolveRecordDate(
+                    currentVariant
+                )
         );
 
         SetText(
             occupationText,
-            occupationPrefix,
             currentClient.Occupation
         );
     }
 
-    private void ClearTexts()
+    public void ClearClient()
     {
-        SetTextDirectly(
-            clientNameText,
-            ""
-        );
+        currentClient = null;
+        currentVariant = null;
 
-        SetTextDirectly(
-            registrationNumberText,
-            ""
-        );
+        CurrentClientContext.Clear();
 
-        SetTextDirectly(
-            recordDateText,
-            ""
-        );
-
-        SetTextDirectly(
-            occupationText,
-            ""
-        );
+        SetText(clientNameText, "");
+        SetText(registrationNumberText, "");
+        SetText(recordDateText, "");
+        SetText(occupationText, "");
     }
 
     private void SetText(
         TMP_Text targetText,
-        string prefix,
         string value)
     {
         if (targetText == null)
             return;
 
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            targetText.text = "";
-            return;
-        }
-
         targetText.text =
-            prefix + value;
-    }
-
-    private void SetTextDirectly(
-        TMP_Text targetText,
-        string value)
-    {
-        if (targetText != null)
-            targetText.text = value;
+            string.IsNullOrWhiteSpace(value)
+                ? ""
+                : value;
     }
 
     private void FindMissingReferences()
@@ -169,7 +132,7 @@ public class ClientInfoPanelController :
         {
             clientNameText =
                 FindChildText(
-                    "Name_Klient"
+                    "Name_klient"
                 );
         }
 
@@ -209,6 +172,7 @@ public class ClientInfoPanelController :
         if (child == null)
             return null;
 
-        return child.GetComponent<TMP_Text>();
+        return child
+            .GetComponent<TMP_Text>();
     }
 }

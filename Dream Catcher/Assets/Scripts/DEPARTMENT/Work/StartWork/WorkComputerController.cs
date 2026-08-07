@@ -77,6 +77,15 @@ public class WorkComputerController :
 
     [SerializeField] private bool zoomClickAvailable;
 
+    [Header("Блокировка между клиентами")]
+
+    [Tooltip("После отправки направления монитор нельзя снова открыть до следующего клиента.")]
+    [SerializeField]
+    private bool lockedUntilNextClient;
+
+    public bool LockedUntilNextClient =>
+        lockedUntilNextClient;
+
     [Tooltip("Quad, на котором отображается Render Texture с видео.")]
     public GameObject videoScreenQuad;
 
@@ -176,6 +185,9 @@ public class WorkComputerController :
 
     public void Interact()
     {
+        if (lockedUntilNextClient)
+            return;
+
         bool isSeated =
             WorkSessionManager.Instance != null &&
             WorkSessionManager.Instance.IsSeated;
@@ -586,6 +598,19 @@ public class WorkComputerController :
         }
     }
 
+    public void LockUntilNextClient()
+    {
+        lockedUntilNextClient = true;
+        zoomClickAvailable = false;
+
+        SetInteractionAvailable(false);
+    }
+
+    public void UnlockForNextClient()
+    {
+        lockedUntilNextClient = false;
+    }
+
     public void PrepareCanvasForTest()
     {
         // Останавливаем возможную загрузку компьютера.
@@ -652,6 +677,9 @@ public class WorkComputerController :
 
     public void ShowWorkCanvasAfterSon3()
     {
+        if (lockedUntilNextClient)
+            return;
+
         if (currentState != ComputerState.Desktop)
             return;
 

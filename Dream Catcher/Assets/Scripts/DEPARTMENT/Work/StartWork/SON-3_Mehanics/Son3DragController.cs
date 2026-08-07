@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class Son3DragController : MonoBehaviour, IInteractable
 {
@@ -35,6 +36,26 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private bool scriptControlsTransform;
     private Transform currentSnapPoint;
 
+    private Transform originalParent;
+
+    private Vector3 originalLocalPosition;
+    private Quaternion originalLocalRotation;
+    private Vector3 originalLocalScale;
+
+    private bool originalTransformCaptured;
+    private bool returnToOriginalEnabled;
+
+    private static Son3DragController
+        returnInteractionOwner;
+
+    public static bool AnyReturnInteractionActive =>
+        returnInteractionOwner != null;
+
+    public bool ReturnToOriginalEnabled =>
+        returnToOriginalEnabled;
+
+    public event Action ReturnedToOriginalPlace;
+
     private Vector3 controlledWorldPosition;
     private Quaternion controlledWorldRotation;
     private Vector3 controlledLocalScale;
@@ -62,6 +83,7 @@ public class Son3DragController : MonoBehaviour, IInteractable
     {
         FindReferences();
         CacheVisuals();
+        CaptureOriginalTransform();
 
         SetRenderersEnabled(true);
         SetAlpha(1f);
@@ -71,6 +93,16 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private void Reset()
     {
         FindReferences();
+    }
+
+    private void OnDisable()
+    {
+        returnToOriginalEnabled = false;
+
+        if (returnInteractionOwner == this)
+        {
+            returnInteractionOwner = null;
+        }
     }
 
     private void LateUpdate()
@@ -135,15 +167,52 @@ public class Son3DragController : MonoBehaviour, IInteractable
     public void Interact()
     {
         if (!interactionAvailable ||
-            transitionInProgress ||
-            placedInTray)
+            transitionInProgress)
         {
             return;
         }
 
+        // Во время финального диалога
+        // СОН-3 можно забрать обратно из лотка.
+        if (returnToOriginalEnabled &&
+            placedInTray)
+        {
+            StartCoroutine(
+                ReturnToOriginalPlaceRoutine()
+            );
+
+            return;
+        }
+
+        // Обычный первый перенос:
+        // от клиента в лоток.
+        if (placedInTray)
+            return;
+
         StartCoroutine(
             MoveToTrayRoutine()
         );
+    }
+
+    private void CaptureOriginalTransform()
+    {
+        if (originalTransformCaptured)
+            return;
+
+        originalParent =
+            transform.parent;
+
+        originalLocalPosition =
+            transform.localPosition;
+
+        originalLocalRotation =
+            transform.localRotation;
+
+        originalLocalScale =
+            transform.localScale;
+
+        originalTransformCaptured =
+            true;
     }
 
     private IEnumerator MoveToTrayRoutine()
@@ -243,6 +312,113 @@ public class Son3DragController : MonoBehaviour, IInteractable
 
         // Сообщаем, что SON-3 полностью проявился в лотке.
         tray?.NotifySon3FullyShown();
+    }
+
+    public bool EnableReturnToOriginalPlace()
+    {
+        if (!originalTransformCaptured ||
+            !placedInTray ||
+            transitionInProgress)
+        {
+            return false;
+        }
+
+        returnToOriginalEnabled = true;
+
+        returnInteractionOwner =
+            this;
+
+        SetInteractionAvailable(true);
+
+        return true;
+    }
+
+    private IEnumerator
+    ReturnToOriginalPlaceRoutine()
+    {
+        transitionInProgress = true;
+        returnToOriginalEnabled = false;
+
+        if (returnInteractionOwner == this)
+        {
+            returnInteractionOwner = null;
+        }
+
+        SetInteractionAvailable(false);
+
+        Vector3 startScale =
+            controlledLocalScale;
+
+        Vector3 hiddenScale =
+            startScale *
+            hiddenScaleMultiplier;
+
+        // Сначала устройство исчезает
+        // прямо на лотке.
+        yield return AnimateVisual(
+            startScale,
+            hiddenScale,
+            1f,
+            0f,
+            disappearDuration
+        );
+
+        SetRenderersEnabled(false);
+
+        // Теперь возвращаем его
+        // именно к исходному родителю.
+        transform.SetParent(
+            originalParent,
+            false
+        );
+
+        transform.localPosition =
+            originalLocalPosition;
+
+        transform.localRotation =
+            originalLocalRotation;
+
+        currentSnapPoint = null;
+        placedInTray = false;
+
+        // Больше не удерживаем устройство
+        // в позиции рабочего лотка.
+        scriptControlsTransform = false;
+
+        Vector3 originalHiddenScale =
+            originalLocalScale *
+            hiddenScaleMultiplier;
+
+        controlledLocalScale =
+            originalHiddenScale;
+
+        transform.localScale =
+            originalHiddenScale;
+
+        SetAlpha(0f);
+        SetRenderersEnabled(true);
+
+        // Устройство появляется уже
+        // в своей исходной точке у NPC.
+        yield return AnimateVisual(
+            originalHiddenScale,
+            originalLocalScale,
+            0f,
+            1f,
+            appearDuration
+        );
+
+        controlledLocalScale =
+            originalLocalScale;
+
+        transform.localScale =
+            originalLocalScale;
+
+        SetAlpha(1f);
+
+        transitionInProgress = false;
+
+        ReturnedToOriginalPlace?.Invoke();
     }
 
     public void AttachToTray(

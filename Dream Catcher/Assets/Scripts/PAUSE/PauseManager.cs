@@ -101,6 +101,15 @@ public class PauseManager : MonoBehaviour
             return;
         }
 
+        // Вариативный диалог блокирует паузу,
+        // но рабочий курсор остаётся доступным.
+        if (ClientQuestionDialogueController
+            .AnyQuestionDialogueOpen)
+        {
+            return;
+        }
+
+
         if (IsPauseBlocked())
         {
             ForceGameplayCursorLocked();
@@ -127,6 +136,12 @@ public class PauseManager : MonoBehaviour
     public void PauseGame()
     {
         if (DialogueManager.AnyDialogueActive)
+        {
+            return;
+        }
+
+        if (ClientQuestionDialogueController
+        .AnyQuestionDialogueOpen)
         {
             return;
         }

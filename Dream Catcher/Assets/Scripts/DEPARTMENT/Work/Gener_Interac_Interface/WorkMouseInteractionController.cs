@@ -1,23 +1,30 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class WorkMouseInteractionController : MonoBehaviour
+public class WorkMouseInteractionController :
+    MonoBehaviour
 {
     [Header("Camera")]
     public Camera playerCamera;
 
     [Header("Interaction")]
-    public string interactableLayerName = "Interactable";
+    public string interactableLayerName =
+        "Interactable";
 
     [Tooltip("ћаксимальное рассто€ние курсорного взаимодействи€.")]
-    public float interactionDistance = 10f;
+    public float interactionDistance =
+        10f;
 
     [Header("Cursor")]
-    public WorkCursorController cursorController;
+    public WorkCursorController
+        cursorController;
 
     [Header("Debug")]
     public bool showDebugLogs = false;
 
-    private IInteractable hoveredInteractable;
+    private IInteractable
+        hoveredInteractable;
+
     private int interactableLayerMask;
 
     private void Awake()
@@ -34,16 +41,26 @@ public class WorkMouseInteractionController : MonoBehaviour
 
     private void Update()
     {
-        // ¬о врем€ паузы курсором управл€ет PauseManager.
         if (PauseManager.Instance != null &&
             PauseManager.Instance.IsPaused)
         {
             return;
         }
 
-        // ¬о врем€ диалога клик обрабатывает только DialogueManager.
-        //  амера при этом продолжает работать через PlayerController.
-        if (DialogueManager.AnyDialogueActive)
+        if (DialogueManager
+            .AnyDialogueActive)
+        {
+            SetHoveredInteractable(null);
+            return;
+        }
+
+        // ѕока открыт вариативный диалог,
+        // клики не проход€т в 3D-мир.
+        if (ClientQuestionDialogueController
+                .AnyQuestionDialogueOpen ||
+            ClientQuestionDialogueController
+                .LastClosedFrame ==
+            Time.frameCount)
         {
             SetHoveredInteractable(null);
             return;
@@ -54,6 +71,15 @@ public class WorkMouseInteractionController : MonoBehaviour
             WorkSessionManager.Instance.IsSeated;
 
         if (!isSeated)
+        {
+            SetHoveredInteractable(null);
+            return;
+        }
+
+        // UI получает клик первым и не пропускает его в 3D-мир.
+        if (EventSystem.current != null &&
+            EventSystem.current
+                .IsPointerOverGameObject())
         {
             SetHoveredInteractable(null);
             return;
@@ -72,9 +98,10 @@ public class WorkMouseInteractionController : MonoBehaviour
                 return;
         }
 
-        Ray ray = playerCamera.ScreenPointToRay(
-            Input.mousePosition
-        );
+        Ray ray =
+            playerCamera.ScreenPointToRay(
+                Input.mousePosition
+            );
 
         if (Physics.Raycast(
             ray,
@@ -84,17 +111,22 @@ public class WorkMouseInteractionController : MonoBehaviour
             QueryTriggerInteraction.Collide))
         {
             IInteractable interactable =
-                FindInteractable(hit.collider);
+                FindInteractable(
+                    hit.collider
+                );
 
             if (interactable != null)
             {
-                SetHoveredInteractable(interactable);
+                SetHoveredInteractable(
+                    interactable
+                );
 
                 if (showDebugLogs)
                 {
                     Debug.Log(
                         "–абочий курсор наведЄн на: " +
-                        hit.collider.gameObject.name
+                        hit.collider
+                            .gameObject.name
                     );
                 }
 
@@ -104,7 +136,8 @@ public class WorkMouseInteractionController : MonoBehaviour
                     {
                         Debug.Log(
                             "–абочий клик по: " +
-                            hit.collider.gameObject.name
+                            hit.collider
+                                .gameObject.name
                         );
                     }
 
@@ -125,14 +158,19 @@ public class WorkMouseInteractionController : MonoBehaviour
             return null;
 
         MonoBehaviour[] behaviours =
-            hitCollider.GetComponentsInParent<MonoBehaviour>(
-                true
-            );
+            hitCollider
+                .GetComponentsInParent
+                    <MonoBehaviour>(true);
 
-        for (int i = 0; i < behaviours.Length; i++)
+        for (int i = 0;
+             i < behaviours.Length;
+             i++)
         {
-            if (behaviours[i] is IInteractable interactable)
+            if (behaviours[i] is
+                IInteractable interactable)
+            {
                 return interactable;
+            }
         }
 
         return null;
@@ -148,15 +186,22 @@ public class WorkMouseInteractionController : MonoBehaviour
             return;
         }
 
-        hoveredInteractable = newInteractable;
+        hoveredInteractable =
+            newInteractable;
 
         if (cursorController == null)
             return;
 
         if (hoveredInteractable != null)
-            cursorController.SetInteractCursor();
+        {
+            cursorController
+                .SetInteractCursor();
+        }
         else
-            cursorController.SetDefaultCursor();
+        {
+            cursorController
+                .SetDefaultCursor();
+        }
     }
 
     private void BuildLayerMask()
@@ -179,18 +224,26 @@ public class WorkMouseInteractionController : MonoBehaviour
             return;
         }
 
-        interactableLayerMask = 1 << layer;
+        interactableLayerMask =
+            1 << layer;
     }
 
     private void FindReferences()
     {
         if (playerCamera == null)
-            playerCamera = Camera.main;
+        {
+            playerCamera =
+                Camera.main;
+        }
 
         if (cursorController == null)
         {
             cursorController =
-                FindObjectOfType<WorkCursorController>();
+                FindFirstObjectByType
+                    <WorkCursorController>(
+                        FindObjectsInactive
+                            .Include
+                    );
         }
     }
 }

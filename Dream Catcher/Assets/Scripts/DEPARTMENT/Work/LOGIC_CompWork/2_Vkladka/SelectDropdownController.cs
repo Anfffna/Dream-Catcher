@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class SelectDropdownController :
@@ -13,6 +14,17 @@ public class SelectDropdownController :
 
     [Tooltip("Объект с плашкой «Выберите симптомы» и текстом выбранных симптомов.")]
     [SerializeField] private GameObject dropdownSectionRoot;
+
+    [Header("Доступ после разговора")]
+    [Tooltip("Контроллер вариативного диалога текущего посетителя.")]
+    [SerializeField]
+    private ClientQuestionDialogueController
+    questionDialogueController;
+
+    [Tooltip("Сообщение о необходимости поговорить с посетителем.")]
+    [SerializeField]
+    private SymptomRequirementWarningController
+        requirementWarning;
 
     [Tooltip("Начинать игру с выключенной галочкой физических симптомов.")]
     [SerializeField] private bool startDisabled = true;
@@ -88,6 +100,7 @@ public class SelectDropdownController :
 
     private void Awake()
     {
+        FindReferences();
         AddListeners();
 
         if (startDisabled &&
@@ -110,6 +123,31 @@ public class SelectDropdownController :
         ApplySymptomsEnabled(
             symptomsEnabled
         );
+    }
+
+    private void LateUpdate()
+    {
+        if (!isOpen)
+            return;
+
+        // Ждём отпускания мыши.
+        // К этому моменту UI-кнопка уже успела выбрать пункт.
+        if (!Input.GetMouseButtonUp(0))
+            return;
+
+        // Клик по раскрытому списку или кнопке
+        // ничего дополнительно не закрывает.
+        if (IsPointerInsideDropdown())
+            return;
+
+        // Любой другой клик закрывает список.
+        CloseDropdown();
+    }
+
+    private void OnEnable()
+    {
+        FindReferences();
+        AddListeners();
     }
 
     private void OnDestroy()
@@ -223,6 +261,36 @@ public class SelectDropdownController :
         RefreshAllVisuals();
     }
 
+    public void ResetDropdown()
+    {
+        CloseDropdown();
+
+        selectedIndices.Clear();
+
+        if (symptomsToggle != null)
+        {
+            symptomsToggle
+                .SetIsOnWithoutNotify(false);
+        }
+
+        if (dropdownSectionRoot != null)
+        {
+            dropdownSectionRoot.SetActive(false);
+        }
+
+        if (requirementWarning != null)
+        {
+            requirementWarning
+                .HideImmediately();
+        }
+
+        RefreshAllVisuals();
+    }
+
+    public bool SymptomsEnabled =>
+        symptomsToggle != null &&
+        symptomsToggle.isOn;
+
     public List<string> GetSelectedValues()
     {
         List<string> values =
@@ -240,9 +308,43 @@ public class SelectDropdownController :
     }
 
     private void HandleSymptomsToggleChanged(
-        bool enabled)
+    bool enabled)
     {
-        ApplySymptomsEnabled(enabled);
+        if (!enabled)
+        {
+            ApplySymptomsEnabled(false);
+            return;
+        }
+
+        FindReferences();
+
+        bool symptomsAvailable =
+            questionDialogueController != null &&
+            questionDialogueController
+                .SymptomsDiscussed;
+
+        if (!symptomsAvailable)
+        {
+            if (symptomsToggle != null)
+            {
+                symptomsToggle
+                    .SetIsOnWithoutNotify(
+                        false
+                    );
+            }
+
+            ApplySymptomsEnabled(false);
+
+            if (requirementWarning != null)
+            {
+                requirementWarning
+                    .ShowWarning();
+            }
+
+            return;
+        }
+
+        ApplySymptomsEnabled(true);
     }
 
     private void ApplySymptomsEnabled(
@@ -461,6 +563,95 @@ public class SelectDropdownController :
                 .RemoveListener(
                     HandleSymptomsToggleChanged
                 );
+        }
+    }
+
+    private bool IsPointerInsideDropdown()
+    {
+        if (EventSystem.current == null)
+            return false;
+
+        PointerEventData pointerData =
+            new PointerEventData(
+                EventSystem.current
+            )
+            {
+                position = Input.mousePosition
+            };
+
+        List<RaycastResult> results =
+            new List<RaycastResult>();
+
+        EventSystem.current.RaycastAll(
+            pointerData,
+            results
+        );
+
+        Transform popupTransform =
+            popupRoot != null
+                ? popupRoot.transform
+                : null;
+
+        Transform buttonTransform =
+            dropdownButton != null
+                ? dropdownButton.transform
+                : null;
+
+        for (int i = 0;
+             i < results.Count;
+             i++)
+        {
+            GameObject hitObject =
+                results[i].gameObject;
+
+            if (hitObject == null)
+                continue;
+
+            Transform hitTransform =
+                hitObject.transform;
+
+            if (IsSameOrChild(
+                hitTransform,
+                popupTransform))
+            {
+                return true;
+            }
+
+            if (IsSameOrChild(
+                hitTransform,
+                buttonTransform))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsSameOrChild(
+        Transform target,
+        Transform parent)
+    {
+        if (target == null ||
+            parent == null)
+        {
+            return false;
+        }
+
+        return
+            target == parent ||
+            target.IsChildOf(parent);
+    }
+
+    private void FindReferences()
+    {
+        if (questionDialogueController == null)
+        {
+            questionDialogueController =
+                FindFirstObjectByType
+                    <ClientQuestionDialogueController>(
+                        FindObjectsInactive.Include
+                    );
         }
     }
 

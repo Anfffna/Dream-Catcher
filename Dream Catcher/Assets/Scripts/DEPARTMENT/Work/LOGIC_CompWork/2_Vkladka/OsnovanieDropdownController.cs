@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class OsnovanieDropdownController :
@@ -91,6 +92,25 @@ public class OsnovanieDropdownController :
     private void OnEnable()
     {
         RefreshAllVisuals();
+    }
+
+    private void LateUpdate()
+    {
+        if (!isOpen)
+            return;
+
+        // Ждём отпускания мыши.
+        // К этому моменту UI-кнопка уже успела выбрать пункт.
+        if (!Input.GetMouseButtonUp(0))
+            return;
+
+        // Клик по раскрытому списку или кнопке
+        // ничего дополнительно не закрывает.
+        if (IsPointerInsideDropdown())
+            return;
+
+        // Любой другой клик закрывает список.
+        CloseDropdown();
     }
 
     private void OnDisable()
@@ -430,6 +450,83 @@ public class OsnovanieDropdownController :
         dropdownButton.onClick.RemoveListener(
             ToggleDropdown
         );
+    }
+
+    private bool IsPointerInsideDropdown()
+    {
+        if (EventSystem.current == null)
+            return false;
+
+        PointerEventData pointerData =
+            new PointerEventData(
+                EventSystem.current
+            )
+            {
+                position = Input.mousePosition
+            };
+
+        List<RaycastResult> results =
+            new List<RaycastResult>();
+
+        EventSystem.current.RaycastAll(
+            pointerData,
+            results
+        );
+
+        Transform popupTransform =
+            popupRoot != null
+                ? popupRoot.transform
+                : null;
+
+        Transform buttonTransform =
+            dropdownButton != null
+                ? dropdownButton.transform
+                : null;
+
+        for (int i = 0;
+             i < results.Count;
+             i++)
+        {
+            GameObject hitObject =
+                results[i].gameObject;
+
+            if (hitObject == null)
+                continue;
+
+            Transform hitTransform =
+                hitObject.transform;
+
+            if (IsSameOrChild(
+                hitTransform,
+                popupTransform))
+            {
+                return true;
+            }
+
+            if (IsSameOrChild(
+                hitTransform,
+                buttonTransform))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsSameOrChild(
+        Transform target,
+        Transform parent)
+    {
+        if (target == null ||
+            parent == null)
+        {
+            return false;
+        }
+
+        return
+            target == parent ||
+            target.IsChildOf(parent);
     }
 
     private void OnValidate()

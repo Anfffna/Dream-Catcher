@@ -3,7 +3,8 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 
-public class DialogueManager : MonoBehaviour
+public class DialogueManager :
+    MonoBehaviour
 {
     [System.Serializable]
     public class DialogueLine
@@ -19,12 +20,19 @@ public class DialogueManager : MonoBehaviour
         [Tooltip("Если включено, во время этой реплики будет играть зацикленная озвучка.")]
         public bool useAudio = false;
 
-        [Tooltip("AudioSource с бормотанием персонажа. Можно назначать только на тех репликах, где Use Audio включён.")]
+        [Tooltip("Отдельный AudioSource реплики. Для данных клиента обычно оставляется пустым.")]
         public AudioSource voiceAudioSource;
 
         [Header("After Click Pause")]
-        [Tooltip("Задержка в секундах после клика (диалоговое окно исчезнет), затем появится следующая реплика. 0 = сразу. Клики во время паузы не работают.")]
+        [Tooltip("Задержка после клика перед следующей репликой.")]
         public float clickPauseDelay = 0f;
+    }
+
+    private enum DialogueRunMode
+    {
+        Normal,
+        KeepLastLineVisible,
+        ChoicePrompt
     }
 
     [Header("UI Elements")]
@@ -32,95 +40,248 @@ public class DialogueManager : MonoBehaviour
     public TextMeshProUGUI dialogueText;
 
     [Header("Dialogue Settings")]
-    public List<DialogueLine> dialogueLines = new List<DialogueLine>();
+    public List<DialogueLine> dialogueLines =
+        new List<DialogueLine>();
+
     public float lettersPerSecond = 35f;
     public bool hidePanelOnStart = true;
     public bool hidePanelOnEnd = true;
 
     [Header("Voice Settings")]
-    [Tooltip("Если у реплики Use Audio включён, но Voice Audio Source не назначен, будет использован этот AudioSource.")]
+    [Tooltip("Источник голоса, используемый, если в реплике отдельный источник не назначен.")]
     public AudioSource defaultVoiceAudioSource;
 
-    [Tooltip("Если включено, DialogueManager принудительно ставит loop = true на используемый AudioSource.")]
+    [Tooltip("Принудительно включать зацикливание используемого голоса.")]
     public bool forceVoiceLoop = true;
 
     [Header("Auto Find")]
     public bool autoFindReferences = true;
     public string playerObjectName = "Player";
 
-    private int currentLineIndex = 0;
-    private bool isTyping = false;
-    private bool dialogueActive = false;
+    private int currentLineIndex;
+    private bool isTyping;
+    private bool dialogueActive;
 
-    public static int ActiveDialogueCount { get; private set; }
-    public static bool AnyDialogueActive => ActiveDialogueCount > 0;
-    public int CurrentLineIndex => currentLineIndex;
+    public static int ActiveDialogueCount
+    {
+        get;
+        private set;
+    }
 
-    private bool registeredAsActiveDialogue = false;
-    private bool waitingForClickAfterTyping = false;
+    public static bool AnyDialogueActive =>
+        ActiveDialogueCount > 0;
+
+    public int CurrentLineIndex =>
+        currentLineIndex;
+
+    public bool DialogueActive =>
+        dialogueActive;
+
+    public bool IsTyping =>
+        isTyping;
+
+    public bool ChoicePromptReady =>
+        dialogueActive &&
+        currentRunMode ==
+            DialogueRunMode.ChoicePrompt &&
+        choicePromptReady;
+
+    private bool registeredAsActiveDialogue;
+    private bool waitingForClickAfterTyping;
+    private bool isWaitingForClickPause;
+    private bool skipProtection;
+    private bool choicePromptReady;
+
     private Coroutine typingCoroutine;
     private Coroutine pauseCoroutine;
-    private bool isWaitingForClickPause = false;
-    private bool skipProtection = false;
 
     private PlayerController playerController;
-    private bool wasMovementLocked = false;
-    private bool originalCanMoveState = false;
-    private bool blockMovementForCurrentDialogue = false;
+
+    private bool wasMovementLocked;
+    private bool originalCanMoveState;
+    private bool blockMovementForCurrentDialogue;
 
     private AudioSource currentVoiceAudioSource;
-    private readonly List<AudioSource> pausedByDialogueSources = new List<AudioSource>();
 
-    public bool DialogueActive => dialogueActive;
+    private readonly List<AudioSource>
+        pausedByDialogueSources =
+            new List<AudioSource>();
 
-    void Start()
+    private DialogueRunMode currentRunMode =
+        DialogueRunMode.Normal;
+
+    private void Start()
     {
         FindReferences();
 
-        if (hidePanelOnStart && dialoguePanel != null)
+        if (hidePanelOnStart &&
+            dialoguePanel != null)
+        {
             dialoguePanel.SetActive(false);
+        }
 
         if (dialogueText != null)
+        {
             dialogueText.text = "";
+        }
     }
 
-    void Update()
+    private void Update()
     {
-        if (!dialogueActive) return;
-        if (isWaitingForClickPause) return;
-        if (skipProtection) return;
+        if (!dialogueActive)
+            return;
 
-        if (Input.GetMouseButtonDown(0))
+        if (isWaitingForClickPause)
+            return;
+
+        if (skipProtection)
+            return;
+
+        if (!Input.GetMouseButtonDown(0))
+            return;
+
+        // Исходная реплика меню вопросов
+        // всегда печатается полностью.
+        if (currentRunMode ==
+            DialogueRunMode.ChoicePrompt)
         {
-            // Если идёт печать — пропускаем печать и прерываем озвучку этой реплики.
-            if (isTyping)
-            {
-                SkipTyping();
-                return;
-            }
+            return;
+        }
 
-            // Если текст полностью показан и ждём клик — запускаем паузу/следующую реплику.
-            if (waitingForClickAfterTyping)
-            {
-                StartClickPauseAndNext();
-            }
+        if (isTyping)
+        {
+            SkipTyping();
+            return;
+        }
+
+        if (waitingForClickAfterTyping)
+        {
+            StartClickPauseAndNext();
         }
     }
 
     public void StartDialogue()
     {
-        StartDialogue(dialogueLines, false);
+        StartDialogue(
+            dialogueLines,
+            false
+        );
     }
 
-    public void StartDialogue(List<DialogueLine> lines, bool blockMovement = false)
+    public void StartDialogue(
+        List<DialogueLine> lines,
+        bool blockMovement = false)
+    {
+        StartDialogueInternal(
+            lines,
+            blockMovement,
+            DialogueRunMode.Normal
+        );
+    }
+
+    public void StartDialogue(
+        List<DialogueLine> lines,
+        bool blockMovement,
+        bool keepLastLineVisible)
+    {
+        DialogueRunMode runMode =
+            keepLastLineVisible
+                ? DialogueRunMode
+                    .KeepLastLineVisible
+                : DialogueRunMode.Normal;
+
+        StartDialogueInternal(
+            lines,
+            blockMovement,
+            runMode
+        );
+    }
+
+    public void ShowChoicePrompt(
+        DialogueLine line,
+        bool blockMovement = false)
+    {
+        if (line == null)
+            return;
+
+        List<DialogueLine> promptLines =
+            new List<DialogueLine>
+            {
+                line
+            };
+
+        StartDialogueInternal(
+            promptLines,
+            blockMovement,
+            DialogueRunMode.ChoicePrompt
+        );
+    }
+
+    public void FinishChoicePrompt(
+        bool keepPanelVisible)
+    {
+        if (!dialogueActive ||
+            currentRunMode !=
+            DialogueRunMode.ChoicePrompt)
+        {
+            return;
+        }
+
+        EndDialogueInternal(
+            keepPanelVisible
+        );
+    }
+
+    public void HidePersistentDialogue()
+    {
+        if (dialogueActive)
+        {
+            if (currentRunMode ==
+                DialogueRunMode.ChoicePrompt)
+            {
+                FinishChoicePrompt(false);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        if (dialogueText != null)
+        {
+            dialogueText.text = "";
+            dialogueText.maxVisibleCharacters =
+                99999;
+        }
+
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(false);
+        }
+    }
+
+    private void StartDialogueInternal(
+        List<DialogueLine> lines,
+        bool blockMovement,
+        DialogueRunMode runMode)
     {
         FindReferences();
+
+        if (dialogueActive)
+            return;
+
+        if (lines == null ||
+            lines.Count == 0)
+        {
+            return;
+        }
 
         PauseCurrentVoiceAudio();
 
         dialogueLines = lines;
-        /*Во время работы игрок уже сидит:
-         * Поэтому DialogueManager не должен повторно блокировать управление через SetMovementEnabled*/
+        currentRunMode = runMode;
+        choicePromptReady = false;
+
         bool playerIsSeated =
             WorkSessionManager.Instance != null &&
             WorkSessionManager.Instance.IsSeated;
@@ -129,138 +290,254 @@ public class DialogueManager : MonoBehaviour
             blockMovement &&
             !playerIsSeated;
 
-        if (dialogueLines == null || dialogueLines.Count == 0) return;
-
         currentLineIndex = 0;
         dialogueActive = true;
+
         RegisterActiveDialogue();
 
-        // Блокируем движение, если требуется.
-        if (blockMovementForCurrentDialogue && playerController != null)
+        if (blockMovementForCurrentDialogue &&
+            playerController != null)
         {
-            originalCanMoveState = playerController.canMove;
-            playerController.SetMovementEnabled(false);
+            originalCanMoveState =
+                playerController.canMove;
+
+            playerController
+                .SetMovementEnabled(false);
+
             wasMovementLocked = true;
         }
 
         waitingForClickAfterTyping = false;
+
         ShowDialoguePanel(true);
-        ShowLine(dialogueLines[currentLineIndex]);
+
+        ShowLine(
+            dialogueLines[currentLineIndex]
+        );
     }
 
     private void ShowNextLine()
     {
         currentLineIndex++;
 
-        if (currentLineIndex >= dialogueLines.Count)
+        if (currentLineIndex >=
+            dialogueLines.Count)
         {
             EndDialogue();
             return;
         }
 
         waitingForClickAfterTyping = false;
+
         ShowDialoguePanel(true);
-        ShowLine(dialogueLines[currentLineIndex]);
+
+        ShowLine(
+            dialogueLines[currentLineIndex]
+        );
     }
 
-    private void ShowLine(DialogueLine line)
+    private void ShowLine(
+        DialogueLine line)
     {
         if (typingCoroutine != null)
-            StopCoroutine(typingCoroutine);
+        {
+            StopCoroutine(
+                typingCoroutine
+            );
+        }
 
         if (pauseCoroutine != null)
-            StopCoroutine(pauseCoroutine);
+        {
+            StopCoroutine(
+                pauseCoroutine
+            );
+        }
 
         isWaitingForClickPause = false;
         waitingForClickAfterTyping = false;
         skipProtection = false;
+        choicePromptReady = false;
 
         HandleVoiceForLine(line);
 
-        string finalText = GetFinalText(line);
-        typingCoroutine = StartCoroutine(TypeLine(finalText));
+        string finalText =
+            GetFinalText(line);
+
+        typingCoroutine =
+            StartCoroutine(
+                TypeLine(finalText)
+            );
     }
 
-    private string GetFinalText(DialogueLine line)
+    private string GetFinalText(
+        DialogueLine line)
     {
-        if (line == null) return "";
+        if (line == null)
+            return "";
 
         if (line.useCustomColor)
-            return "<color=" + line.colorHex + ">" + line.text + "</color>";
+        {
+            return
+                "<color=" +
+                line.colorHex +
+                ">" +
+                line.text +
+                "</color>";
+        }
 
         return line.text;
     }
 
-    private IEnumerator TypeLine(string line)
+    private IEnumerator TypeLine(
+        string line)
     {
         isTyping = true;
-        dialogueText.text = line;
-        dialogueText.maxVisibleCharacters = 0;
 
-        float delay = lettersPerSecond <= 0f ? 0f : 1f / lettersPerSecond;
-
-        for (int i = 1; i <= line.Length; i++)
+        if (dialogueText != null)
         {
-            dialogueText.maxVisibleCharacters = i;
+            dialogueText.text = line;
+            dialogueText.maxVisibleCharacters =
+                0;
+        }
+
+        float delay =
+            lettersPerSecond <= 0f
+                ? 0f
+                : 1f / lettersPerSecond;
+
+        for (int i = 1;
+             i <= line.Length;
+             i++)
+        {
+            if (dialogueText != null)
+            {
+                dialogueText
+                    .maxVisibleCharacters = i;
+            }
 
             if (delay > 0f)
-                yield return new WaitForSeconds(delay);
+            {
+                yield return
+                    new WaitForSeconds(delay);
+            }
             else
+            {
                 yield return null;
+            }
         }
 
         isTyping = false;
         typingCoroutine = null;
 
-        // Печать завершена, теперь ждём клик игрока.
-        // Озвучку НЕ останавливаем тут: она продолжает бормотать, пока игрок не кликнет.
+        bool isLastLine =
+            currentLineIndex >=
+            dialogueLines.Count - 1;
+
+        if (currentRunMode ==
+                DialogueRunMode.ChoicePrompt &&
+            isLastLine)
+        {
+            choicePromptReady = true;
+            waitingForClickAfterTyping = false;
+
+            // После печати меню вопросов уже не блокирует 3D-клик по самому клиенту.
+            UnregisterActiveDialogue();
+
+            yield break;
+        }
+
         waitingForClickAfterTyping = true;
     }
 
     private void SkipTyping()
     {
         if (typingCoroutine != null)
-            StopCoroutine(typingCoroutine);
-
-        if (dialogueText != null && dialogueLines != null && dialogueLines.Count > currentLineIndex)
         {
-            string fullText = GetFinalText(dialogueLines[currentLineIndex]);
-            dialogueText.text = fullText;
-            dialogueText.maxVisibleCharacters = fullText.Length;
+            StopCoroutine(
+                typingCoroutine
+            );
         }
 
-        // При скипе печати озвучка этой реплики прерывается/ставится на паузу.
+        if (dialogueText != null &&
+            dialogueLines != null &&
+            dialogueLines.Count >
+                currentLineIndex)
+        {
+            string fullText =
+                GetFinalText(
+                    dialogueLines[
+                        currentLineIndex
+                    ]
+                );
+
+            dialogueText.text = fullText;
+
+            dialogueText.maxVisibleCharacters =
+                fullText.Length;
+        }
+
         PauseCurrentVoiceAudio();
 
         isTyping = false;
         typingCoroutine = null;
-        waitingForClickAfterTyping = true;
 
-        // Защита от двойного клика на 0.2 секунды.
+        bool isLastLine =
+            currentLineIndex >=
+            dialogueLines.Count - 1;
+
+        if (currentRunMode ==
+                DialogueRunMode.ChoicePrompt &&
+            isLastLine)
+        {
+            choicePromptReady = true;
+            waitingForClickAfterTyping = false;
+
+            UnregisterActiveDialogue();
+        }
+        else
+        {
+            waitingForClickAfterTyping = true;
+        }
+
         if (!skipProtection)
-            StartCoroutine(SkipProtectionRoutine());
+        {
+            StartCoroutine(
+                SkipProtectionRoutine()
+            );
+        }
     }
 
     private IEnumerator SkipProtectionRoutine()
     {
         skipProtection = true;
-        yield return new WaitForSeconds(0.2f);
+
+        yield return
+            new WaitForSeconds(0.2f);
+
         skipProtection = false;
     }
 
     private void StartClickPauseAndNext()
     {
-        // При переходе с реплики озвучка прерывается.
         PauseCurrentVoiceAudio();
 
-        float delay = dialogueLines[currentLineIndex].clickPauseDelay;
+        float delay =
+            dialogueLines[
+                currentLineIndex
+            ].clickPauseDelay;
+
         waitingForClickAfterTyping = false;
 
         if (delay > 0f)
         {
             isWaitingForClickPause = true;
+
             ShowDialoguePanel(false);
-            pauseCoroutine = StartCoroutine(ClickPauseRoutine(delay));
+
+            pauseCoroutine =
+                StartCoroutine(
+                    ClickPauseRoutine(delay)
+                );
         }
         else
         {
@@ -268,9 +545,11 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    private IEnumerator ClickPauseRoutine(float delay)
+    private IEnumerator ClickPauseRoutine(
+        float delay)
     {
-        yield return new WaitForSeconds(delay);
+        yield return
+            new WaitForSeconds(delay);
 
         isWaitingForClickPause = false;
         pauseCoroutine = null;
@@ -278,72 +557,86 @@ public class DialogueManager : MonoBehaviour
         ShowNextLine();
     }
 
-    private void ShowDialoguePanel(bool show)
+    private void ShowDialoguePanel(
+        bool show)
     {
         if (!show)
+        {
             PauseCurrentVoiceAudio();
+        }
 
-        if (dialoguePanel != null && dialoguePanel.activeSelf != show)
+        if (dialoguePanel != null &&
+            dialoguePanel.activeSelf != show)
+        {
             dialoguePanel.SetActive(show);
+        }
     }
 
-    private void HandleVoiceForLine(DialogueLine line)
+    private void HandleVoiceForLine(
+        DialogueLine line)
     {
-        if (line == null)
+        if (line == null ||
+            !line.useAudio)
         {
             PauseCurrentVoiceAudio();
             return;
         }
 
-        if (!line.useAudio)
-        {
-            PauseCurrentVoiceAudio();
-            return;
-        }
-
-        AudioSource source = line.voiceAudioSource;
-
-        if (source == null)
-            source = defaultVoiceAudioSource;
+        AudioSource source =
+            line.voiceAudioSource;
 
         if (source == null)
         {
-            PauseCurrentVoiceAudio();
-            return;
+            source =
+                defaultVoiceAudioSource;
         }
 
-        if (source.clip == null)
+        if (source == null ||
+            source.clip == null)
         {
             PauseCurrentVoiceAudio();
             return;
         }
 
-        if (currentVoiceAudioSource != null && currentVoiceAudioSource != source)
-            PauseVoiceAudio(currentVoiceAudioSource);
+        if (currentVoiceAudioSource != null &&
+            currentVoiceAudioSource != source)
+        {
+            PauseVoiceAudio(
+                currentVoiceAudioSource
+            );
+        }
 
-        currentVoiceAudioSource = source;
+        currentVoiceAudioSource =
+            source;
 
         if (forceVoiceLoop)
-            currentVoiceAudioSource.loop = true;
+        {
+            currentVoiceAudioSource.loop =
+                true;
+        }
 
-        PlayOrResumeVoiceAudio(currentVoiceAudioSource);
+        PlayOrResumeVoiceAudio(
+            currentVoiceAudioSource
+        );
     }
 
-    private void PlayOrResumeVoiceAudio(AudioSource source)
+    private void PlayOrResumeVoiceAudio(
+        AudioSource source)
     {
-        if (source == null)
+        if (source == null ||
+            source.clip == null ||
+            source.isPlaying)
+        {
             return;
+        }
 
-        if (source.clip == null)
-            return;
-
-        if (source.isPlaying)
-            return;
-
-        if (pausedByDialogueSources.Contains(source))
+        if (pausedByDialogueSources
+            .Contains(source))
         {
             source.UnPause();
-            pausedByDialogueSources.Remove(source);
+
+            pausedByDialogueSources
+                .Remove(source);
         }
         else
         {
@@ -356,23 +649,30 @@ public class DialogueManager : MonoBehaviour
         if (currentVoiceAudioSource == null)
             return;
 
-        PauseVoiceAudio(currentVoiceAudioSource);
+        PauseVoiceAudio(
+            currentVoiceAudioSource
+        );
     }
 
-    private void PauseVoiceAudio(AudioSource source)
+    private void PauseVoiceAudio(
+        AudioSource source)
     {
-        if (source == null)
-            return;
-
-        if (source.clip == null)
-            return;
-
-        if (source.isPlaying)
+        if (source == null ||
+            source.clip == null)
         {
-            source.Pause();
+            return;
+        }
 
-            if (!pausedByDialogueSources.Contains(source))
-                pausedByDialogueSources.Add(source);
+        if (!source.isPlaying)
+            return;
+
+        source.Pause();
+
+        if (!pausedByDialogueSources
+            .Contains(source))
+        {
+            pausedByDialogueSources
+                .Add(source);
         }
     }
 
@@ -391,61 +691,118 @@ public class DialogueManager : MonoBehaviour
             return;
 
         registeredAsActiveDialogue = false;
-        ActiveDialogueCount = Mathf.Max(0, ActiveDialogueCount - 1);
+
+        ActiveDialogueCount =
+            Mathf.Max(
+                0,
+                ActiveDialogueCount - 1
+            );
     }
 
     private void EndDialogue()
     {
+        bool keepPanelVisible =
+            currentRunMode ==
+            DialogueRunMode
+                .KeepLastLineVisible;
+
+        EndDialogueInternal(
+            keepPanelVisible
+        );
+    }
+
+    private void EndDialogueInternal(
+        bool keepPanelVisible)
+    {
         PauseCurrentVoiceAudio();
 
         dialogueActive = false;
+
         UnregisterActiveDialogue();
 
-        if (wasMovementLocked && playerController != null)
+        if (wasMovementLocked &&
+            playerController != null)
         {
-            playerController.SetMovementEnabled(originalCanMoveState);
+            playerController
+                .SetMovementEnabled(
+                    originalCanMoveState
+                );
+
             wasMovementLocked = false;
         }
 
-        blockMovementForCurrentDialogue = false;
+        blockMovementForCurrentDialogue =
+            false;
 
         if (typingCoroutine != null)
-            StopCoroutine(typingCoroutine);
+        {
+            StopCoroutine(
+                typingCoroutine
+            );
+        }
 
         if (pauseCoroutine != null)
-            StopCoroutine(pauseCoroutine);
+        {
+            StopCoroutine(
+                pauseCoroutine
+            );
+        }
 
         pauseCoroutine = null;
+        typingCoroutine = null;
+
+        isTyping = false;
         isWaitingForClickPause = false;
         waitingForClickAfterTyping = false;
         skipProtection = false;
-        typingCoroutine = null;
+        choicePromptReady = false;
 
-        if (dialogueText != null)
+        if (!keepPanelVisible)
         {
-            dialogueText.text = "";
-            dialogueText.maxVisibleCharacters = 99999;
+            if (dialogueText != null)
+            {
+                dialogueText.text = "";
+
+                dialogueText
+                    .maxVisibleCharacters =
+                    99999;
+            }
+
+            if (hidePanelOnEnd &&
+                dialoguePanel != null)
+            {
+                dialoguePanel.SetActive(false);
+            }
         }
 
-        if (hidePanelOnEnd && dialoguePanel != null)
-            dialoguePanel.SetActive(false);
+        currentRunMode =
+            DialogueRunMode.Normal;
 
-        if (WorkSessionManager.Instance != null &&
-            WorkSessionManager.Instance.IsSeated)
+        RestoreWorkState();
+    }
+
+    private void RestoreWorkState()
+    {
+        if (WorkSessionManager.Instance == null ||
+            !WorkSessionManager.Instance.IsSeated)
         {
-            if (WorkSessionManager.Instance.seatController != null)
-            {
-                WorkSessionManager.Instance
-                    .seatController
-                    .RestoreWorkControlAfterPause();
-            }
+            return;
+        }
 
-            if (WorkSessionManager.Instance.cursorController != null)
-            {
-                WorkSessionManager.Instance
-                    .cursorController
-                    .ShowWorkCursor();
-            }
+        if (WorkSessionManager.Instance
+            .seatController != null)
+        {
+            WorkSessionManager.Instance
+                .seatController
+                .RestoreWorkControlAfterPause();
+        }
+
+        if (WorkSessionManager.Instance
+            .cursorController != null)
+        {
+            WorkSessionManager.Instance
+                .cursorController
+                .ShowWorkCursor();
         }
     }
 
@@ -456,25 +813,55 @@ public class DialogueManager : MonoBehaviour
 
         if (playerController == null)
         {
-            GameObject obj = GameObject.Find(playerObjectName);
+            GameObject playerObject =
+                GameObject.Find(
+                    playerObjectName
+                );
 
-            if (obj != null)
-                playerController = obj.GetComponent<PlayerController>();
+            if (playerObject != null)
+            {
+                playerController =
+                    playerObject
+                        .GetComponent
+                            <PlayerController>();
+            }
         }
 
         if (playerController == null)
-            playerController = FindObjectOfType<PlayerController>();
+        {
+            playerController =
+                FindFirstObjectByType
+                    <PlayerController>(
+                        FindObjectsInactive
+                            .Include
+                    );
+        }
     }
 
     private void OnDisable()
     {
         PauseCurrentVoiceAudio();
 
-        if (dialogueActive)
+        if (typingCoroutine != null)
         {
-            dialogueActive = false;
-            UnregisterActiveDialogue();
+            StopCoroutine(
+                typingCoroutine
+            );
         }
+
+        if (pauseCoroutine != null)
+        {
+            StopCoroutine(
+                pauseCoroutine
+            );
+        }
+
+        typingCoroutine = null;
+        pauseCoroutine = null;
+        dialogueActive = false;
+        choicePromptReady = false;
+
+        UnregisterActiveDialogue();
     }
 
     private void OnDestroy()
@@ -484,7 +871,8 @@ public class DialogueManager : MonoBehaviour
         if (dialogueActive)
         {
             dialogueActive = false;
-            UnregisterActiveDialogue();
         }
+
+        UnregisterActiveDialogue();
     }
 }
