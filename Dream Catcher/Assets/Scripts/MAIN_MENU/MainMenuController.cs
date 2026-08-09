@@ -10,6 +10,10 @@ public class MainMenuController : MonoBehaviour
     [Header("Testing")]
     public bool TestAgain = false;
 
+    [Header("Audio")]
+    public AudioSource buttonAudioSource;
+    public AudioClip buttonClickSound;
+
     [Header("Panels")]
     public GameObject quitPanel;
     public GameObject settingsPanel;
@@ -79,6 +83,7 @@ public class MainMenuController : MonoBehaviour
 
     public void StartGame()
     {
+        PlayButtonSound();
         Time.timeScale = 1f;
 
         if (SaveManager.Instance != null)
@@ -110,6 +115,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OnContinueButton()
     {
+        PlayButtonSound();
         Time.timeScale = 1f;
 
         if (SaveManager.Instance == null)
@@ -129,6 +135,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OnLoadButton()
     {
+        PlayButtonSound();
         if (loadPanel == null || loadCG == null)
             return;
 
@@ -152,6 +159,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OnSettingsButton()
     {
+        PlayButtonSound();
         if (settingsPanel == null || settingsCG == null)
             return;
 
@@ -173,6 +181,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OnQuitButton()
     {
+        PlayButtonSound();
         if (quitPanel == null || quitCG == null)
             return;
 
@@ -188,6 +197,14 @@ public class MainMenuController : MonoBehaviour
         CloseSettingsPanelIfOpen();
 
         StartFadeIn(ref quitFadeCoroutine, quitPanel, quitCG);
+    }
+
+    private void PlayButtonSound()
+    {
+        if (buttonAudioSource != null && buttonClickSound != null)
+        {
+            buttonAudioSource.PlayOneShot(buttonClickSound);
+        }
     }
 
     public void ConfirmQuit()

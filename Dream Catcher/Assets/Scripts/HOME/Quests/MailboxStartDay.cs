@@ -78,8 +78,17 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
     {
         FindReferences();
 
-        if (isRead || isReading) return;
-        if (currentCoroutine != null) StopCoroutine(currentCoroutine);
+        if (isRead || isReading)
+            return;
+
+        // Сразу выключаем коллайдер почтового ящика, чтобы InteractionController больше его не видел.
+        BoxCollider boxCollider = GetComponent<BoxCollider>();
+        if (boxCollider != null)
+            boxCollider.enabled = false;
+
+        if (currentCoroutine != null)
+            StopCoroutine(currentCoroutine);
+
         currentCoroutine = StartCoroutine(ShowLetterRoutine());
     }
 

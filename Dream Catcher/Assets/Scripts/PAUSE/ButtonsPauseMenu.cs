@@ -3,9 +3,14 @@ using UnityEngine.SceneManagement;
 
 public class ButtonsPauseMenu : MonoBehaviour
 {
+    [Header("Audio")]
+    public AudioSource buttonAudioSource;
+    public AudioClip buttonClickSound;
+
     // ----- Кнопка "Продолжить" -----
     public void OnResume()
     {
+        PlayButtonSound();
         if (PauseManager.Instance != null)
             PauseManager.Instance.ResumeGame();
     }
@@ -13,6 +18,7 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Сохранить" -----
     public void OnSave()
     {
+        PlayButtonSound();
         if (PauseManager.Instance != null)
             PauseManager.Instance.ShowSavePanel();
     }
@@ -20,6 +26,7 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Загрузить" -----
     public void OnLoad()
     {
+        PlayButtonSound();
         if (PauseManager.Instance != null)
             PauseManager.Instance.ShowDownloadPanel();
     }
@@ -27,6 +34,7 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Настройки" -----
     public void OnSettings()
     {
+        PlayButtonSound();
         if (PauseManager.Instance != null)
             PauseManager.Instance.ShowSettingsPanel();
 
@@ -37,6 +45,7 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Главное меню" -----
     public void OnMainMenu()
     {
+        PlayButtonSound();
         // Выходим из паузы (возвращаем время)
         if (PauseManager.Instance != null)
             PauseManager.Instance.ResumeGame();
@@ -55,6 +64,14 @@ public class ButtonsPauseMenu : MonoBehaviour
             SceneManager.LoadScene(
                 "MainMenu"
             );
+        }
+    }
+
+    private void PlayButtonSound()
+    {
+        if (buttonAudioSource != null && buttonClickSound != null)
+        {
+            buttonAudioSource.PlayOneShot(buttonClickSound);
         }
     }
 }
