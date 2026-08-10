@@ -279,7 +279,13 @@ public class ClientNPCController :
         }
 
         CurrentActiveClient = this;
+        if (SessionStatsManager.Instance != null)
+        {
+            SessionStatsManager.Instance
+                .TrackClient(this);
+        }
         approachStarted = true;
+
         dialogueStage =
             ClientDialogueStage
                 .WaitingForApproach;
