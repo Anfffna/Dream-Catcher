@@ -47,11 +47,15 @@ public class PlayerController : MonoBehaviour
 
     public bool IsWorkLookEnabled => workLookEnabled;
 
-    private void Start()
+    private void Awake()
     {
-        controller = GetComponent<CharacterController>();
+        controller =
+            GetComponent<CharacterController>();
 
+        // Нормальную позу камеры обязательно
+        // запоминаем ДО Start() других систем.
         CaptureNormalCameraPoseIfNeeded();
+
         SyncPitchFromCamera();
     }
 
@@ -272,6 +276,16 @@ public class PlayerController : MonoBehaviour
         workLookEnabled = false;
         workYawOffset = 0f;
 
+        float currentYaw =
+            transform.eulerAngles.y;
+
+        transform.rotation =
+            Quaternion.Euler(
+                0f,
+                currentYaw,
+                0f
+            );
+
         canControl = true;
         canMove = true;
         firstControlFrame = true;
@@ -490,14 +504,28 @@ public class PlayerController : MonoBehaviour
         if (cameraTransform == null)
             return;
 
-        float currentZ =
-            cameraTransform.localRotation.eulerAngles.z;
+        float normalY = 0f;
+        float normalZ = 0f;
 
+        if (normalCameraPoseCaptured)
+        {
+            Vector3 normalEuler =
+                normalCameraLocalRotation
+                    .eulerAngles;
+
+            normalY =
+                normalEuler.y;
+
+            normalZ =
+                normalEuler.z;
+        }
+
+        // Случайный наклон камеры из временных сцен, катсцен, загрузки и т.д. больше не переносится в обычное управление.
         cameraTransform.localRotation =
             Quaternion.Euler(
                 xRotation,
-                0f,
-                currentZ
+                normalY,
+                normalZ
             );
     }
 

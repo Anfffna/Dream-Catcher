@@ -10753,7 +10753,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8b398d84d583c554cbc73ea7a279a8c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ComputerInterfaceNavigation
-  computerCanvasGroup: {fileID: 552288636}
+  computerGraphicRaycaster: {fileID: 0}
   sleepRecordingTab:
     button: {fileID: 1436017091}
     buttonImage: {fileID: 1436017088}

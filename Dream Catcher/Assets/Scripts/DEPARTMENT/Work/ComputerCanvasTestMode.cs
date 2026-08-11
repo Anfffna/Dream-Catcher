@@ -27,9 +27,11 @@ public class ComputerCanvasTestMode :
 
     private IEnumerator Start()
     {
-#if UNITY_EDITOR
-        if (!enableTestMode ||
-            testApplied)
+    #if !UNITY_EDITOR
+            yield break;
+    #else
+
+        if (!enableTestMode || testApplied)
         {
             yield break;
         }
@@ -48,7 +50,6 @@ public class ComputerCanvasTestMode :
         yield return null;
         yield return null;
 
-        // Ждём завершения загрузки сохранения и сброса старого состояния.
         if (delayAfterSceneLoad > 0f)
         {
             yield return new WaitForSecondsRealtime(
@@ -56,7 +57,6 @@ public class ComputerCanvasTestMode :
             );
         }
 
-        // Дополнительно пропускаем два кадра.
         yield return null;
         yield return null;
 
@@ -73,7 +73,6 @@ public class ComputerCanvasTestMode :
 
         DisableSequenceObjects();
 
-        // Сначала запускаем настоящую рабочую посадку.
         if (!sessionManager.IsSeated)
         {
             sessionManager.StartWork();
@@ -83,45 +82,33 @@ public class ComputerCanvasTestMode :
             while (!sessionManager.IsSeated &&
                    elapsed < seatingTimeout)
             {
-                elapsed +=
-                    Time.unscaledDeltaTime;
-
+                elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
         }
 
-        // Без завершённой посадки зум не запускаем.
         if (!sessionManager.IsSeated)
         {
             testApplied = false;
             yield break;
         }
 
-        // Даём контроллеру посадки полностью закончить последний кадр.
         yield return null;
         yield return null;
 
-        // Устанавливаем компьютер в готовое состояние.
-        computerController
-            .PrepareCanvasForTest();
+        computerController.PrepareCanvasForTest();
 
         yield return null;
 
-        // Запускаем настоящий зум из уже правильной сидячей позиции.
         zoomComputerWork.StartZoom();
 
-        // В тестовом режиме курсор должен точно остаться видимым.
         if (sessionManager.cursorController != null)
         {
-            sessionManager
-                .cursorController
-                .ShowWorkCursor();
-
-            sessionManager
-                .cursorController
-                .SetDefaultCursor();
+            sessionManager.cursorController.ShowWorkCursor();
+            sessionManager.cursorController.SetDefaultCursor();
         }
-#endif
+
+    #endif
     }
 
     private void DisableSequenceObjects()
