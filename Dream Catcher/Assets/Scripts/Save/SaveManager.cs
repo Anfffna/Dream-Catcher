@@ -21,6 +21,14 @@ public class SaveManager : MonoBehaviour
 
     private Coroutine finishLoadingCoroutine;
 
+    [Header("Загрузка характеристик")]
+
+    [Tooltip("Через сколько секунд после нажатия загрузки восстановить характеристики игрока.")]
+    [SerializeField]
+    private float playerStatsRestoreDelay = 1f;
+
+    private Coroutine restorePlayerStatsCoroutine;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -113,6 +121,40 @@ public class SaveManager : MonoBehaviour
         SaveQuestState(save);
         SaveItemInteractionState(save);
 
+        if (!SavePlayerStats(save))
+            return false;
+
+        return true;
+    }
+
+    private bool SavePlayerStats(
+    SaveData save)
+    {
+        if (save == null)
+            return false;
+
+        SessionStatsManager stats =
+            SessionStatsManager.Instance;
+
+        if (stats == null)
+        {
+            Debug.LogWarning(
+                "SaveManager: SessionStatsManager не найден. " +
+                "Характеристики игрока не сохранены."
+            );
+
+            return false;
+        }
+
+        save.playerStatsVersion =
+            SessionStatsManager.SaveVersion;
+
+        save.sanity =
+            stats.GetSanityForSave();
+
+        save.experience =
+            stats.GetExperienceForSave();
+
         return true;
     }
 
@@ -165,6 +207,20 @@ public class SaveManager : MonoBehaviour
         Time.timeScale = 1f;
         IsLoadingSave = true;
 
+        if (restorePlayerStatsCoroutine != null)
+        {
+            StopCoroutine(
+                restorePlayerStatsCoroutine
+            );
+        }
+
+        restorePlayerStatsCoroutine =
+            StartCoroutine(
+                RestorePlayerStatsDelayed(
+                    pendingLoadData
+                )
+            );
+
         SceneManager.sceneLoaded -= OnSceneLoadedAfterSaveLoad;
         SceneManager.sceneLoaded += OnSceneLoadedAfterSaveLoad;
 
@@ -180,6 +236,54 @@ public class SaveManager : MonoBehaviour
                 pendingLoadData.sceneName
             );
         }
+    }
+
+    private void RestorePlayerStats(
+    SaveData data)
+    {
+        if (data == null)
+            return;
+
+        SessionStatsManager stats =
+            SessionStatsManager.Instance;
+
+        if (stats == null)
+            return;
+
+        // Старый сейв, созданный ещё до появления
+        // системы характеристик.
+        if (data.playerStatsVersion <= 0)
+        {
+            stats.ResetForNewGame();
+            return;
+        }
+
+        stats.RestoreFromSave(
+            data.sanity,
+            data.experience
+        );
+    }
+
+    private IEnumerator RestorePlayerStatsDelayed(
+    SaveData data)
+    {
+        if (playerStatsRestoreDelay > 0f)
+        {
+            yield return new WaitForSecondsRealtime(
+                playerStatsRestoreDelay
+            );
+        }
+
+        // На случай, если persistent-объекты
+        // ещё не успели окончательно определиться.
+        while (SessionStatsManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        RestorePlayerStats(data);
+
+        restorePlayerStatsCoroutine = null;
     }
 
     private void OnSceneLoadedAfterSaveLoad(Scene scene, LoadSceneMode mode)
@@ -442,6 +546,14 @@ public class SaveManager : MonoBehaviour
 
         clone.dateTime = source.dateTime;
 
+        clone.playerStatsVersion =
+            source.playerStatsVersion;
+
+        clone.sanity =
+            source.sanity;
+        clone.experience =
+            source.experience;
+
         clone.activeQuestIds = new List<string>(source.activeQuestIds);
         clone.completedQuestIds = new List<string>(source.completedQuestIds);
         clone.inspectedItemIds = new List<string>(source.inspectedItemIds);
@@ -484,6 +596,12 @@ public class SaveManager : MonoBehaviour
 
         if (taskPanelController != null)
             taskPanelController.ResetForNewGame();
+
+        if (SessionStatsManager.Instance != null)
+        {
+            SessionStatsManager.Instance
+                .ResetForNewGame();
+        }
 
         Debug.Log("SaveManager: подготовка новой игры завершена.");
     }

@@ -17,6 +17,7 @@ public class IndicatorHover : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
     private Coroutine colorCoroutine;
     private static IndicatorHover selectedInstance = null;
+    private bool interactionEnabled = true;
 
     void Start()
     {
@@ -28,39 +29,105 @@ public class IndicatorHover : MonoBehaviour, IPointerEnterHandler, IPointerExitH
             indicator.rectTransform.sizeDelta = new Vector2(25, 10);
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
+    public void OnPointerEnter(
+    PointerEventData eventData)
     {
-        if (indicator == null) return;
-        if (selectedInstance == this) return;
-        SetColor(activeColor);
+        if (!interactionEnabled)
+            return;
+
+        if (indicator == null)
+            return;
+
+        if (selectedInstance == this)
+            return;
+
+        SetColor(
+            activeColor
+        );
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+    public void OnPointerExit(
+    PointerEventData eventData)
     {
-        if (indicator == null) return;
+        if (!interactionEnabled)
+            return;
+
+        if (indicator == null)
+            return;
+
         if (selectedInstance == this)
         {
-            SetColor(activeColor);
+            SetColor(
+                activeColor
+            );
+
             return;
         }
-        SetColor(normalColor);
+
+        SetColor(
+            normalColor
+        );
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    public void OnPointerClick(
+    PointerEventData eventData)
     {
+        if (!interactionEnabled)
+            return;
+
         Select();
     }
 
     public void Select()
     {
-        if (selectedInstance == this) return;
+        if (!interactionEnabled)
+            return;
+
+        if (selectedInstance == this)
+            return;
 
         if (selectedInstance != null)
             selectedInstance.Deselect();
 
         selectedInstance = this;
+
         if (indicator != null)
-            SetColor(activeColor);
+        {
+            SetColor(
+                activeColor
+            );
+        }
+    }
+
+    public void SetInteractionEnabled(
+    bool enabled)
+    {
+        interactionEnabled =
+            enabled;
+
+        if (colorCoroutine != null)
+        {
+            StopCoroutine(
+                colorCoroutine
+            );
+
+            colorCoroutine =
+                null;
+        }
+
+        if (selectedInstance == this)
+        {
+            selectedInstance =
+                null;
+        }
+
+        if (indicator != null)
+        {
+            // При блокировке и при повторном
+            // включении начинаем с normalColor.
+            indicator.color =
+                normalColor;
+        }
     }
 
     public void Deselect()

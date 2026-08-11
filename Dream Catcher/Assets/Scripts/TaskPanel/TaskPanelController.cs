@@ -28,6 +28,9 @@ public class TaskPanelController : MonoBehaviour
     [Header("Player")]
     public PlayerController playerController;
 
+    [Header("Work HUD")]
+    public WorkHUDManager workHUDManager;
+
     [Header("Auto Find")]
     public bool autoFindReferences = true;
     public string playerObjectName = "Player";
@@ -41,6 +44,9 @@ public class TaskPanelController : MonoBehaviour
     public Vector2 interactCursorHotspot = Vector2.zero;
 
     public bool IsPanelOpen => isPanelOpen;
+
+    public bool BlocksWorldInteraction =>
+    isPanelOpen || fadeCoroutine != null;
 
     private bool isPanelOpen = false;
     private bool cursorIsDefault = false;
@@ -189,6 +195,11 @@ public class TaskPanelController : MonoBehaviour
 
         isPanelOpen = true;
 
+        if (workHUDManager != null)
+            workHUDManager.SetTaskPanelBlocked(true);
+
+        InteractionOutlineAutoHider.SetForceVisible(false);
+
         if (taskPanel != null)
             taskPanel.SetActive(true);
 
@@ -217,6 +228,11 @@ public class TaskPanelController : MonoBehaviour
         FindReferences();
 
         isPanelOpen = false;
+
+        if (workHUDManager != null)
+            workHUDManager.SetTaskPanelBlocked(false);
+
+        InteractionOutlineAutoHider.SetForceVisible(true);
 
         if (taskPanelCanvasGroup != null)
         {
@@ -338,6 +354,8 @@ public class TaskPanelController : MonoBehaviour
         }
 
         fadeCoroutine = null;
+        if (targetPanelAlpha <= 0.001f)
+            InteractionOutlineAutoHider.SetForceVisible(false);
     }
 
     public void SetDefaultCursor()
@@ -377,5 +395,13 @@ public class TaskPanelController : MonoBehaviour
 
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
+
+        if (workHUDManager == null)
+        {
+            workHUDManager =
+                FindFirstObjectByType<WorkHUDManager>(
+                    FindObjectsInactive.Include
+                );
+        }
     }
 }

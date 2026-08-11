@@ -12,6 +12,15 @@ public class WorkHUDManager : MonoBehaviour
 
     private Coroutine fadeCoroutine;
 
+    // Настоящее состояние HUD,
+    // которым управляют рабочие скрипты, зум и т.д.
+    private bool requestedVisible = false;
+
+    // Временные блокировки поверх настоящего состояния.
+    private bool pauseBlocked = false;
+    private bool taskPanelBlocked = false;
+
+
     private void Awake()
     {
         if (canvasGroup == null)
@@ -20,34 +29,83 @@ public class WorkHUDManager : MonoBehaviour
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
-        HideInstant();
+        requestedVisible = false;
+
+        ApplyInstant(0f);
     }
 
+
+    // Обычная логика игры:
+    // "HUD сейчас должен быть виден".
     public void Show()
     {
-        StartFade(1f);
+        requestedVisible = true;
+        RefreshVisibility();
     }
 
+
+    // Обычная логика игры:
+    // "HUD сейчас должен быть скрыт".
     public void Hide()
     {
-        StartFade(0f);
+        requestedVisible = false;
+        RefreshVisibility();
     }
+
 
     public void HideInstant()
     {
+        requestedVisible = false;
+
         if (fadeCoroutine != null)
         {
             StopCoroutine(fadeCoroutine);
             fadeCoroutine = null;
         }
 
-        if (canvasGroup == null)
+        ApplyInstant(0f);
+    }
+
+
+    // PauseManager вызывает только это.
+    public void SetPauseBlocked(bool blocked)
+    {
+        if (pauseBlocked == blocked)
             return;
 
-        canvasGroup.alpha = 0f;
-        canvasGroup.interactable = false;
-        canvasGroup.blocksRaycasts = false;
+        pauseBlocked = blocked;
+        RefreshVisibility();
     }
+
+
+    // TaskPanelController вызывает только это.
+    public void SetTaskPanelBlocked(bool blocked)
+    {
+        if (taskPanelBlocked == blocked)
+            return;
+
+        taskPanelBlocked = blocked;
+        RefreshVisibility();
+    }
+
+
+    private void RefreshVisibility()
+    {
+        bool temporarilyBlocked =
+            pauseBlocked ||
+            taskPanelBlocked;
+
+        bool shouldActuallyBeVisible =
+            requestedVisible &&
+            !temporarilyBlocked;
+
+        StartFade(
+            shouldActuallyBeVisible
+                ? 1f
+                : 0f
+        );
+    }
+
 
     private void StartFade(float targetAlpha)
     {
@@ -57,15 +115,36 @@ public class WorkHUDManager : MonoBehaviour
         gameObject.SetActive(true);
 
         if (fadeCoroutine != null)
+        {
             StopCoroutine(fadeCoroutine);
+            fadeCoroutine = null;
+        }
+
+        // Если уже на нужном значении,
+        // лишнюю корутину не запускаем.
+        if (Mathf.Approximately(
+            canvasGroup.alpha,
+            targetAlpha))
+        {
+            canvasGroup.alpha = targetAlpha;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+            return;
+        }
 
         fadeCoroutine =
-            StartCoroutine(FadeRoutine(targetAlpha));
+            StartCoroutine(
+                FadeRoutine(targetAlpha)
+            );
     }
 
-    private IEnumerator FadeRoutine(float targetAlpha)
+
+    private IEnumerator FadeRoutine(
+        float targetAlpha)
     {
-        float startAlpha = canvasGroup.alpha;
+        float startAlpha =
+            canvasGroup.alpha;
+
         float timer = 0f;
 
         canvasGroup.interactable = false;
@@ -73,13 +152,20 @@ public class WorkHUDManager : MonoBehaviour
 
         while (timer < fadeDuration)
         {
-            timer += Time.unscaledDeltaTime;
+            timer +=
+                Time.unscaledDeltaTime;
 
-            float t = fadeDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(timer / fadeDuration);
+            float t =
+                fadeDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        timer /
+                        fadeDuration
+                    );
 
-            float smoothT = t * t * (3f - 2f * t);
+            float smoothT =
+                t * t *
+                (3f - 2f * t);
 
             canvasGroup.alpha =
                 Mathf.Lerp(
@@ -91,10 +177,23 @@ public class WorkHUDManager : MonoBehaviour
             yield return null;
         }
 
-        canvasGroup.alpha = targetAlpha;
+        canvasGroup.alpha =
+            targetAlpha;
+
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
         fadeCoroutine = null;
+    }
+
+
+    private void ApplyInstant(float alpha)
+    {
+        if (canvasGroup == null)
+            return;
+
+        canvasGroup.alpha = alpha;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
     }
 }

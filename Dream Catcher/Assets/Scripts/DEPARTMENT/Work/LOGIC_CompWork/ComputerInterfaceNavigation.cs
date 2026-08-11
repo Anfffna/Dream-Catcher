@@ -46,6 +46,14 @@ public class ComputerInterfaceNavigation :
             Color.black;
     }
 
+    [Header("Pause / Task UI Blocking")]
+    [Tooltip("GraphicRaycaster World Space Canvas компьютера. На время паузы/панели заданий временно отключается.")]
+    [SerializeField]
+    private GraphicRaycaster computerGraphicRaycaster;
+
+    private bool externalUIBlockActive = false;
+    private bool raycasterEnabledBeforeBlock = true;
+
     [System.Serializable]
     private class PopupEntry
     {
@@ -95,6 +103,18 @@ public class ComputerInterfaceNavigation :
         FindMissingTabReferences();
         AddButtonListeners();
 
+        if (computerGraphicRaycaster == null)
+{
+    Canvas canvas =
+        GetComponentInParent<Canvas>();
+
+    if (canvas != null)
+    {
+        computerGraphicRaycaster =
+            canvas.GetComponent<GraphicRaycaster>();
+    }
+}
+
         currentTab =
             MainTab.SleepRecording;
 
@@ -105,8 +125,23 @@ public class ComputerInterfaceNavigation :
         ApplyPopupState();
     }
 
+    private void Update()
+    {
+        UpdateInteractionBlocking();
+    }
+
     private void LateUpdate()
     {
+        if (IsInteractionBlocked())
+            return;
+
+        if (!closeInstructionOnAnyClick ||
+            !instructionOpen ||
+            !Input.GetMouseButtonUp(0))
+        {
+            return;
+        }
+
         if (!closeInstructionOnAnyClick ||
             !instructionOpen ||
             !Input.GetMouseButtonUp(0))
@@ -125,6 +160,60 @@ public class ComputerInterfaceNavigation :
         ApplyPopupState();
     }
 
+    private void UpdateInteractionBlocking()
+    {
+        bool blocked =
+            IsInteractionBlocked();
+
+        // Только что открылась Pause / Task Panel.
+        if (blocked && !externalUIBlockActive)
+        {
+            externalUIBlockActive = true;
+
+            if (computerGraphicRaycaster != null)
+            {
+                // Запоминаем реальное состояние,
+                // которое установила ТВОЯ логика компьютера.
+                raycasterEnabledBeforeBlock =
+                    computerGraphicRaycaster.enabled;
+
+                // Временно полностью запрещаем UI монитора.
+                computerGraphicRaycaster.enabled =
+                    false;
+            }
+
+            return;
+        }
+
+        // Pause / Task Panel только что полностью перестали блокировать.
+        if (!blocked && externalUIBlockActive)
+        {
+            externalUIBlockActive = false;
+
+            if (computerGraphicRaycaster != null)
+            {
+                // Возвращаем ровно то состояние,
+                // которое было ДО открытия меню.
+                computerGraphicRaycaster.enabled =
+                    raycasterEnabledBeforeBlock;
+            }
+        }
+    }
+
+    private bool IsInteractionBlocked()
+    {
+        bool pauseBlocks =
+            PauseManager.Instance != null &&
+            PauseManager.Instance.IsPaused;
+
+        bool taskPanelBlocks =
+            TaskPanelController.Instance != null &&
+            TaskPanelController.Instance.BlocksWorldInteraction;
+
+        return pauseBlocks ||
+               taskPanelBlocks;
+    }
+
     private void OnDisable()
     {
         directivesOpen = false;
@@ -141,6 +230,9 @@ public class ComputerInterfaceNavigation :
 
     public void ShowSleepRecordingTab()
     {
+        if (IsInteractionBlocked())
+            return;
+
         SetMainTab(
             MainTab.SleepRecording
         );
@@ -148,6 +240,9 @@ public class ComputerInterfaceNavigation :
 
     public void ShowElectronicDirectionTab()
     {
+        if (IsInteractionBlocked())
+            return;
+
         SetMainTab(
             MainTab.ElectronicDirection
         );
@@ -155,6 +250,9 @@ public class ComputerInterfaceNavigation :
 
     public void ToggleDirectives()
     {
+        if (IsInteractionBlocked())
+            return;
+
         if (!HasWindow(directivesPopup))
             return;
 

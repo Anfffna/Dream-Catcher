@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -80,6 +81,12 @@ public class DirectionSubmitController :
     private bool submissionLocked;
     private Coroutine hideCoroutine;
 
+    // Вызывается после успешной отправки полностью заполненного направления и содержит результат проверки.
+    // На это событие могут подписываться награды,штрафы и другие последствия.
+    public event Action<
+        DirectionEvaluationController.EvaluationResult
+    > DirectionSubmitted;
+
     private void Awake()
     {
         FindReferences();
@@ -113,12 +120,6 @@ public class DirectionSubmitController :
         if (formController == null ||
             evaluationController == null)
         {
-            Debug.LogWarning(
-                "DirectionSubmitController: " +
-                "не найдены контроллер формы " +
-                "или контроллер проверки."
-            );
-
             return;
         }
 
@@ -145,11 +146,6 @@ public class DirectionSubmitController :
         if (!evaluated ||
             result == null)
         {
-            Debug.LogWarning(
-                "DirectionSubmitController: " +
-                "не удалось проверить текущее дело."
-            );
-
             return;
         }
 
@@ -207,6 +203,10 @@ public class DirectionSubmitController :
         // Возврат камеры и исчезновение интерфейса начинаются в одном кадре.
         StartReturnToWorkView();
         StartHideAnimation();
+
+        DirectionSubmitted?.Invoke(
+            result
+        );
     }
 
     private void StartReturnToWorkView()

@@ -146,6 +146,9 @@ public class SanityHUDController :
         statsManager.SanityChanged +=
             HandleSanityChanged;
 
+        statsManager.SanityRestored +=
+            HandleSanityRestored;
+
         if (sanitySlider != null)
         {
             sanitySlider.minValue = 0f;
@@ -176,7 +179,42 @@ public class SanityHUDController :
         statsManager.SanityChanged -=
             HandleSanityChanged;
 
+        statsManager.SanityRestored -=
+            HandleSanityRestored;
+
         statsManager = null;
+    }
+
+    private void HandleSanityRestored(
+    int restoredValue)
+    {
+        if (valueCoroutine != null)
+        {
+            StopCoroutine(
+                valueCoroutine
+            );
+
+            valueCoroutine = null;
+        }
+
+        if (sanitySlider != null)
+        {
+            sanitySlider.minValue = 0f;
+
+            if (statsManager != null)
+            {
+                sanitySlider.maxValue =
+                    statsManager.MaxSanity;
+            }
+
+            sanitySlider.value =
+                restoredValue;
+        }
+
+        SetNoiseImmediate(
+            restoredValue <=
+            noiseThreshold
+        );
     }
 
     private void HandleSanityChanged(

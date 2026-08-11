@@ -23,6 +23,9 @@ public class PauseManager : MonoBehaviour
     public float leftStartX = 0f;
     public float leftTargetX = -382f;
 
+    [Header("Work HUD")]
+    public WorkHUDManager workHUDManager;
+
     [Header("Pause Panel Fade")]
     public CanvasGroup leftPanelCG;
     public float pausePanelFadeDuration = 0.3f;
@@ -157,9 +160,13 @@ public class PauseManager : MonoBehaviour
         FindLeftPanelCanvasGroup();
 
         if (isPaused) return;
+        InteractionOutlineAutoHider.SetForceVisible(false);
 
         isPaused = true;
         isTransitioning = true;
+
+        if (workHUDManager != null)
+            workHUDManager.SetPauseBlocked(true);
 
         Time.timeScale = 0f;
 
@@ -203,6 +210,11 @@ public class PauseManager : MonoBehaviour
         FindLeftPanelCanvasGroup();
 
         if (!isPaused) return;
+
+        if (workHUDManager != null)
+            workHUDManager.SetPauseBlocked(false);
+
+        InteractionOutlineAutoHider.SetForceVisible(true);
 
         if (pausePanelFadeCoroutine != null)
             StopCoroutine(pausePanelFadeCoroutine);
@@ -566,6 +578,7 @@ public class PauseManager : MonoBehaviour
         }
 
         pausePanelFadeCoroutine = null;
+        InteractionOutlineAutoHider.SetForceVisible(false);
     }
 
     private void FindLeftPanelCanvasGroup()
@@ -678,6 +691,14 @@ public class PauseManager : MonoBehaviour
 
         if (playerController == null)
             playerController = FindObjectOfType<PlayerController>();
+
+        if (workHUDManager == null)
+        {
+            workHUDManager =
+                FindFirstObjectByType<WorkHUDManager>(
+                    FindObjectsInactive.Include
+                );
+        }
     }
 
     private bool IsPauseBlocked()

@@ -179,6 +179,12 @@ public class WorkSessionManager : MonoBehaviour
             yield break;
         }
 
+        if (SessionStatsManager.Instance != null)
+        {
+            SessionStatsManager.Instance
+                .BeginWorkCheckpoint();
+        }
+
         if (hudManager != null)
             hudManager.Show();
 

@@ -232,6 +232,7 @@ GameObject:
   - component: {fileID: 7463787453169423273}
   - component: {fileID: 5548526629232053477}
   - component: {fileID: 2946373502563984057}
+  - component: {fileID: 6609716273265801320}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -374,6 +375,19 @@ MonoBehaviour:
   zoomFactor: 2.5
   zoomSpeed: 5
   playerController: {fileID: 0}
+--- !u!114 &6609716273265801320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6427036356857264776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ec7124590ef5df4ea127d6c596966e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SanityCameraJitter
+  jitterSpeed: 18
 --- !u!1 &6971996061825589495
 GameObject:
   m_ObjectHideFlags: 0

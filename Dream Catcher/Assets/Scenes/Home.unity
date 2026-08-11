@@ -1761,6 +1761,9 @@ MonoBehaviour:
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 8
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
@@ -3456,6 +3459,9 @@ MonoBehaviour:
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 8
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
@@ -4965,6 +4971,9 @@ MonoBehaviour:
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 6
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 12
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
@@ -8756,6 +8765,9 @@ MonoBehaviour:
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 8
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
@@ -13291,6 +13303,9 @@ MonoBehaviour:
   outlineColor: {r: 0.74509805, g: 0.83137256, b: 0.6627451, a: 1}
   lineThicknessPixels: 9
   screenPaddingPixels: 0
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 8
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
@@ -14266,8 +14281,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.0000001, y: 1.0000001, z: 0.03}
-  m_Center: {x: 0.0000019073486, y: 0.00000023841858, z: -0.00000047683716}
+  m_Size: {x: 1.0000001, y: 1.0000001, z: 0.0568272}
+  m_Center: {x: 0.0000019124932, y: 0.00000025085316, z: -0.01341406}
 --- !u!114 &2015623541
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14321,7 +14336,10 @@ MonoBehaviour:
   outlineId: obj_check3
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
-  screenPaddingPixels: 0
+  screenPaddingPixels: -2
+  simplifySmallOutlines: 1
+  smallOutlineMaxSizePixels: 120
+  smallOutlinePoints: 8
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1

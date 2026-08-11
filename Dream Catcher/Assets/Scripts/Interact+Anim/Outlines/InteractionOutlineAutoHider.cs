@@ -31,12 +31,18 @@ public class InteractionOutlineAutoHider : MonoBehaviour
     public bool debugLogBlocker = false;
     [SerializeField] private string currentBlockerName = "";
 
+    public static InteractionOutlineAutoHider Instance { get; private set; }
+
+    private bool forceVisible = false;
+
     private RectTransform ownRect;
     private CanvasGroup ownCanvasGroup;
     private bool isHidden = false;
 
     private void Awake()
     {
+        Instance = this;
+
         ownRect = GetComponent<RectTransform>();
 
         if (uiRoot == null && transform.parent != null)
@@ -52,8 +58,20 @@ public class InteractionOutlineAutoHider : MonoBehaviour
         ApplyVisibility(false);
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     private void LateUpdate()
     {
+        if (forceVisible)
+        {
+            ApplyVisibility(false);
+            return;
+        }
+
         bool shouldHide = HasLargeVisibleUI();
         ApplyVisibility(shouldHide);
     }
@@ -68,6 +86,21 @@ public class InteractionOutlineAutoHider : MonoBehaviour
 
         ownCanvasGroup.interactable = false;
         ownCanvasGroup.blocksRaycasts = false;
+    }
+
+    public static void SetForceVisible(bool value)
+    {
+        if (Instance == null)
+            return;
+
+        Instance.forceVisible = value;
+
+        if (value)
+        {
+            Instance.ApplyVisibility(false);
+
+            InteractionOutlineRegistry.RedrawVisibleOutlines();
+        }
     }
 
     private bool HasLargeVisibleUI()

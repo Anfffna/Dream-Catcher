@@ -41,9 +41,21 @@ public class WorkMouseInteractionController :
 
     private void Update()
     {
-        if (PauseManager.Instance != null &&
-            PauseManager.Instance.IsPaused)
+        bool pauseBlocksWorld =
+            PauseManager.Instance != null &&
+            PauseManager.Instance.IsPaused;
+
+        bool taskPanelBlocksWorld =
+            TaskPanelController.Instance != null &&
+            TaskPanelController.Instance.BlocksWorldInteraction;
+
+        if (pauseBlocksWorld ||
+            taskPanelBlocksWorld)
         {
+            // Сбрасываем старый hover от объекта,
+            // но НЕ меняем сам курсор:
+            // курсором сейчас управляет открытое меню.
+            hoveredInteractable = null;
             return;
         }
 

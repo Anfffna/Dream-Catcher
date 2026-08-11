@@ -6769,6 +6769,61 @@ RectTransform:
   m_AnchoredPosition: {x: -11.5, y: 0}
   m_SizeDelta: {x: 23, y: 27}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &728960800 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3467936280537049924, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &728960802 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9149526581289758544, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 728960800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec9faf571050a3949998ee74299bcd2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndicatorHover
+--- !u!114 &728960803 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4126073710887501096, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 728960800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &728960804 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5067851256339095429, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 728960800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &728960806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 728960800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acabbefdc0c7c9a4386f49e07ef0dd93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveButtonBlockController
+  saveButton: {fileID: 728960803}
+  saveButtonText: {fileID: 728960804}
+  indicatorHover: {fileID: 728960802}
+  blockedTextColor: {r: 0.24313726, g: 0.24313726, b: 0.24313726, a: 1}
+  blockDuringWork: 1
 --- !u!1 &737065636
 GameObject:
   m_ObjectHideFlags: 0
@@ -7664,6 +7719,11 @@ MonoBehaviour:
   imageToScale: {fileID: 0}
   scaleMultiplier: 1.07
   duration: 0.3
+--- !u!82 &1131689155 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 7449026074481617591, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1145260348
 GameObject:
   m_ObjectHideFlags: 0
@@ -10151,6 +10211,14 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3451004820746085663, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: Loop
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3451004820746085663, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: m_Resource
+      value: 
+      objectReference: {fileID: 8300000, guid: 41db4f2b920d270488f2366ae6c73efa, type: 3}
     - target: {fileID: 3501698572730244407, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -10203,6 +10271,98 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: severeJitter
+      value: 0.0065
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: effectDuration
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: severeVignette
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: breakdownJitter
+      value: 0.008
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: heartbeatVolume
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: mildSoundVolume
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: breakdownVignette
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: effectSoundSource
+      value: 
+      objectReference: {fileID: 1131689155}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: mildSoundMaxDelay
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: mildSoundMinDelay
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: strongSoundVolume
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: strongSoundMaxDelay
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: strongSoundMinDelay
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: breakdownPulseAmount
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: severeHeartbeatVolume
+      value: 0.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: strongReminderInterval
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: breakdownHeartbeatVolume
+      value: 0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: mildSoundClips.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: strongSoundClips.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: 'mildSoundClips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: e594aa697c69e6940b996be88ce34223, type: 3}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: 'mildSoundClips.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: c55e09e4c511b014e9a47eb906f0bdf4, type: 3}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: 'strongSoundClips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: dfbc27cab4360a542b7298ff8bd230e6, type: 3}
+    - target: {fileID: 5212255341540515630, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: 'strongSoundClips.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: abdd08558cbccb2429ae4e59c02de71e, type: 3}
     - target: {fileID: 5223892688238500145, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -10242,6 +10402,14 @@ PrefabInstance:
     - target: {fileID: 6761038692569782090, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7449026074481617591, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: Loop
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7449026074481617591, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: m_Volume
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7570398394091705703, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_Name
@@ -10322,6 +10490,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1865056723580960092, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2093807261}
+    - targetCorrespondingSourceObject: {fileID: 3467936280537049924, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 728960806}
   m_SourcePrefab: {fileID: 100100000, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
 --- !u!1 &2093807260 stripped
 GameObject:

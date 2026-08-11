@@ -23,6 +23,16 @@ public class InteractionOutline : MonoBehaviour
     public float lineThicknessPixels = 4f;
     public float screenPaddingPixels = 3f;
 
+    [Header("Small Object Outline Smoothing")]
+    public bool simplifySmallOutlines = true;
+
+    [Tooltip("Объекты меньше этого размера на экране будут иметь упрощённый контур.")]
+    public float smallOutlineMaxSizePixels = 120f;
+
+    [Range(4, 12)]
+    [Tooltip("Максимальное количество точек контура у маленьких объектов.")]
+    public int smallOutlinePoints = 8;
+
     [Header("Line Texture")]
     public Sprite lineSprite;
     public Image.Type lineImageType = Image.Type.Tiled;
@@ -154,6 +164,9 @@ public class InteractionOutline : MonoBehaviour
             return;
         }
 
+        if (simplifySmallOutlines)
+            hull = SimplifySmallHull(hull);
+
         Vector2 center = Vector2.zero;
 
         for (int i = 0; i < hull.Count; i++)
@@ -181,6 +194,118 @@ public class InteractionOutline : MonoBehaviour
         }
 
         DrawUILines(paddedHull);
+    }
+
+    private List<ScreenPoint> SimplifySmallHull(List<ScreenPoint> hull)
+    {
+        if (hull == null || hull.Count <= smallOutlinePoints)
+            return hull;
+
+        float minX = hull[0].position.x;
+        float maxX = hull[0].position.x;
+        float minY = hull[0].position.y;
+        float maxY = hull[0].position.y;
+
+        for (int i = 1; i < hull.Count; i++)
+        {
+            Vector2 p = hull[i].position;
+
+            minX = Mathf.Min(minX, p.x);
+            maxX = Mathf.Max(maxX, p.x);
+            minY = Mathf.Min(minY, p.y);
+            maxY = Mathf.Max(maxY, p.y);
+        }
+
+        float width = maxX - minX;
+        float height = maxY - minY;
+
+        float maxSize = Mathf.Max(width, height);
+
+        // Большие объекты вообще не трогаем.
+        if (maxSize > smallOutlineMaxSizePixels)
+            return hull;
+
+        int targetCount = Mathf.Clamp(
+            smallOutlinePoints,
+            4,
+            hull.Count
+        );
+
+        return ResampleClosedHull(hull, targetCount);
+    }
+
+    private List<ScreenPoint> ResampleClosedHull(
+        List<ScreenPoint> hull,
+        int targetCount)
+    {
+        if (hull == null || hull.Count < 3)
+            return hull;
+
+        if (targetCount >= hull.Count)
+            return hull;
+
+        int count = hull.Count;
+
+        float[] edgeLengths = new float[count];
+        float perimeter = 0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 a = hull[i].position;
+            Vector2 b = hull[(i + 1) % count].position;
+
+            float length = Vector2.Distance(a, b);
+
+            edgeLengths[i] = length;
+            perimeter += length;
+        }
+
+        if (perimeter <= 0.001f)
+            return hull;
+
+        List<ScreenPoint> result =
+            new List<ScreenPoint>(targetCount);
+
+        float spacing = perimeter / targetCount;
+
+        int edgeIndex = 0;
+        float edgeStartDistance = 0f;
+
+        for (int sample = 0; sample < targetCount; sample++)
+        {
+            float targetDistance = sample * spacing;
+
+            while (
+                edgeIndex < count - 1 &&
+                edgeStartDistance + edgeLengths[edgeIndex]
+                < targetDistance)
+            {
+                edgeStartDistance += edgeLengths[edgeIndex];
+                edgeIndex++;
+            }
+
+            Vector2 a = hull[edgeIndex].position;
+            Vector2 b =
+                hull[(edgeIndex + 1) % count].position;
+
+            float edgeLength = edgeLengths[edgeIndex];
+
+            float t = 0f;
+
+            if (edgeLength > 0.001f)
+            {
+                t =
+                    (targetDistance - edgeStartDistance)
+                    / edgeLength;
+            }
+
+            Vector2 point =
+                Vector2.Lerp(a, b, Mathf.Clamp01(t));
+
+            result.Add(new ScreenPoint(point));
+        }
+
+        return result;
     }
 
     private void ResolveReferences()
