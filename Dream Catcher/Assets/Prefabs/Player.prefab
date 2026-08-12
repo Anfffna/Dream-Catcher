@@ -105,10 +105,9 @@ MonoBehaviour:
   interactionKey: 101
   interactableLayers:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 9
   interactionDot: {fileID: 0}
   defaultDotColor: {r: 0.74509805, g: 0.83137256, b: 0.6627451, a: 1}
-  darkDotColor: {r: 0.16226411, g: 0.16226411, b: 0.16226411, a: 1}
 --- !u!82 &8993039441123364192
 AudioSource:
   m_ObjectHideFlags: 0
@@ -219,6 +218,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PersistentObject
   objectID: Player
+  eventSystemObject: {fileID: 0}
 --- !u!1 &6427036356857264776
 GameObject:
   m_ObjectHideFlags: 0
