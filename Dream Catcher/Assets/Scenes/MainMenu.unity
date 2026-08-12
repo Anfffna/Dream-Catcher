@@ -10211,6 +10211,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3384898333405913877, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3451004820746085663, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: Loop
       value: 0
@@ -10383,6 +10387,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6649144349413030790, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: eventSystemObject
+      value: 
+      objectReference: {fileID: 2093807262}
     - target: {fileID: 6711889189557760349, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -10596,6 +10604,11 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!1 &2093807262 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3384898333405913877, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

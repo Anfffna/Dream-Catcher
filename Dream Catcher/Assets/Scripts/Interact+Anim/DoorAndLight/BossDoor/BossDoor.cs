@@ -78,6 +78,7 @@ public class BossDoor : MonoBehaviour, IInteractable
 
     private int defaultLayer;
     private int interactableLayer;
+    private SaveButtonBlockController saveButtonBlockController;
 
     private void Start()
     {
@@ -105,6 +106,8 @@ public class BossDoor : MonoBehaviour, IInteractable
 
         stage = DoorStage.WaitingFirstOpen;
         SetDoorAvailable(availableOnStart);
+
+        SetSaveBlocked(false);
     }
 
     public void Interact()
@@ -156,19 +159,36 @@ public class BossDoor : MonoBehaviour, IInteractable
 
     public void ForceFinishedClosedAfterBossQuest()
     {
+        SetSaveBlocked(false);
+
+        if (stage == DoorStage.FinalClosing)
+        {
+            SetDoorAvailable(false);
+            return;
+        }
+
+        if (stage == DoorStage.SecondOpen)
+        {
+            StartCoroutine(
+                FinalCloseRoutine()
+            );
+
+            return;
+        }
+
         StopAllCoroutines();
 
         stage = DoorStage.Finished;
+
         SetDoorAvailable(false);
 
         ForceAnimatorsToClosedState();
-
-        Debug.Log("BossDoor: задание walk_to_boss завершено, дверь начальника закрыта и больше не интерактивна.");
     }
 
     public void ResetDoorForWalkBossActiveQuest()
     {
         StopAllCoroutines();
+        SetSaveBlocked(false);
 
         stage = DoorStage.WaitingFirstOpen;
 
@@ -231,6 +251,8 @@ public class BossDoor : MonoBehaviour, IInteractable
         stage = DoorStage.FirstOpening;
         SetDoorAvailable(false);
 
+        SetSaveBlocked(true);
+
         PlaySound(firstOpenSound);
         PlayTriggerOnAllAnimators(openTrigger, closeTrigger);
 
@@ -248,6 +270,8 @@ public class BossDoor : MonoBehaviour, IInteractable
         stage = DoorStage.FirstClosing;
         SetDoorAvailable(false);
 
+        SetSaveBlocked(false);
+
         PlaySound(closeSound);
         PlayTriggerOnAllAnimators(closeTrigger, openTrigger);
 
@@ -262,6 +286,8 @@ public class BossDoor : MonoBehaviour, IInteractable
     {
         stage = DoorStage.SecondOpening;
         SetDoorAvailable(false);
+
+        SetSaveBlocked(true);
 
         PlaySound(secondOpenSound);
         PlayTriggerOnAllAnimators(openTrigger, closeTrigger);
@@ -279,6 +305,8 @@ public class BossDoor : MonoBehaviour, IInteractable
     {
         stage = DoorStage.FinalClosing;
         SetDoorAvailable(false);
+
+        SetSaveBlocked(false);
 
         PlaySound(closeSound);
         PlayTriggerOnAllAnimators(closeTrigger, openTrigger);
@@ -407,6 +435,22 @@ public class BossDoor : MonoBehaviour, IInteractable
     {
         if (audioSource != null && clip != null)
             audioSource.PlayOneShot(clip);
+    }
+
+    private void SetSaveBlocked(bool blocked)
+    {
+        if (saveButtonBlockController == null)
+        {
+            saveButtonBlockController =
+                FindFirstObjectByType<SaveButtonBlockController>(
+                    FindObjectsInactive.Include
+                );
+        }
+
+        if (saveButtonBlockController != null)
+        {
+            saveButtonBlockController.SetTemporaryBlock(blocked);
+        }
     }
 
     private void SetDoorAvailable(bool state)

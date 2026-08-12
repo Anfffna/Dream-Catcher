@@ -6,6 +6,9 @@ public class PersistentObject : MonoBehaviour
     [Header("Unique ID")]
     public string objectID = "MyGlobalObject";
 
+    [Header("Только для GlobalSystem")]
+    [SerializeField] private GameObject eventSystemObject;
+
     // Статический словарь: ID ? экземпляр
     private static Dictionary<string, PersistentObject> _instances = new Dictionary<string, PersistentObject>();
 
@@ -22,12 +25,22 @@ public class PersistentObject : MonoBehaviour
         // 3. Проверяем дубликат по ID
         if (_instances.ContainsKey(objectID))
         {
-            // Если это тот же объект (уже зарегистрирован) – ничего не делаем
-            if (_instances[objectID] == this)
+            PersistentObject existingObject =
+                _instances[objectID];
+
+            // Это уже зарегистрированный объект.
+            if (existingObject == this)
                 return;
 
-            // Иначе – это дубликат, уничтожаем его
-            Debug.Log($"Уничтожаем дубликат {gameObject.name} (ID: {objectID})");
+            MovePersistentPlayerToScenePlayer(
+                existingObject
+            );
+
+            Debug.Log(
+                $"Уничтожаем дубликат {gameObject.name} " +
+                $"(ID: {objectID})"
+            );
+
             Destroy(gameObject);
             return;
         }
@@ -37,7 +50,82 @@ public class PersistentObject : MonoBehaviour
 
         // 5. Делаем объект глобальным
         DontDestroyOnLoad(gameObject);
-        Debug.Log($"Объект {gameObject.name} (ID: {objectID}) стал глобальным");
+
+        if (eventSystemObject != null)
+            eventSystemObject.SetActive(true);
+    }
+
+    private void MovePersistentPlayerToScenePlayer(
+    PersistentObject existingObject)
+    {
+        if (existingObject == null)
+            return;
+
+        // При загрузке сохранения ничего не трогаем.
+        // SaveManager сам поставит Player
+        // в сохранённые координаты.
+        if (SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            return;
+        }
+
+        // Проверяем, что оба PersistentObject
+        // действительно являются Player.
+        PlayerController scenePlayer =
+            GetComponent<PlayerController>();
+
+        PlayerController persistentPlayer =
+            existingObject
+                .GetComponent<PlayerController>();
+
+        if (scenePlayer == null ||
+            persistentPlayer == null)
+        {
+            return;
+        }
+
+        // Обнуляем старую скорость/гравитацию,
+        // которую Player мог принести
+        // из предыдущей сцены.
+        bool oldCanMove =
+            persistentPlayer.canMove;
+
+        persistentPlayer
+            .SetMovementEnabled(false);
+
+        CharacterController controller =
+            persistentPlayer
+                .GetComponent<CharacterController>();
+
+        bool controllerWasEnabled =
+            controller != null &&
+            controller.enabled;
+
+        if (controllerWasEnabled)
+        {
+            controller.enabled = false;
+        }
+
+        // Позиция и поворот берутся прямо
+        // от Player prefab новой сцены.
+        persistentPlayer.transform
+            .SetPositionAndRotation(
+                transform.position,
+                transform.rotation
+            );
+
+        Physics.SyncTransforms();
+
+        if (controllerWasEnabled)
+        {
+            controller.enabled = true;
+        }
+
+        persistentPlayer
+            .SetMovementEnabled(
+                oldCanMove
+            );
     }
 
     void OnDestroy()

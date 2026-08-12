@@ -4,40 +4,94 @@ using System.Collections;
 public class SimpleLightSwitch : MonoBehaviour, IInteractable
 {
     [Header("Lights")]
+
+    [Tooltip("Первый источник света.")]
     public Light roomLight1;
+
+    [Tooltip("Второй источник света.")]
     public Light roomLight2;
 
-    [Header("Lamp Material")]
-    [Tooltip("Материал лампы, у которого нужно включать/выключать Emission.")]
+
+    [Header("Первая лампа — Emission")]
+
+    [Tooltip(
+        "Материал первой лампы, у которого " +
+        "включается и выключается Emission."
+    )]
     public Material lampMaterial;
 
+    [Tooltip(
+        "Цвет Emission первой лампы " +
+        "во включённом состоянии."
+    )]
+    [SerializeField]
+    private Color emissionOnColor =
+        new Color32(
+            103,
+            86,
+            62,
+            255
+        );
+
+
+    [Header("Вторая лампа — замена материала")]
+
+    [Tooltip(
+        "Renderer объекта второй лампы, " +
+        "у которого нужно менять материал."
+    )]
+    [SerializeField]
+    private Renderer secondLampRenderer;
+
+    [Tooltip(
+        "Материал второй лампы, когда свет включён."
+    )]
+    [SerializeField]
+    private Material secondLampOnMaterial;
+
+    [Tooltip(
+        "Исходный материал второй лампы, " +
+        "который возвращается при выключении света."
+    )]
+    [SerializeField]
+    private Material secondLampOffMaterial;
+
+
     [Header("Interaction Layer")]
-    public string interactableLayerName = "Interactable";
-    public bool applyLayerToChildren = true;
+
+    public string interactableLayerName =
+        "Interactable";
+
+    public bool applyLayerToChildren =
+        true;
+
 
     [Header("Outline")]
+
     public InteractionOutline interactionOutline;
-    public bool showOutlineOnStart = true;
-    public bool hideOutlineAfterFirstInteraction = true;
+
+    public bool showOutlineOnStart =
+        true;
+
+    public bool hideOutlineAfterFirstInteraction =
+        true;
+
 
     [Header("Audio")]
+
     public AudioSource audioSource;
 
-    private bool isOn = false;
-    private bool outlineHiddenAfterInteraction = false;
 
-    // Запоминаем настроенный цвет и яркость Emission,
-    // чтобы вернуть их после повторного включения лампы.
-    private Color savedEmissionColor = Color.white;
-    private bool emissionColorSaved = false;
+    private bool isOn = false;
+
+    private bool outlineHiddenAfterInteraction =
+        false;
 
 
     private void Awake()
     {
         SetInteractableLayer();
         FindOutline();
-
-        CacheEmissionSettings();
     }
 
 
@@ -46,7 +100,8 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         SetInteractableLayer();
         FindOutline();
 
-        // Определяем исходное состояние по первой лампе.
+        // Определяем исходное состояние
+        // по первой лампе.
         if (roomLight1 != null)
         {
             isOn = roomLight1.enabled;
@@ -57,14 +112,23 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         }
 
         if (audioSource == null)
-            audioSource = GetComponent<AudioSource>();
+        {
+            audioSource =
+                GetComponent<AudioSource>();
+        }
 
-        // Сразу приводим Emission в соответствие
-        // с реальным состоянием света.
-        SetEmission(isOn);
+        // Сразу синхронизируем:
+        // 1. оба источника света;
+        // 2. Emission первой лампы;
+        // 3. материал второй лампы.
+        ApplyLightState();
 
         if (showOutlineOnStart)
-            StartCoroutine(ShowOutlineNextFrames());
+        {
+            StartCoroutine(
+                ShowOutlineNextFrames()
+            );
+        }
     }
 
 
@@ -78,88 +142,122 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
     {
         SetInteractableLayer();
 
-        // Переключаем состояние света.
         isOn = !isOn;
 
-        if (roomLight1 != null)
-            roomLight1.enabled = isOn;
-
-        if (roomLight2 != null)
-            roomLight2.enabled = isOn;
-
-        // Одновременно переключаем Emission материала.
-        SetEmission(isOn);
+        ApplyLightState();
 
         if (audioSource != null)
+        {
             audioSource.Play();
+        }
 
         HideOutlineAfterFirstInteraction();
     }
 
 
-    private void CacheEmissionSettings()
+    // =====================================================
+    // ОБЩЕЕ СОСТОЯНИЕ СВЕТА
+    // =====================================================
+
+    private void ApplyLightState()
     {
-        if (lampMaterial == null)
-            return;
+        if (roomLight1 != null)
+        {
+            roomLight1.enabled =
+                isOn;
+        }
 
-        if (!lampMaterial.HasProperty("_EmissionColor"))
-            return;
+        if (roomLight2 != null)
+        {
+            roomLight2.enabled =
+                isOn;
+        }
 
-        savedEmissionColor =
-            lampMaterial.GetColor("_EmissionColor");
+        // Первая лампа.
+        SetEmission(isOn);
 
-        emissionColorSaved = true;
+        // Вторая лампа.
+        SetSecondLampMaterial(isOn);
     }
 
+
+    // =====================================================
+    // ПЕРВАЯ ЛАМПА — EMISSION
+    // =====================================================
 
     private void SetEmission(bool enabled)
     {
         if (lampMaterial == null)
             return;
 
+        if (!lampMaterial.HasProperty(
+                "_EmissionColor"))
+        {
+            return;
+        }
+
         if (enabled)
         {
-            // Возвращаем заранее настроенный
-            // цвет и интенсивность Emission.
-            if (emissionColorSaved &&
-                lampMaterial.HasProperty("_EmissionColor"))
-            {
-                lampMaterial.SetColor(
-                    "_EmissionColor",
-                    savedEmissionColor
-                );
-            }
+            lampMaterial.SetColor(
+                "_EmissionColor",
+                emissionOnColor
+            );
 
-            // Включаем Emission.
-            lampMaterial.EnableKeyword("_EMISSION");
+            lampMaterial.EnableKeyword(
+                "_EMISSION"
+            );
 
             lampMaterial.globalIlluminationFlags &=
-                ~MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+                ~MaterialGlobalIlluminationFlags
+                    .EmissiveIsBlack;
         }
         else
         {
-            // Делаем Emission фактически нулевым.
-            if (lampMaterial.HasProperty("_EmissionColor"))
-            {
-                lampMaterial.SetColor(
-                    "_EmissionColor",
-                    Color.black
-                );
-            }
+            lampMaterial.SetColor(
+                "_EmissionColor",
+                Color.black
+            );
 
-            // Выключаем Emission.
-            lampMaterial.DisableKeyword("_EMISSION");
+            lampMaterial.DisableKeyword(
+                "_EMISSION"
+            );
 
             lampMaterial.globalIlluminationFlags |=
-                MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+                MaterialGlobalIlluminationFlags
+                    .EmissiveIsBlack;
         }
     }
 
 
+    // =====================================================
+    // ВТОРАЯ ЛАМПА — ЗАМЕНА МАТЕРИАЛА
+    // =====================================================
+
+    private void SetSecondLampMaterial(
+        bool enabled)
+    {
+        if (secondLampRenderer == null)
+            return;
+
+        Material targetMaterial =
+            enabled
+                ? secondLampOnMaterial
+                : secondLampOffMaterial;
+
+        if (targetMaterial == null)
+            return;
+
+        secondLampRenderer.sharedMaterial =
+            targetMaterial;
+    }
+
+
+    // =====================================================
+    // OUTLINE
+    // =====================================================
+
     private IEnumerator ShowOutlineNextFrames()
     {
-        // Ждём, чтобы камера, GlobalCanvas
-        // и InteractionOutlineCanvas успели включиться.
         yield return null;
         yield return null;
 
@@ -168,7 +266,8 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         if (interactionOutline != null &&
             !outlineHiddenAfterInteraction)
         {
-            interactionOutline.ForceRedrawOutline();
+            interactionOutline
+                .ForceRedrawOutline();
         }
     }
 
@@ -184,9 +283,12 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         FindOutline();
 
         if (interactionOutline != null)
+        {
             interactionOutline.HideOutline();
+        }
 
-        outlineHiddenAfterInteraction = true;
+        outlineHiddenAfterInteraction =
+            true;
     }
 
 
@@ -201,18 +303,24 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         if (interactionOutline == null)
         {
             interactionOutline =
-                GetComponentInChildren<InteractionOutline>(
-                    true
-                );
+                GetComponentInChildren
+                    <InteractionOutline>(
+                        true
+                    );
         }
 
         if (interactionOutline == null)
         {
             interactionOutline =
-                GetComponentInParent<InteractionOutline>();
+                GetComponentInParent
+                    <InteractionOutline>();
         }
     }
 
+
+    // =====================================================
+    // INTERACTION LAYER
+    // =====================================================
 
     private void SetInteractableLayer()
     {
@@ -240,7 +348,8 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         }
         else
         {
-            gameObject.layer = layer;
+            gameObject.layer =
+                layer;
         }
     }
 

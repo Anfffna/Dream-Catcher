@@ -38,7 +38,6 @@ public class SaveManager : MonoBehaviour
         }
 
         Instance = this;
-        DontDestroyOnLoad(gameObject);
 
         savePath = Path.Combine(Application.persistentDataPath, "saves.json");
         LoadFromFile();
