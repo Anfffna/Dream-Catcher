@@ -21,7 +21,9 @@ public class SaveData
     // ХАРАКТЕРИСТИКИ ИГРОКА
     // 0 = старый сейв без характеристик.
     // 1 = сохранён рассудок.
+    // 2 = рассудок + стаж + деньги.
     public int playerStatsVersion = 0;
     public int sanity = 100;
     public int experience = 0;
+    public int money = 100;
 }

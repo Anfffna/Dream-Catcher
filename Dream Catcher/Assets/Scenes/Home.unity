@@ -2068,6 +2068,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 691a0d645ddb515458e93cfb71e4cf89, type: 3}
   m_PrefabInstance: {fileID: 272001066}
   m_PrefabAsset: {fileID: 0}
+--- !u!23 &272001068 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7898370000293616642, guid: 691a0d645ddb515458e93cfb71e4cf89, type: 3}
+  m_PrefabInstance: {fileID: 272001066}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &275941277
 GameObject:
   m_ObjectHideFlags: 0
@@ -2412,8 +2417,8 @@ Transform:
   m_GameObject: {fileID: 317993908}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 1, w: 0}
-  m_LocalPosition: {x: -0.045461625, y: 0.003153, z: 0.018967807}
-  m_LocalScale: {x: 0.000018763156, y: 0.00040540428, z: 0.00001876316}
+  m_LocalPosition: {x: -0.045461625, y: 0.003077, z: 0.018967807}
+  m_LocalScale: {x: 0.0000151808945, y: 0.0003280045, z: 0.000015180897}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 272001067}
@@ -9443,6 +9448,10 @@ PrefabInstance:
       propertyPath: m_RenderingLayerMask
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: -7604359193457694929, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: -7317850513508931128, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -9939,6 +9948,10 @@ PrefabInstance:
       propertyPath: m_RenderingLayerMask
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 3819263531123766051, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3985671528252056849, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
       propertyPath: m_RenderingLayerMask
       value: 2
@@ -10028,6 +10041,10 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6043180330777032750, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6110803481249059189, guid: 504a3204cb056834fb7e3ed5c47bdcc0, type: 3}
       propertyPath: m_RenderingLayerMask
       value: 2
       objectReference: {fileID: 0}
@@ -13623,6 +13640,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LightSwitch
   roomLight1: {fileID: 76138429}
   roomLight2: {fileID: 575082537}
+  lampRenderer: {fileID: 272001068}
+  lampOnMaterial: {fileID: 2100000, guid: d03e4a6a25d4a814591f42aeb8849bb1, type: 2}
+  lampOffMaterial: {fileID: 2100000, guid: 241f03dbe3e18844e84bb64deea2dd99, type: 2}
   questUIManager: {fileID: 0}
   questIdToComplete: turn_on_light
   outlineIdToHideAfterFirstInteraction: obj_light_switch

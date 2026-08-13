@@ -49,7 +49,7 @@ public static class CursorCenterHelper
 
         WarpToCenter();
 
-        Cursor.SetCursor(cursorTexture, hotspot, CursorMode.ForceSoftware);
+        Cursor.SetCursor(cursorTexture, hotspot, CursorMode.Auto);
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
 

@@ -26,6 +26,15 @@ public class MainMenuController : MonoBehaviour
     [Header("Fade Settings")]
     public float fadeDuration = 0.3f;
 
+    [Header("Cursor")]
+
+    [Tooltip(
+    "Родитель, внутри которого находятся " +
+    "кнопки главного меню."
+    )]
+    [SerializeField]
+    private Transform cursorButtonsRoot;
+
     private CanvasGroup quitCG;
     private CanvasGroup settingsCG;
     private CanvasGroup loadCG;
@@ -33,6 +42,17 @@ public class MainMenuController : MonoBehaviour
     private Coroutine quitFadeCoroutine;
     private Coroutine settingsFadeCoroutine;
     private Coroutine loadFadeCoroutine;
+
+    private void Awake()
+    {
+        // При появлении сцены Main Menu
+        // курсор сначала всегда скрыт.
+        // Покажем его только после окончания загрузки.
+        Cursor.lockState =
+            CursorLockMode.Locked;
+
+        Cursor.visible = false;
+    }
 
     private void Start()
     {
@@ -80,6 +100,10 @@ public class MainMenuController : MonoBehaviour
                 loadPanel.SetActive(false);
             }
         }
+
+        StartCoroutine(
+            SetupMainMenuCursor()
+        );
     }
 
     public void StartGame()
@@ -275,6 +299,37 @@ public class MainMenuController : MonoBehaviour
 
         lastButtonClickSound = selectedClip;
         buttonAudioSource.PlayOneShot(selectedClip);
+    }
+
+    private IEnumerator SetupMainMenuCursor()
+    {
+        while (LoadingManager.Instance != null &&
+               LoadingManager.Instance.IsLoading)
+        {
+            Cursor.visible = false;
+
+            Cursor.lockState =
+                CursorLockMode.Locked;
+
+            yield return null;
+        }
+
+        // Даём MainMenu полностью отрисоваться
+        yield return new WaitForEndOfFrame();
+
+        // Переходим уже на следующий кадр.
+        yield return null;
+
+        if (PauseManager.Instance == null)
+            yield break;
+
+        PauseManager.Instance
+            .ShowUICursor();
+
+        PauseManager.Instance
+            .AddCursorEventsToButtons(
+                cursorButtonsRoot
+            );
     }
 
     public void ConfirmQuit()

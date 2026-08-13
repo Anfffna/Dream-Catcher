@@ -49,6 +49,7 @@ public class PauseManager : MonoBehaviour
     private bool isPaused = false;
     private bool isTransitioning = false;
     private CanvasGroup currentRightPanel = null;
+    private bool pauseCursorEventsInitialized;
 
     public bool IsPaused => isPaused;
 
@@ -571,14 +572,24 @@ public class PauseManager : MonoBehaviour
         if (playerController != null)
             playerController.canControl = true;
 
-        if (WorkSessionManager.Instance != null &&
-            WorkSessionManager.Instance.IsWorkModeActive)
+        bool workModeActive =
+            WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance.IsWorkModeActive;
+
+        if (workModeActive)
         {
-            WorkSessionManager.Instance.RestoreAfterPause();
+            WorkSessionManager.Instance
+                .RestoreAfterPause();
+        }
+        else
+        {
+            HideGameplayCursor();
         }
 
         pausePanelFadeCoroutine = null;
-        InteractionOutlineAutoHider.SetForceVisible(false);
+
+        InteractionOutlineAutoHider
+            .SetForceVisible(false);
     }
 
     private void FindLeftPanelCanvasGroup()
@@ -628,50 +639,180 @@ public class PauseManager : MonoBehaviour
 
     // ----- Управление кастомным курсором -----
 
-    private void SetDefaultCursor()
+    public void SetDefaultCursor()
     {
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
+        Cursor.SetCursor(
+            defaultCursor,
+            defaultCursorHotspot,
+            CursorMode.Auto
+        );
     }
 
-    private void SetInteractCursor()
+    public void SetInteractCursor()
     {
-        Cursor.SetCursor(interactCursor, interactCursorHotspot, CursorMode.ForceSoftware);
+        Cursor.SetCursor(
+            interactCursor,
+            interactCursorHotspot,
+            CursorMode.Auto
+        );
+    }
+
+    public void ShowUICursor()
+    {
+        Cursor.lockState =
+            CursorLockMode.None;
+
+        SetDefaultCursor();
+
+        Cursor.visible = true;
+    }
+
+    public void ShowUICursorCentered(
+        MonoBehaviour owner)
+    {
+        if (owner == null)
+            return;
+
+        CursorCenterHelper.ShowCursorCentered(
+            owner,
+            defaultCursor,
+            defaultCursorHotspot
+        );
+    }
+
+    public void HideGameplayCursor()
+    {
+        Cursor.visible = false;
+
+        Cursor.lockState =
+            CursorLockMode.Locked;
     }
 
     private void AddCursorEventsToAllButtons()
     {
-        // Находим все кнопки на левой панели и на правых панелях (если активны)
-        Button[] buttons = GetComponentsInChildren<Button>(true);
-        foreach (Button btn in buttons)
-        {
-            // Добавляем EventTrigger, если его нет
-            EventTrigger trigger = btn.gameObject.GetComponent<EventTrigger>();
-            if (trigger == null)
-                trigger = btn.gameObject.AddComponent<EventTrigger>();
+        AddCursorEventsToButtons(
+            leftPanel
+        );
 
-            // Проверяем, есть ли уже событие PointerEnter, чтобы не дублировать
+        if (savePanelCG != null)
+        {
+            AddCursorEventsToButtons(
+                savePanelCG.transform
+            );
+        }
+
+        if (downloadPanelCG != null)
+        {
+            AddCursorEventsToButtons(
+                downloadPanelCG.transform
+            );
+        }
+
+        if (settingsPanelCG != null)
+        {
+            AddCursorEventsToButtons(
+                settingsPanelCG.transform
+            );
+        }
+    }
+
+    public void AddCursorEventsToButtons(
+    Transform buttonsRoot)
+    {
+        if (buttonsRoot == null)
+            return;
+
+        Button[] buttons =
+            buttonsRoot
+                .GetComponentsInChildren<Button>(
+                    true
+                );
+
+        for (int i = 0;
+             i < buttons.Length;
+             i++)
+        {
+            Button btn = buttons[i];
+
+            if (btn == null)
+                continue;
+
+            EventTrigger trigger =
+                btn.GetComponent<EventTrigger>();
+
+            if (trigger == null)
+            {
+                trigger =
+                    btn.gameObject
+                        .AddComponent<EventTrigger>();
+            }
+
+            if (trigger.triggers == null)
+            {
+                trigger.triggers =
+                    new System.Collections
+                        .Generic
+                        .List<EventTrigger.Entry>();
+            }
+
             bool hasEnter = false;
             bool hasExit = false;
-            foreach (var entry in trigger.triggers)
+
+            for (int j = 0;
+                 j < trigger.triggers.Count;
+                 j++)
             {
-                if (entry.eventID == EventTriggerType.PointerEnter) hasEnter = true;
-                if (entry.eventID == EventTriggerType.PointerExit) hasExit = true;
+                EventTrigger.Entry entry =
+                    trigger.triggers[j];
+
+                if (entry == null)
+                    continue;
+
+                if (entry.eventID ==
+                    EventTriggerType.PointerEnter)
+                {
+                    hasEnter = true;
+                }
+
+                if (entry.eventID ==
+                    EventTriggerType.PointerExit)
+                {
+                    hasExit = true;
+                }
             }
 
             if (!hasEnter)
             {
-                var entryEnter = new EventTrigger.Entry();
-                entryEnter.eventID = EventTriggerType.PointerEnter;
-                entryEnter.callback.AddListener((data) => { SetInteractCursor(); });
-                trigger.triggers.Add(entryEnter);
+                EventTrigger.Entry enterEntry =
+                    new EventTrigger.Entry();
+
+                enterEntry.eventID =
+                    EventTriggerType.PointerEnter;
+
+                enterEntry.callback.AddListener(
+                    _ => SetInteractCursor()
+                );
+
+                trigger.triggers.Add(
+                    enterEntry
+                );
             }
 
             if (!hasExit)
             {
-                var entryExit = new EventTrigger.Entry();
-                entryExit.eventID = EventTriggerType.PointerExit;
-                entryExit.callback.AddListener((data) => { SetDefaultCursor(); });
-                trigger.triggers.Add(entryExit);
+                EventTrigger.Entry exitEntry =
+                    new EventTrigger.Entry();
+
+                exitEntry.eventID =
+                    EventTriggerType.PointerExit;
+
+                exitEntry.callback.AddListener(
+                    _ => SetDefaultCursor()
+                );
+
+                trigger.triggers.Add(
+                    exitEntry
+                );
             }
         }
     }

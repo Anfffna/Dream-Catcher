@@ -3,7 +3,10 @@ using UnityEngine;
 
 public class SessionStatsManager : MonoBehaviour
 {
-    public const int SaveVersion = 1;
+    // Версия 2:
+    // 1 = рассудок + стаж
+    // 2 = рассудок + стаж + деньги
+    public const int SaveVersion = 2;
 
     public static SessionStatsManager Instance
     {
@@ -46,6 +49,7 @@ public class SessionStatsManager : MonoBehaviour
     // =====================================================
     // СТАЖ
     // =====================================================
+
     [Header("Стаж")]
 
     [Tooltip("Стаж игрока при начале новой игры.")]
@@ -55,6 +59,20 @@ public class SessionStatsManager : MonoBehaviour
     [Tooltip("Текущий стаж игрока.")]
     [SerializeField]
     private int currentExperience = 0;
+
+    // =====================================================
+    // ДЕНЬГИ
+    // =====================================================
+
+    [Header("Деньги")]
+
+    [Tooltip("Количество денег при начале новой игры.")]
+    [SerializeField]
+    private int startingMoney = 100;
+
+    [Tooltip("Текущее количество денег игрока.")]
+    [SerializeField]
+    private int currentMoney = 100;
 
     // =====================================================
     // ТЕКУЩЕЕ СОСТОЯНИЕ
@@ -86,8 +104,17 @@ public class SessionStatsManager : MonoBehaviour
     [SerializeField]
     private int workStartSanity = 100;
 
+    [Tooltip(
+        "Стаж, который был у игрока перед началом текущей смены."
+    )]
     [SerializeField]
     private int workStartExperience = 0;
+
+    [Tooltip(
+        "Деньги, которые были у игрока перед началом текущей смены."
+    )]
+    [SerializeField]
+    private int workStartMoney = 100;
 
     private ClientNPCController trackedClient;
 
@@ -117,7 +144,10 @@ public class SessionStatsManager : MonoBehaviour
               maxSanity;
 
     public int CurrentExperience =>
-    currentExperience;
+        currentExperience;
+
+    public int CurrentMoney =>
+        currentMoney;
 
     // =====================================================
     // СОБЫТИЯ
@@ -125,7 +155,6 @@ public class SessionStatsManager : MonoBehaviour
 
     /// <summary>
     /// Обычное игровое изменение рассудка.
-    /// HUD должен его анимировать.
     /// Старое значение, новое значение.
     /// </summary>
     public event Action<int, int>
@@ -133,32 +162,36 @@ public class SessionStatsManager : MonoBehaviour
 
     /// <summary>
     /// Восстановление рассудка из сейва.
-    /// HUD должен выставить значение мгновенно.
     /// </summary>
     public event Action<int>
         SanityRestored;
 
     /// <summary>
-    /// Обычное уменьшение рабочего времени.
-    /// Старое количество минут, новое количество минут.
+    /// Обычное изменение рабочего времени.
+    /// Старое значение, новое значение.
     /// </summary>
     public event Action<int, int>
         WorkTimeChanged;
 
     /// <summary>
-    /// Рабочее время было сброшено
-    /// к началу новой смены.
-    /// HUD должен показать его мгновенно.
+    /// Рабочее время было сброшено к началу смены.
     /// </summary>
     public event Action<int>
         WorkTimeReset;
 
-    //стаж
+    // Стаж.
     public event Action<int, int>
-    ExperienceChanged;
+        ExperienceChanged;
 
     public event Action<int>
         ExperienceRestored;
+
+    // Деньги.
+    public event Action<int, int>
+        MoneyChanged;
+
+    public event Action<int>
+        MoneyRestored;
 
     private void Awake()
     {
@@ -171,7 +204,7 @@ public class SessionStatsManager : MonoBehaviour
 
         Instance = this;
 
-        //рассудок
+        // Рассудок.
         maxSanity =
             Mathf.Max(
                 1,
@@ -191,7 +224,8 @@ public class SessionStatsManager : MonoBehaviour
                 0,
                 maxSanity
             );
-        //время
+
+        // Время.
         shiftDurationMinutes =
             Mathf.Max(
                 1,
@@ -210,7 +244,8 @@ public class SessionStatsManager : MonoBehaviour
                 0,
                 shiftDurationMinutes
             );
-        //стаж
+
+        // Стаж.
         startingExperience =
             Mathf.Max(
                 0,
@@ -223,11 +258,27 @@ public class SessionStatsManager : MonoBehaviour
                 currentExperience
             );
 
+        // Деньги.
+        startingMoney =
+            Mathf.Max(
+                0,
+                startingMoney
+            );
+
+        currentMoney =
+            Mathf.Max(
+                0,
+                currentMoney
+            );
+
         workStartExperience =
             currentExperience;
 
         workStartSanity =
             currentSanity;
+
+        workStartMoney =
+            currentMoney;
     }
 
     // =====================================================
@@ -246,6 +297,9 @@ public class SessionStatsManager : MonoBehaviour
 
         workStartExperience =
             currentExperience;
+
+        workStartMoney =
+            currentMoney;
 
         workCheckpointActive =
             true;
@@ -270,13 +324,17 @@ public class SessionStatsManager : MonoBehaviour
 
         workStartExperience =
             currentExperience;
+
+        workStartMoney =
+            currentMoney;
     }
 
     public void RollbackWorkCheckpoint()
     {
         if (!workCheckpointActive)
             return;
-        //рассудок
+
+        // Рассудок.
         currentSanity =
             Mathf.Clamp(
                 workStartSanity,
@@ -284,13 +342,10 @@ public class SessionStatsManager : MonoBehaviour
                 maxSanity
             );
 
-        workCheckpointActive =
-            false;
-
         workStartSanity =
             currentSanity;
 
-        //стаж
+        // Стаж.
         currentExperience =
             Mathf.Max(
                 0,
@@ -300,8 +355,25 @@ public class SessionStatsManager : MonoBehaviour
         workStartExperience =
             currentExperience;
 
+        // Деньги.
+        currentMoney =
+            Mathf.Max(
+                0,
+                workStartMoney
+            );
+
+        workStartMoney =
+            currentMoney;
+
+        workCheckpointActive =
+            false;
+
         ExperienceRestored?.Invoke(
             currentExperience
+        );
+
+        MoneyRestored?.Invoke(
+            currentMoney
         );
 
         StopTrackingClient();
@@ -321,6 +393,26 @@ public class SessionStatsManager : MonoBehaviour
         }
 
         return currentSanity;
+    }
+
+    public int GetExperienceForSave()
+    {
+        if (workCheckpointActive)
+        {
+            return workStartExperience;
+        }
+
+        return currentExperience;
+    }
+
+    public int GetMoneyForSave()
+    {
+        if (workCheckpointActive)
+        {
+            return workStartMoney;
+        }
+
+        return currentMoney;
     }
 
     // =====================================================
@@ -507,27 +599,71 @@ public class SessionStatsManager : MonoBehaviour
         );
     }
 
-    public int GetExperienceForSave()
+    // =====================================================
+    // ДЕНЬГИ
+    // =====================================================
+
+    public void ChangeMoney(
+        int amount)
     {
-        if (workCheckpointActive)
+        SetMoney(
+            currentMoney +
+            amount
+        );
+    }
+
+    public void SetMoney(
+        int value)
+    {
+        int newValue =
+            Mathf.Max(
+                0,
+                value
+            );
+
+        if (newValue ==
+            currentMoney)
         {
-            return workStartExperience;
+            return;
         }
 
-        return currentExperience;
+        int oldValue =
+            currentMoney;
+
+        currentMoney =
+            newValue;
+
+        MoneyChanged?.Invoke(
+            oldValue,
+            currentMoney
+        );
     }
 
     // =====================================================
     // SAVE / LOAD
     // =====================================================
 
+    // Старый overload оставляем,
+    // чтобы случайно не сломать другой существующий код.
     public void RestoreFromSave(
-    int savedSanity,
-    int savedExperience)
+        int savedSanity,
+        int savedExperience)
+    {
+        RestoreFromSave(
+            savedSanity,
+            savedExperience,
+            startingMoney
+        );
+    }
+
+    public void RestoreFromSave(
+        int savedSanity,
+        int savedExperience,
+        int savedMoney)
     {
         StopTrackingClient();
 
-        // Восстанавливаем рассудок.
+        // Рассудок.
         currentSanity =
             Mathf.Clamp(
                 savedSanity,
@@ -535,15 +671,22 @@ public class SessionStatsManager : MonoBehaviour
                 maxSanity
             );
 
-        // Восстанавливаем стаж.
+        // Стаж.
         currentExperience =
             Mathf.Max(
                 0,
                 savedExperience
             );
 
-        // После загрузки никакая незавершённая
-        // рабочая смена больше не считается активной.
+        // Деньги.
+        currentMoney =
+            Mathf.Max(
+                0,
+                savedMoney
+            );
+
+        // После загрузки незавершённая
+        // рабочая смена больше не активна.
         workCheckpointActive =
             false;
 
@@ -553,20 +696,25 @@ public class SessionStatsManager : MonoBehaviour
         workStartExperience =
             currentExperience;
 
+        workStartMoney =
+            currentMoney;
+
         // Рабочее время не хранится в сейве.
-        // При следующем начале смены оно снова будет
-        // начинаться с полного рабочего дня.
         currentWorkMinutes =
             shiftDurationMinutes;
 
-        // HUD получает сохранённые значения мгновенно,
-        // без анимации начисления.
+        // Сохранённые значения ставим
+        // мгновенно, без анимации награды.
         SanityRestored?.Invoke(
             currentSanity
         );
 
         ExperienceRestored?.Invoke(
             currentExperience
+        );
+
+        MoneyRestored?.Invoke(
+            currentMoney
         );
 
         WorkTimeReset?.Invoke(
@@ -581,23 +729,33 @@ public class SessionStatsManager : MonoBehaviour
         currentSanity =
             startingSanity;
 
+        currentExperience =
+            startingExperience;
+
+        currentMoney =
+            startingMoney;
+
         workCheckpointActive =
             false;
 
         workStartSanity =
             startingSanity;
 
-        currentWorkMinutes =
-            shiftDurationMinutes;
-
-        currentExperience =
-            startingExperience;
-
         workStartExperience =
             startingExperience;
 
+        workStartMoney =
+            startingMoney;
+
+        currentWorkMinutes =
+            shiftDurationMinutes;
+
         ExperienceRestored?.Invoke(
             currentExperience
+        );
+
+        MoneyRestored?.Invoke(
+            currentMoney
         );
 
         SanityRestored?.Invoke(
@@ -661,12 +819,13 @@ public class SessionStatsManager : MonoBehaviour
 
     private void OnValidate()
     {
+        // Рассудок.
         maxSanity =
             Mathf.Max(
                 1,
                 maxSanity
             );
-        //рассудок
+
         startingSanity =
             Mathf.Clamp(
                 startingSanity,
@@ -693,7 +852,8 @@ public class SessionStatsManager : MonoBehaviour
                 0,
                 maxSanity
             );
-        //стаж
+
+        // Стаж.
         startingExperience =
             Mathf.Max(
                 0,
@@ -712,6 +872,26 @@ public class SessionStatsManager : MonoBehaviour
                 workStartExperience
             );
 
+        // Деньги.
+        startingMoney =
+            Mathf.Max(
+                0,
+                startingMoney
+            );
+
+        currentMoney =
+            Mathf.Max(
+                0,
+                currentMoney
+            );
+
+        workStartMoney =
+            Mathf.Max(
+                0,
+                workStartMoney
+            );
+
+        // Время.
         shiftDurationMinutes =
             Mathf.Max(
                 1,

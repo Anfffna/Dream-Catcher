@@ -30,6 +30,12 @@ public class WorkDirectionRewardController :
     [SerializeField]
     private int experienceReward = 50;
 
+    [Tooltip(
+        "Сколько денег начисляется за полностью правильное направление."
+    )]
+    [SerializeField]
+    private int moneyReward = 70;
+
     [Header("Плашка правильного результата")]
 
     [Tooltip(
@@ -41,7 +47,7 @@ public class WorkDirectionRewardController :
     [Header("Плашка неправильного результата")]
 
     [Tooltip(
-    "Плашка, которая выезжает после неправильного направления."
+        "Плашка, которая выезжает после неправильного направления."
     )]
     [SerializeField]
     private TaskUpdateToast incorrectResultToast;
@@ -90,8 +96,8 @@ public class WorkDirectionRewardController :
     }
 
     private void HandleDirectionSubmitted(
-    DirectionEvaluationController
-        .EvaluationResult result)
+        DirectionEvaluationController
+            .EvaluationResult result)
     {
         if (result == null)
             return;
@@ -112,7 +118,7 @@ public class WorkDirectionRewardController :
     }
 
     private IEnumerator RewardAfterReturnRoutine(
-    bool isCorrect)
+        bool isCorrect)
     {
         FindReferences();
 
@@ -135,8 +141,9 @@ public class WorkDirectionRewardController :
 
         if (isCorrect)
         {
-            // Только за полностью правильное
-            // направление начисляется стаж.
+            // За полностью правильное направление
+            // одновременно начисляем
+            // стаж и деньги.
             SessionStatsManager stats =
                 SessionStatsManager.Instance;
 
@@ -144,6 +151,10 @@ public class WorkDirectionRewardController :
             {
                 stats.ChangeExperience(
                     experienceReward
+                );
+
+                stats.ChangeMoney(
+                    moneyReward
                 );
             }
 
@@ -157,7 +168,7 @@ public class WorkDirectionRewardController :
         {
             // Направление отправлено,
             // но заполнено неправильно.
-            // Обычной награды нет.
+            // Стаж и деньги не начисляются.
             if (incorrectResultToast != null)
             {
                 incorrectResultToast
@@ -195,6 +206,12 @@ public class WorkDirectionRewardController :
             Mathf.Max(
                 0,
                 experienceReward
+            );
+
+        moneyReward =
+            Mathf.Max(
+                0,
+                moneyReward
             );
     }
 }

@@ -35,14 +35,6 @@ public class TaskPanelController : MonoBehaviour
     public bool autoFindReferences = true;
     public string playerObjectName = "Player";
 
-    [Header("Custom Cursors")]
-    public Texture2D defaultCursor;
-    public Texture2D interactCursor;
-
-    [Header("Cursor Hotspot")]
-    public Vector2 defaultCursorHotspot = Vector2.zero;
-    public Vector2 interactCursorHotspot = Vector2.zero;
-
     public bool IsPanelOpen => isPanelOpen;
 
     public bool BlocksWorldInteraction =>
@@ -220,7 +212,11 @@ public class TaskPanelController : MonoBehaviour
 
         fadeCoroutine = StartCoroutine(FadePanelAndBlur(1f, blurOpenWeight));
 
-        CursorCenterHelper.ShowCursorCentered(this, defaultCursor, defaultCursorHotspot);
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance
+                .ShowUICursorCentered(this);
+        }
     }
 
     public void ClosePanel()
@@ -256,17 +252,18 @@ public class TaskPanelController : MonoBehaviour
         }
         else
         {
-            // В обычном игровом режиме
-            // курсор снова скрывается.
-            Cursor.SetCursor(
-                defaultCursor,
-                defaultCursorHotspot,
-                CursorMode.ForceSoftware
-            );
+            if (PauseManager.Instance != null)
+            {
+                PauseManager.Instance
+                    .HideGameplayCursor();
+            }
+            else
+            {
+                Cursor.lockState =
+                    CursorLockMode.Locked;
 
-            Cursor.visible = false;
-            Cursor.lockState =
-                CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
 
             if (playerController != null &&
                 (PauseManager.Instance == null ||
@@ -302,9 +299,18 @@ public class TaskPanelController : MonoBehaviour
             taskPanelCanvasGroup.blocksRaycasts = false;
         }
 
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance
+                .HideGameplayCursor();
+        }
+        else
+        {
+            Cursor.lockState =
+                CursorLockMode.Locked;
+
+            Cursor.visible = false;
+        }
 
         cursorIsDefault = false;
         cursorIsInteract = false;
@@ -354,16 +360,63 @@ public class TaskPanelController : MonoBehaviour
         }
 
         fadeCoroutine = null;
+
         if (targetPanelAlpha <= 0.001f)
-            InteractionOutlineAutoHider.SetForceVisible(false);
+        {
+            InteractionOutlineAutoHider
+                .SetForceVisible(false);
+
+            RestoreCursorAfterTaskPanelClosed();
+        }
+    }
+
+    private void RestoreCursorAfterTaskPanelClosed()
+    {
+        bool workModeActive =
+            WorkSessionManager.Instance != null &&
+            WorkSessionManager.Instance
+                .IsWorkModeActive;
+
+        if (workModeActive)
+        {
+            // Если TaskPanel закрыли во время работы,
+            // возвращаем рабочий курсор.
+            WorkSessionManager.Instance
+                .RestoreAfterPause();
+
+            return;
+        }
+
+        // Обычный gameplay:
+        // после полного исчезновения TaskPanel
+        // никакого курсора быть не должно.
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance
+                .HideGameplayCursor();
+        }
+        else
+        {
+            Cursor.visible = false;
+
+            Cursor.lockState =
+                CursorLockMode.Locked;
+        }
     }
 
     public void SetDefaultCursor()
     {
-        if (!isPanelOpen) return;
-        if (cursorIsDefault) return;
+        if (!isPanelOpen)
+            return;
 
-        Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
+        if (cursorIsDefault)
+            return;
+
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance
+                .SetDefaultCursor();
+        }
 
         cursorIsDefault = true;
         cursorIsInteract = false;
@@ -371,10 +424,17 @@ public class TaskPanelController : MonoBehaviour
 
     public void SetInteractCursor()
     {
-        if (!isPanelOpen) return;
-        if (cursorIsInteract) return;
+        if (!isPanelOpen)
+            return;
 
-        Cursor.SetCursor(interactCursor, interactCursorHotspot, CursorMode.ForceSoftware);
+        if (cursorIsInteract)
+            return;
+
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance
+                .SetInteractCursor();
+        }
 
         cursorIsInteract = true;
         cursorIsDefault = false;

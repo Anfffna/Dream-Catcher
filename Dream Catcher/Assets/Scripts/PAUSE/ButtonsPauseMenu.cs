@@ -46,22 +46,26 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Главное меню" -----
     public void OnMainMenu()
     {
-        PlayButtonSound();
-        // Выходим из паузы (возвращаем время)
+        // НЕ вызываем ResumeGame().
         if (PauseManager.Instance != null)
-            PauseManager.Instance.ResumeGame();
+        {
+            PauseManager.Instance
+                .HidePauseMenuBeforeLoading();
+        }
 
-        // Сбрасываем выделение индикаторов
         IndicatorHover.ResetSelection();
 
         if (LoadingManager.Instance != null)
         {
-            LoadingManager.Instance.StartLoading(
-                "MainMenu"
-            );
+            LoadingManager.Instance
+                .StartLoading("MainMenu");
         }
         else
         {
+            Cursor.visible = false;
+            Cursor.lockState =
+                CursorLockMode.Locked;
+
             SceneManager.LoadScene(
                 "MainMenu"
             );

@@ -131,6 +131,12 @@ public class LoadingManager : MonoBehaviour
             return;
         }
 
+        // Скрываем курсор немедленно
+        Cursor.visible = false;
+
+        Cursor.lockState =
+            CursorLockMode.Locked;
+
         if (loadingCoroutine != null)
         {
             StopCoroutine(loadingCoroutine);
@@ -158,10 +164,10 @@ public class LoadingManager : MonoBehaviour
         isLoading = true;
         LoadingBlocksPause = true;
 
+        Cursor.visible = false;
+
         Cursor.lockState =
             CursorLockMode.Locked;
-
-        Cursor.visible = false;
 
         FindReferences();
         PrepareLoadingVisuals();

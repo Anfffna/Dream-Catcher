@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
 public class WorkMouseInteractionController :
@@ -24,6 +25,10 @@ public class WorkMouseInteractionController :
 
     private IInteractable
         hoveredInteractable;
+
+    private readonly List<MonoBehaviour>
+    behaviourBuffer =
+        new List<MonoBehaviour>(8);
 
     private int interactableLayerMask;
 
@@ -164,25 +169,34 @@ public class WorkMouseInteractionController :
     }
 
     private IInteractable FindInteractable(
-        Collider hitCollider)
+    Collider hitCollider)
     {
         if (hitCollider == null)
             return null;
 
-        MonoBehaviour[] behaviours =
-            hitCollider
-                .GetComponentsInParent
-                    <MonoBehaviour>(true);
+        Transform current =
+            hitCollider.transform;
 
-        for (int i = 0;
-             i < behaviours.Length;
-             i++)
+        while (current != null)
         {
-            if (behaviours[i] is
-                IInteractable interactable)
+            behaviourBuffer.Clear();
+
+            current.GetComponents(
+                behaviourBuffer
+            );
+
+            for (int i = 0;
+                 i < behaviourBuffer.Count;
+                 i++)
             {
-                return interactable;
+                if (behaviourBuffer[i] is
+                    IInteractable interactable)
+                {
+                    return interactable;
+                }
             }
+
+            current = current.parent;
         }
 
         return null;

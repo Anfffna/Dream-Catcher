@@ -625,54 +625,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 245921815}
   m_CullTransparentMesh: 1
---- !u!1 &263968719
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 263968721}
-  - component: {fileID: 263968720}
-  m_Layer: 0
-  m_Name: CursorManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &263968720
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263968719}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f6322233d732a44eb8c25d63877372d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MainMenuCursorController
-  defaultCursor: {fileID: 2800000, guid: a3d5f1d032a92134d9861569b344b26a, type: 3}
-  interactCursor: {fileID: 2800000, guid: 92a2c716075b0844c85132940c947f40, type: 3}
-  defaultCursorHotspot: {x: 0, y: 0}
-  interactCursorHotspot: {x: 0, y: 0}
---- !u!4 &263968721
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263968719}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1441.2197, y: 545.95245, z: 5.67852}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &269666003
 GameObject:
   m_ObjectHideFlags: 0
@@ -1299,6 +1251,7 @@ MonoBehaviour:
   loadPanel: {fileID: 672260929}
   loadPanelController: {fileID: 672260930}
   fadeDuration: 0.3
+  cursorButtonsRoot: {fileID: 1145260349}
 --- !u!82 &447149750
 AudioSource:
   m_ObjectHideFlags: 0
@@ -10383,6 +10336,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6004807092175069991, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: pauseKey
+      value: 27
+      objectReference: {fileID: 0}
     - target: {fileID: 6209175117451911161, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -10615,7 +10572,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 2088081429}
   - {fileID: 1999236711}
-  - {fileID: 263968721}
   - {fileID: 1755325878}
   - {fileID: 705532541}
   - {fileID: 2093807259}

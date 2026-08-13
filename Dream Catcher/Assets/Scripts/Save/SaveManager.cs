@@ -154,6 +154,9 @@ public class SaveManager : MonoBehaviour
         save.experience =
             stats.GetExperienceForSave();
 
+        save.money =
+            stats.GetMoneyForSave();
+
         return true;
     }
 
@@ -249,17 +252,25 @@ public class SaveManager : MonoBehaviour
         if (stats == null)
             return;
 
-        // Старый сейв, созданный ещё до появления
-        // системы характеристик.
+        // Совсем старый сейв,
+        // созданный до появления характеристик.
         if (data.playerStatsVersion <= 0)
         {
             stats.ResetForNewGame();
             return;
         }
 
+        // Версия 1 существовала до денег.
+        // Такие сейвы получают стартовые 100 рублей.
+        int savedMoney =
+            data.playerStatsVersion >= 2
+                ? data.money
+                : 100;
+
         stats.RestoreFromSave(
             data.sanity,
-            data.experience
+            data.experience,
+            savedMoney
         );
     }
 
@@ -512,22 +523,34 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    private void NormalizeSaveData(SaveData save)
+    private void NormalizeSaveData(
+    SaveData save)
     {
         if (save == null)
             return;
 
         if (save.activeQuestIds == null)
-            save.activeQuestIds = new List<string>();
+            save.activeQuestIds =
+                new List<string>();
 
         if (save.completedQuestIds == null)
-            save.completedQuestIds = new List<string>();
+            save.completedQuestIds =
+                new List<string>();
 
         if (save.inspectedItemIds == null)
-            save.inspectedItemIds = new List<string>();
+            save.inspectedItemIds =
+                new List<string>();
+
+        // Сейвы версии 1 были созданы
+        // до появления денег.
+        if (save.playerStatsVersion == 1)
+        {
+            save.money = 100;
+        }
     }
 
-    private SaveData CloneSaveData(SaveData source)
+    private SaveData CloneSaveData(
+    SaveData source)
     {
         if (source == null)
             return null;
@@ -537,25 +560,39 @@ public class SaveManager : MonoBehaviour
         SaveData clone = new SaveData();
 
         clone.saveName = source.saveName;
+
         clone.sceneName = source.sceneName;
 
         clone.posX = source.posX;
+
         clone.posY = source.posY;
+
         clone.posZ = source.posZ;
 
         clone.dateTime = source.dateTime;
 
-        clone.playerStatsVersion =
-            source.playerStatsVersion;
+        clone.playerStatsVersion = source.playerStatsVersion;
 
-        clone.sanity =
-            source.sanity;
-        clone.experience =
-            source.experience;
+        clone.sanity = source.sanity;
 
-        clone.activeQuestIds = new List<string>(source.activeQuestIds);
-        clone.completedQuestIds = new List<string>(source.completedQuestIds);
-        clone.inspectedItemIds = new List<string>(source.inspectedItemIds);
+        clone.experience = source.experience;
+
+        clone.money = source.money;
+
+        clone.activeQuestIds =
+            new List<string>(
+                source.activeQuestIds
+            );
+
+        clone.completedQuestIds =
+            new List<string>(
+                source.completedQuestIds
+            );
+
+        clone.inspectedItemIds =
+            new List<string>(
+                source.inspectedItemIds
+            );
 
         return clone;
     }
