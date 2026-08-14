@@ -17,6 +17,16 @@ public class LoadingManager : MonoBehaviour
         private set;
     }
 
+    [Header("Случайные варианты загрузки")]
+
+    [Tooltip("Все варианты фона загрузки. " + "При каждой загрузке будет выбран один случайный.")]
+    [SerializeField]
+    private GameObject[] loadingBackgroundVariants;
+
+    [Tooltip("Все варианты изображения загрузки. " + "При каждой загрузке будет выбран один случайный.")]
+    [SerializeField]
+    private GameObject[] loadingImageVariants;
+
     [Header("Цветной экран загрузки")]
     [Tooltip("Общий родитель цветного интерфейса загрузки.")]
     [SerializeField] private GameObject loadingRoot;
@@ -170,6 +180,7 @@ public class LoadingManager : MonoBehaviour
             CursorLockMode.Locked;
 
         FindReferences();
+        SelectRandomLoadingVisuals();
         PrepareLoadingVisuals();
 
         // Сначала плавно показываем цветной фон.
@@ -253,17 +264,11 @@ public class LoadingManager : MonoBehaviour
         if (loadingSpinner != null)
             loadingSpinner.HideSmooth();
 
-        // Сначала скрываем картинку.
+        // Фон и изображение уже составляют
+        // единый загрузочный экран.
         yield return StartCoroutine(
             FadeOut(
-                loadingImageCanvasGroup
-            )
-        );
-
-        // Затем скрываем фон.
-        yield return StartCoroutine(
-            FadeOut(
-                loadingBackgroundCanvasGroup
+                loadingRootCanvasGroup
             )
         );
 
@@ -278,6 +283,54 @@ public class LoadingManager : MonoBehaviour
         LoadingBlocksPause = false;
         isLoading = false;
         loadingCoroutine = null;
+    }
+
+    private void SelectRandomLoadingVisuals()
+    {
+        SelectRandomVariant(
+            loadingBackgroundVariants
+        );
+
+        SelectRandomVariant(
+            loadingImageVariants
+        );
+    }
+
+    private void SelectRandomVariant(
+        GameObject[] variants)
+    {
+        if (variants == null ||
+            variants.Length == 0)
+        {
+            return;
+        }
+
+        // Сначала выключаем все варианты.
+        for (int i = 0;
+             i < variants.Length;
+             i++)
+        {
+            if (variants[i] != null)
+            {
+                variants[i].SetActive(
+                    false
+                );
+            }
+        }
+
+        // Выбираем случайный.
+        int randomIndex =
+            Random.Range(
+                0,
+                variants.Length
+            );
+
+        if (variants[randomIndex] != null)
+        {
+            variants[randomIndex].SetActive(
+                true
+            );
+        }
     }
 
     private void PrepareLoadingVisuals()

@@ -606,6 +606,24 @@ public class WorkComputerController :
         SetInteractionAvailable(false);
     }
 
+    public void PrepareForNextClient()
+    {
+        // Снимаем блок прошлого дела,
+        // но монитор пока НЕ показываем.
+        lockedUntilNextClient = false;
+
+        zoomClickAvailable = false;
+
+        // Canvas нового дела должен оставаться
+        // полностью скрытым, пока новый СОН-3
+        // не окажется на подставке.
+        HideComputerCanvas();
+
+        // Сам монитор пока тоже
+        // не должен быть интерактивным.
+        SetInteractionAvailable(false);
+    }
+
     public void UnlockForNextClient()
     {
         lockedUntilNextClient = false;

@@ -712,6 +712,18 @@ public class ClientNPCController :
 
     private void TryUnlockQuestionDialogue()
     {
+        // Если вкладка уже реально открыта,
+        // но событие по какой-либо причине
+        // было пропущено, синхронизируемся
+        // с фактическим состоянием компьютера.
+        if (!directionTabOpened &&
+            computerNavigation != null &&
+            computerNavigation
+                .IsElectronicDirectionSelected)
+        {
+            directionTabOpened = true;
+        }
+
         if (!directionTabOpened ||
             dialogueStage !=
             ClientDialogueStage
@@ -1217,6 +1229,7 @@ public class ClientNPCController :
     {
         FindAnimator();
         FindInteractionReferences();
+        FindSon3Tray();
         FindDialogueManagerByExactName();
         FindQuestionDialogueController();
         FindComputerNavigation();
@@ -1241,6 +1254,15 @@ public class ClientNPCController :
 
     private void FindInteractionReferences()
     {
+        // =====================================================
+        // SON-3
+        // =====================================================
+
+        // SON-3 ищем только если ссылка вообще отсутствует.
+        //
+        // После передачи игроку SON-3 специально
+        // перестаёт быть дочерним объектом NPC,
+        // поэтому проверять IsChildOf здесь НЕЛЬЗЯ.
         if (son3 == null)
         {
             son3 =
@@ -1250,19 +1272,30 @@ public class ClientNPCController :
                     );
         }
 
+
+        // =====================================================
+        // COLLIDER NPC
+        // =====================================================
+
         if (interactionCollider != null)
             return;
+
 
         Collider[] colliders =
             GetComponentsInChildren
                 <Collider>(true);
 
+
+        // Сначала ищем точный
+        // ClientInteractionCollider.
         for (int i = 0;
              i < colliders.Length;
              i++)
         {
-            if (colliders[i]
-                .gameObject.name ==
+            if (colliders[i] == null)
+                continue;
+
+            if (colliders[i].gameObject.name ==
                 clientColliderObjectName)
             {
                 interactionCollider =
@@ -1272,6 +1305,8 @@ public class ClientNPCController :
             }
         }
 
+
+        // Запасной поиск.
         for (int i = 0;
              i < colliders.Length;
              i++)
@@ -1282,6 +1317,9 @@ public class ClientNPCController :
             if (currentCollider == null)
                 continue;
 
+
+            // Collider SON-3 нельзя принять
+            // за Collider самого NPC.
             if (son3 != null &&
                 currentCollider.transform
                     .IsChildOf(
@@ -1291,11 +1329,24 @@ public class ClientNPCController :
                 continue;
             }
 
+
             interactionCollider =
                 currentCollider;
 
             return;
         }
+    }
+
+    private void FindSon3Tray()
+    {
+        if (son3Tray != null)
+            return;
+
+        son3Tray =
+            FindFirstObjectByType
+                <WorkSon3TrayController>(
+                    FindObjectsInactive.Include
+                );
     }
 
     private void FindDialogueManagerByExactName()

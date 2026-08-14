@@ -409,6 +409,24 @@ public class ComputerInterfaceNavigation :
                popup.window != null;
     }
 
+    public void ResetForNextClient()
+    {
+        // Каждое новое дело начинается
+        // с вкладки записи сна.
+        currentTab =
+            MainTab.SleepRecording;
+
+        // Закрываем все временные окна
+        // предыдущего дела.
+        directivesOpen = false;
+        instructionOpen = false;
+
+        popupButtonHandledFrame = -1;
+
+        ApplyMainTabState();
+        ApplyPopupState();
+    }
+
     private void FindMissingTabReferences()
     {
         FindTabReferences(

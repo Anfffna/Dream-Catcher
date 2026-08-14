@@ -13,6 +13,7 @@ public class WorkDirectionRewardController :
     [SerializeField]
     private DirectionSubmitController submitController;
 
+
     [Header("Возврат камеры")]
 
     [Tooltip(
@@ -21,6 +22,7 @@ public class WorkDirectionRewardController :
     )]
     [SerializeField]
     private ZoomComputerWork zoomComputerWork;
+
 
     [Header("Награда за правильное направление")]
 
@@ -36,6 +38,7 @@ public class WorkDirectionRewardController :
     [SerializeField]
     private int moneyReward = 70;
 
+
     [Header("Плашка правильного результата")]
 
     [Tooltip(
@@ -44,15 +47,39 @@ public class WorkDirectionRewardController :
     [SerializeField]
     private TaskUpdateToast correctResultToast;
 
+
     [Header("Плашка неправильного результата")]
 
     [Tooltip(
-        "Плашка, которая выезжает после неправильного направления."
+        "Плашка обычной ошибки. " +
+        "Не показывается при опасном Release вместо Prison, " +
+        "потому что там будет отдельный телефонный штраф."
     )]
     [SerializeField]
     private TaskUpdateToast incorrectResultToast;
 
+    [Header("Плашка штрафа")]
+
+    [Tooltip(
+    "Плашка, которая показывается " +
+    "после телефонного разговора " +
+    "при опасной ошибке."
+    )]
+    [SerializeField]
+    private TaskUpdateToast penaltyResultToast;
+
+
+    [Header("Штраф за опасную ошибку")]
+
+    [Tooltip(
+        "Штраф, если клиента нужно было " +
+        "отправить в тюрьму, но игрок его отпустил."
+    )]
+    [SerializeField]
+    private int dangerousReleasePenalty = 100;
+
     private Coroutine rewardCoroutine;
+
 
     private void OnEnable()
     {
@@ -73,6 +100,11 @@ public class WorkDirectionRewardController :
             rewardCoroutine = null;
         }
     }
+
+
+    // =====================================================
+    // ПОДПИСКА
+    // =====================================================
 
     private void Subscribe()
     {
@@ -95,6 +127,11 @@ public class WorkDirectionRewardController :
             HandleDirectionSubmitted;
     }
 
+
+    // =====================================================
+    // РЕЗУЛЬТАТ
+    // =====================================================
+
     private void HandleDirectionSubmitted(
         DirectionEvaluationController
             .EvaluationResult result)
@@ -112,20 +149,18 @@ public class WorkDirectionRewardController :
         rewardCoroutine =
             StartCoroutine(
                 RewardAfterReturnRoutine(
-                    result.IsCorrect
+                    result
                 )
             );
     }
 
+
     private IEnumerator RewardAfterReturnRoutine(
-        bool isCorrect)
+    DirectionEvaluationController
+        .EvaluationResult result)
     {
         FindReferences();
 
-        // DirectionSubmitController запускает
-        // возврат камеры в тот же кадр.
-        // Даём ZoomComputerWork один кадр,
-        // чтобы войти в состояние возврата.
         yield return null;
 
         if (zoomComputerWork != null)
@@ -136,14 +171,13 @@ public class WorkDirectionRewardController :
             }
         }
 
-        // Камера полностью вернулась
-        // к обычному рабочему положению.
+        bool dangerousRelease =
+            IsDangerousRelease(
+                result
+            );
 
-        if (isCorrect)
+        if (result.IsCorrect)
         {
-            // За полностью правильное направление
-            // одновременно начисляем
-            // стаж и деньги.
             SessionStatsManager stats =
                 SessionStatsManager.Instance;
 
@@ -164,11 +198,9 @@ public class WorkDirectionRewardController :
                     .ShowToast();
             }
         }
-        else
+        else if (!dangerousRelease)
         {
-            // Направление отправлено,
-            // но заполнено неправильно.
-            // Стаж и деньги не начисляются.
+            // Любая обычная ошибка.
             if (incorrectResultToast != null)
             {
                 incorrectResultToast
@@ -176,8 +208,52 @@ public class WorkDirectionRewardController :
             }
         }
 
+        // dangerousRelease здесь
+        // ничего не показывает.
+        // Сначала должна пройти
+        // телефонная сцена.
+
         rewardCoroutine = null;
     }
+
+    public static bool IsDangerousRelease(
+        DirectionEvaluationController
+            .EvaluationResult result)
+    {
+        if (result == null)
+            return false;
+
+        return
+            result.CorrectDecision ==
+                DirectionDecision.Prison &&
+            result.SelectedDecision ==
+                DirectionDecision.Release;
+    }
+
+
+    public void ApplyDangerousReleasePenalty()
+    {
+        SessionStatsManager stats =
+            SessionStatsManager.Instance;
+
+        if (stats != null)
+        {
+            stats.ChangeMoney(
+                -dangerousReleasePenalty
+            );
+        }
+
+        if (penaltyResultToast != null)
+        {
+            penaltyResultToast
+                .ShowToast();
+        }
+    }
+
+
+    // =====================================================
+    // REFERENCES
+    // =====================================================
 
     private void FindReferences()
     {
@@ -200,6 +276,7 @@ public class WorkDirectionRewardController :
         }
     }
 
+
     private void OnValidate()
     {
         experienceReward =
@@ -212,6 +289,12 @@ public class WorkDirectionRewardController :
             Mathf.Max(
                 0,
                 moneyReward
+            );
+
+        dangerousReleasePenalty =
+            Mathf.Max(
+                0,
+                dangerousReleasePenalty
             );
     }
 }
