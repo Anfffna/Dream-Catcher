@@ -62,15 +62,26 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
 
     void Update()
     {
-        if (waitingForFirstClick && Input.GetMouseButtonDown(0))
+        if (waitingForFirstClick &&
+            Input.GetMouseButtonDown(0))
         {
             waitingForFirstClick = false;
-            StartCoroutine(ShowHintRoutine());
+
+            // Сразу разрешаем следующий клик.
+            waitingForSecondClick = true;
+
+            StartCoroutine(
+                ShowHintRoutine()
+            );
         }
-        else if (waitingForSecondClick && Input.GetMouseButtonDown(0))
+        else if (waitingForSecondClick &&
+                 Input.GetMouseButtonDown(0))
         {
             waitingForSecondClick = false;
-            StartCoroutine(HideAllRoutine());
+
+            StartCoroutine(
+                HideAllRoutine()
+            );
         }
     }
 
@@ -143,16 +154,18 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
             outline.HideOutline();
         }
 
-        // Ожидание первого клика (плашка появится только после него)
+        // Ожидание первого клика.
+        // После него начинается появление подсказки.
         waitingForFirstClick = true;
-        yield return new WaitUntil(() => !waitingForFirstClick);
 
-        // Плашка уже показана корутиной ShowHintRoutine, но мы подождём, пока она появится
-        yield return new WaitUntil(() => hintCanvasGroup.alpha >= 0.99f);
+        yield return new WaitUntil(
+            () => !waitingForFirstClick
+        );
 
-        // Ожидание второго клика
-        waitingForSecondClick = true;
-        yield return new WaitUntil(() => !waitingForSecondClick);
+        // waitingForSecondClick включается сразу в Update после первого клика. Поэтому следующий клик уже можно принимать, не дожидаясь полного Fade.
+        yield return new WaitUntil(
+            () => !waitingForSecondClick
+        );
 
         // Всё скрыто корутиной HideAllRoutine
         // Ждём завершения анимации (проверяем, что письмо скрыто и плашка скрыта)
@@ -206,12 +219,26 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
         hintCanvasGroup.gameObject.SetActive(true);
 
         float elapsed = 0f;
-        while (elapsed < fadeDuration)
+
+        while (elapsed < fadeDuration &&
+               waitingForSecondClick)
         {
             elapsed += Time.deltaTime;
-            hintCanvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / fadeDuration);
+
+            hintCanvasGroup.alpha =
+                Mathf.Lerp(
+                    0f,
+                    1f,
+                    elapsed / fadeDuration
+                );
+
             yield return null;
         }
+
+        // Если игрок уже нажал второй раз, HideAllRoutine теперь сама скрывает подсказку.
+        if (!waitingForSecondClick)
+            yield break;
+
         hintCanvasGroup.alpha = 1f;
     }
 
@@ -219,6 +246,10 @@ public class MailboxStartDay : MonoBehaviour, IInteractable
     {
         // Плавно скрываем плашку
         float elapsed = 0f;
+
+        float startHintAlpha =
+        hintCanvasGroup.alpha;
+
         while (elapsed < fadeDuration)
         {
             elapsed += Time.deltaTime;

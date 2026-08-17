@@ -6,7 +6,8 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
 {
     [Header("Dialogue")]
     public DialogueManager dialogueManager;
-    public List<DialogueManager.DialogueLine> dialogueLines = new List<DialogueManager.DialogueLine>();
+    public List<DialogueManager.DialogueLine> dialogueLines =
+        new List<DialogueManager.DialogueLine>();
     public bool blockMovementDuringDialogue = true;
 
     [Header("Hidden Save ID")]
@@ -34,30 +35,96 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
     private bool stateApplied = false;
     private bool lastAppliedTalkedState = false;
 
+    private ClientNPCController clientNPCController;
+    private bool workQueueTookControl = false;
+
+
     private void Start()
     {
-        interactableLayer = LayerMask.NameToLayer(interactableLayerName);
-        defaultLayer = LayerMask.NameToLayer(defaultLayerName);
+        interactableLayer =
+            LayerMask.NameToLayer(interactableLayerName);
 
-        if (autoFindCollider && interactionCollider == null)
-            interactionCollider = GetComponent<Collider>();
+        defaultLayer =
+            LayerMask.NameToLayer(defaultLayerName);
+
+        if (autoFindCollider &&
+            interactionCollider == null)
+        {
+            interactionCollider =
+                GetComponent<Collider>();
+        }
+
+        clientNPCController =
+            GetComponent<ClientNPCController>();
 
         FindReferences();
 
         RefreshSavedState();
     }
 
+
     private void Update()
     {
-        // Важно: при загрузке сейва ждём, пока SaveManager восстановит ItemInteractionState.
-        if (SaveManager.Instance != null && SaveManager.Instance.IsLoadingSave)
+        // Если этот человек теперь участвует
+        // в рабочей очереди, управление Collider
+        // полностью отдаём ClientNPCController.
+        if (clientNPCController != null &&
+            VisitorQueueManager.Instance != null &&
+            VisitorQueueManager.Instance.QueueStarted)
+        {
+            if (!workQueueTookControl)
+            {
+                workQueueTookControl = true;
+
+                if (interactionCollider != null &&
+                    defaultLayer != -1)
+                {
+                    interactionCollider.gameObject.layer =
+                        defaultLayer;
+                }
+            }
+
             return;
+        }
+
+
+        // Важно: при загрузке сейва ждём,
+        // пока SaveManager восстановит ItemInteractionState.
+        if (SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            return;
+        }
 
         RefreshSavedState();
     }
 
+
     public void Interact()
     {
+        // =====================================================
+        // РАБОЧАЯ ОЧЕРЕДЬ
+        // =====================================================
+
+        // Если человек сейчас используется системой клиентов,
+        // TalkPeopleHall просто передаёт клик
+        // ClientNPCController.
+        //
+        // Это нужно потому, что на одном NPC
+        // находятся два IInteractable.
+        if (clientNPCController != null &&
+            VisitorQueueManager.Instance != null &&
+            VisitorQueueManager.Instance.QueueStarted)
+        {
+            clientNPCController.Interact();
+            return;
+        }
+
+
+        // =====================================================
+        // ОБЫЧНЫЙ РАЗГОВОР В ХОЛЛЕ
+        // =====================================================
+
         if (dialogueRoutineStarted)
             return;
 
@@ -68,27 +135,43 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
 
         if (dialogueManager == null)
         {
-            Debug.LogWarning("TalkPeopleHall: DialogueManager не найден.", this);
+            Debug.LogWarning(
+                "TalkPeopleHall: DialogueManager не найден.",
+                this
+            );
+
             return;
         }
 
-        if (dialogueLines == null || dialogueLines.Count == 0)
+        if (dialogueLines == null ||
+            dialogueLines.Count == 0)
         {
-            Debug.LogWarning("TalkPeopleHall: Dialogue Lines пустой.", this);
+            Debug.LogWarning(
+                "TalkPeopleHall: Dialogue Lines пустой.",
+                this
+            );
+
             return;
         }
 
         StartCoroutine(TalkRoutine());
     }
 
+
     private IEnumerator TalkRoutine()
     {
         dialogueRoutineStarted = true;
 
-        dialogueManager.StartDialogue(dialogueLines, blockMovementDuringDialogue);
+        dialogueManager.StartDialogue(
+            dialogueLines,
+            blockMovementDuringDialogue
+        );
 
-        while (dialogueManager != null && dialogueManager.DialogueActive)
+        while (dialogueManager != null &&
+               dialogueManager.DialogueActive)
+        {
             yield return null;
+        }
 
         MarkTalked();
 
@@ -97,15 +180,27 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
 
         dialogueRoutineStarted = false;
 
-        Debug.Log($"TalkPeopleHall: разговор сохранён скрытым id: {talkId}", this);
+        Debug.Log(
+            $"TalkPeopleHall: разговор сохранён скрытым id: {talkId}",
+            this
+        );
     }
+
 
     private void RefreshSavedState()
     {
+        // После старта рабочей очереди
+        // слой уже принадлежит ClientNPCController.
+        if (workQueueTookControl)
+            return;
+
         bool talked = WasTalkedAlready();
 
-        if (stateApplied && lastAppliedTalkedState == talked)
+        if (stateApplied &&
+            lastAppliedTalkedState == talked)
+        {
             return;
+        }
 
         stateApplied = true;
         lastAppliedTalkedState = talked;
@@ -116,8 +211,12 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
             EnableInteraction();
     }
 
+
     private void EnableInteraction()
     {
+        if (workQueueTookControl)
+            return;
+
         if (!setLayerOnStart)
             return;
 
@@ -125,28 +224,44 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
             return;
 
         if (interactableLayer != -1)
-            interactionCollider.gameObject.layer = interactableLayer;
+        {
+            interactionCollider.gameObject.layer =
+                interactableLayer;
+        }
     }
+
 
     private void DisableInteraction()
     {
+        if (workQueueTookControl)
+            return;
+
         if (interactionCollider == null)
             return;
 
         if (defaultLayer != -1)
-            interactionCollider.gameObject.layer = defaultLayer;
+        {
+            interactionCollider.gameObject.layer =
+                defaultLayer;
+        }
     }
+
 
     private void MarkTalked()
     {
         if (string.IsNullOrEmpty(talkId))
         {
-            Debug.LogWarning("TalkPeopleHall: talkId пустой, разговор не будет сохранён.", this);
+            Debug.LogWarning(
+                "TalkPeopleHall: talkId пустой, разговор не будет сохранён.",
+                this
+            );
+
             return;
         }
 
         ItemInteractionState.MarkInspected(talkId);
     }
+
 
     private bool WasTalkedAlready()
     {
@@ -156,6 +271,7 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
         return ItemInteractionState.IsInspected(talkId);
     }
 
+
     private void FindReferences()
     {
         if (!autoFindReferences)
@@ -163,13 +279,22 @@ public class TalkPeopleHall : MonoBehaviour, IInteractable
 
         if (dialogueManager == null)
         {
-            GameObject obj = GameObject.Find(dialogueManagerObjectName);
+            GameObject obj =
+                GameObject.Find(
+                    dialogueManagerObjectName
+                );
 
             if (obj != null)
-                dialogueManager = obj.GetComponent<DialogueManager>();
+            {
+                dialogueManager =
+                    obj.GetComponent<DialogueManager>();
+            }
         }
 
         if (dialogueManager == null)
-            dialogueManager = FindObjectOfType<DialogueManager>();
+        {
+            dialogueManager =
+                FindObjectOfType<DialogueManager>();
+        }
     }
 }

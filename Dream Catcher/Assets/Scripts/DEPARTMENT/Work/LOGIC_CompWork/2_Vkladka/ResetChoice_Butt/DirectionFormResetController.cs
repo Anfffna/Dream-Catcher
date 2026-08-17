@@ -76,7 +76,7 @@ public class DirectionFormResetController :
             true;
 
         decisionToggleGroup
-            .SetAllTogglesOff(false);
+            .SetAllTogglesOff(true);
     }
 
     private void AddButtonListener()

@@ -88,6 +88,24 @@ public class ClientNPCController :
     private float takeSon3StartTimeout =
         2f;
 
+    [Tooltip(
+    "Максимальное время ожидания " +
+    "реального запуска Give_SON3."
+)]
+    [SerializeField]
+    private float giveSon3StartTimeout =
+    2f;
+
+    [Tooltip(
+        "Момент Give_SON3, после которого " +
+        "SON-3 уже гарантированно находится " +
+        "в руке клиента."
+    )]
+    [Range(0f, 1f)]
+    [SerializeField]
+    private float giveSon3ReadyNormalizedTime =
+        0.9f;
+
     [SerializeField]
     private int animatorLayerIndex;
 
@@ -161,8 +179,9 @@ public class ClientNPCController :
 
     private Coroutine approachCoroutine;
     private Coroutine dialogueCoroutine;
-
     private Coroutine takeSon3Coroutine;
+    private Coroutine giveSon3Coroutine;
+    private bool giveSon3AnimationReady;
 
     public bool IsFinished =>
         dialogueStage ==
@@ -209,6 +228,16 @@ public class ClientNPCController :
             );
 
             dialogueCoroutine = null;
+        }
+
+        if (giveSon3Coroutine != null)
+        {
+            StopCoroutine(
+                giveSon3Coroutine
+            );
+
+            giveSon3Coroutine =
+                null;
         }
 
         if (takeSon3Coroutine != null)
@@ -601,10 +630,11 @@ public class ClientNPCController :
     }
 
     private IEnumerator
-        WaitForFirstDialogueToFinish()
+    WaitForFirstDialogueToFinish()
     {
         bool giveSon3Triggered =
             false;
+
 
         while (dialogueManager != null &&
                dialogueManager.DialogueActive)
@@ -620,33 +650,76 @@ public class ClientNPCController :
                         .GiveSon3DialogueIndex
                     : -1;
 
+
+            // =====================================================
+            // ЗАПУСК GIVE_SON3
+            // =====================================================
+
+            // Используем >=, а не ==.
+            //
+            // Даже если из-за быстрого переключения
+            // нужный индекс был пройден между кадрами,
+            // анимация всё равно будет запущена.
             if (shouldGiveSon3 &&
                 !giveSon3Triggered &&
                 giveSon3Index >= 0 &&
                 dialogueManager
-                    .CurrentLineIndex ==
-                    giveSon3Index)
+                    .CurrentLineIndex >=
+                        giveSon3Index)
             {
                 giveSon3Triggered = true;
 
-                if (animator != null)
-                {
-                    animator.ResetTrigger(
-                        giveSon3TriggerName
-                    );
-
-                    animator.SetTrigger(
-                        giveSon3TriggerName
-                    );
-                }
+                StartGiveSon3Animation();
             }
+
 
             yield return null;
         }
 
-        if (activeVariant != null &&
+
+        // =====================================================
+        // ЗАЩИТА ОТ ПОЛНОГО СКИПА
+        // =====================================================
+
+        bool needsSon3 =
+            activeVariant != null &&
             activeVariant
-                .GiveSon3DuringFirstDialogue &&
+                .GiveSon3DuringFirstDialogue;
+
+
+        // Если каким-то образом весь диалог закончился
+        // раньше, чем наша корутина увидела нужную
+        // реплику, всё равно запускаем передачу.
+        if (needsSon3 &&
+            !giveSon3Triggered)
+        {
+            giveSon3Triggered = true;
+
+            StartGiveSon3Animation();
+        }
+
+
+        // =====================================================
+        // ЖДЁМ НЕ ВРЕМЯ, А РЕАЛЬНУЮ АНИМАЦИЮ
+        // =====================================================
+
+        if (needsSon3 &&
+            giveSon3Triggered)
+        {
+            while (!giveSon3AnimationReady &&
+                   giveSon3Coroutine != null)
+            {
+                yield return null;
+            }
+        }
+
+
+        // =====================================================
+        // ТОЛЬКО ТЕПЕРЬ ОТДАЁМ SON-3 ИГРОКУ
+        // =====================================================
+
+        if (needsSon3 &&
+            giveSon3AnimationReady &&
             son3 != null &&
             son3Tray != null)
         {
@@ -658,26 +731,175 @@ public class ClientNPCController :
             son3Tray.EnablePlacement();
         }
 
+
         dialogueStage =
             ClientDialogueStage
                 .WaitingForDirectionTab;
 
         SetInteractionAvailable(false);
 
-        yield return null;
-
-        RestoreWorkStateAfterDialogue();
 
         yield return null;
 
         RestoreWorkStateAfterDialogue();
+
+
+        yield return null;
+
+        RestoreWorkStateAfterDialogue();
+
 
         dialogueInteractionLocked =
             false;
 
-        dialogueCoroutine = null;
+        dialogueCoroutine =
+            null;
 
         TryUnlockQuestionDialogue();
+    }
+
+    private void StartGiveSon3Animation()
+    {
+        if (giveSon3AnimationReady)
+            return;
+
+        if (giveSon3Coroutine != null)
+            return;
+
+        if (animator == null)
+            return;
+
+
+        animator.ResetTrigger(
+            giveSon3TriggerName
+        );
+
+        animator.SetTrigger(
+            giveSon3TriggerName
+        );
+
+
+        giveSon3Coroutine =
+            StartCoroutine(
+                WaitForGiveSon3Ready()
+            );
+    }
+
+
+    private IEnumerator WaitForGiveSon3Ready()
+    {
+        int stateHash =
+            Animator.StringToHash(
+                giveSon3TriggerName
+            );
+
+
+        // =====================================================
+        // ЖДЁМ РЕАЛЬНОГО ВХОДА В GIVE_SON3
+        // =====================================================
+
+        float elapsed = 0f;
+        bool enteredState = false;
+
+
+        while (elapsed <
+               giveSon3StartTimeout)
+        {
+            AnimatorStateInfo stateInfo =
+                animator
+                    .GetCurrentAnimatorStateInfo(
+                        animatorLayerIndex
+                    );
+
+
+            bool isGiveSon3State =
+                stateInfo.shortNameHash ==
+                    stateHash ||
+                stateInfo.IsName(
+                    giveSon3TriggerName
+                );
+
+
+            if (isGiveSon3State)
+            {
+                enteredState = true;
+                break;
+            }
+
+
+            elapsed +=
+                Time.deltaTime;
+
+            yield return null;
+        }
+
+
+        if (!enteredState)
+        {
+            Debug.LogError(
+                "ClientNPCController: NPC \"" +
+                gameObject.name +
+                "\" не вошёл в состояние " +
+                giveSon3TriggerName +
+                "."
+            );
+
+            giveSon3Coroutine =
+                null;
+
+            yield break;
+        }
+
+
+        // =====================================================
+        // ЖДЁМ МОМЕНТА, КОГДА SON-3 УЖЕ В РУКЕ
+        // =====================================================
+
+        while (true)
+        {
+            AnimatorStateInfo stateInfo =
+                animator
+                    .GetCurrentAnimatorStateInfo(
+                        animatorLayerIndex
+                    );
+
+
+            bool isGiveSon3State =
+                stateInfo.shortNameHash ==
+                    stateHash ||
+                stateInfo.IsName(
+                    giveSon3TriggerName
+                );
+
+
+            if (isGiveSon3State &&
+                stateInfo.normalizedTime >=
+                    giveSon3ReadyNormalizedTime)
+            {
+                break;
+            }
+
+
+            // Если состояние уже полностью закончилось,
+            // значит нужный момент тем более был пройден.
+            if (!isGiveSon3State &&
+                !animator.IsInTransition(
+                    animatorLayerIndex
+                ))
+            {
+                break;
+            }
+
+
+            yield return null;
+        }
+
+
+        giveSon3AnimationReady =
+            true;
+
+        giveSon3Coroutine =
+            null;
     }
 
     private void ToggleQuestionDialogue()
@@ -1162,6 +1384,19 @@ public class ClientNPCController :
 
     private void ResetRuntimeStateForNewClient()
     {
+        if (giveSon3Coroutine != null)
+        {
+            StopCoroutine(
+                giveSon3Coroutine
+            );
+
+            giveSon3Coroutine =
+                null;
+        }
+
+        giveSon3AnimationReady =
+            false;
+
         if (takeSon3Coroutine != null)
         {
             StopCoroutine(
