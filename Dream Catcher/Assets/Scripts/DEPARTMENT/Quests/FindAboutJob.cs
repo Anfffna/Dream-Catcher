@@ -26,6 +26,16 @@ public class FindAboutJob : MonoBehaviour, IInteractable
     public string stopTalkTriggerName = "StopTalk";
     public bool resetOtherTriggersBeforeSet = true;
 
+    [Header("Give Key Audio")]
+    [Tooltip("AudioSource со звуком выдачи ключей. Clip назначается прямо в AudioSource.")]
+    [SerializeField] private AudioSource giveKeyAudioSource;
+
+    [Tooltip("Название Animator State анимации выдачи ключей.")]
+    [SerializeField] private string giveKeyStateName = "giveKey";
+
+    [Tooltip("Кадр state giveKey, на котором должен проиграться звук.")]
+    [SerializeField] private int giveKeyAudioFrame = 148;
+
     [Header("Keys Swap By Time")]
     [Tooltip("Ключи, которые участвуют в анимации секретутки. Они пропадут в нужный момент.")]
     public GameObject animatedKeysObject;
@@ -101,7 +111,11 @@ public class FindAboutJob : MonoBehaviour, IInteractable
             {
                 EnableInteraction();
 
-                Debug.Log($"FindAboutJob: объект {gameObject.name} активирован для задания {questIdToComplete}", this);
+                Debug.Log(
+                    $"FindAboutJob: объект {gameObject.name} активирован для задания {questIdToComplete}",
+                    this
+                );
+
                 yield break;
             }
 
@@ -124,7 +138,11 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (!questManager.IsQuestActive(questIdToComplete))
         {
-            Debug.Log($"FindAboutJob: задание '{questIdToComplete}' не активно или уже завершено.", this);
+            Debug.Log(
+                $"FindAboutJob: задание '{questIdToComplete}' не активно или уже завершено.",
+                this
+            );
+
             return;
         }
 
@@ -195,14 +213,25 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (receptionistAnimator == null)
         {
-            Debug.LogWarning($"FindAboutJob: Animator не назначен на объекте {gameObject.name}. Ключи будут показаны без анимации.", this);
+            Debug.LogWarning(
+                $"FindAboutJob: Animator не назначен на объекте {gameObject.name}. Ключи будут показаны без анимации.",
+                this
+            );
+
             SwapAnimatedKeysToWorldKeys();
             yield break;
         }
 
         PlayGivesKeyAnimation();
 
-        Debug.Log($"FindAboutJob: запущен Trigger {givesKeyTriggerName}", this);
+        // Отдельно ждём 148-й кадр state giveKey
+        // и проигрываем Clip, назначенный в AudioSource.
+        StartCoroutine(PlayGiveKeyAudioAtFrame());
+
+        Debug.Log(
+            $"FindAboutJob: запущен Trigger {givesKeyTriggerName}",
+            this
+        );
 
         float delay = GetKeysSwapDelay();
 
@@ -212,6 +241,60 @@ public class FindAboutJob : MonoBehaviour, IInteractable
             yield return null;
 
         SwapAnimatedKeysToWorldKeys();
+    }
+
+    private IEnumerator PlayGiveKeyAudioAtFrame()
+    {
+        if (receptionistAnimator == null)
+            yield break;
+
+        if (giveKeyAudioSource == null)
+            yield break;
+
+        if (giveKeyAudioSource.clip == null)
+            yield break;
+
+        if (string.IsNullOrEmpty(giveKeyStateName))
+            yield break;
+
+        if (animationFrameRate <= 0f)
+            yield break;
+
+        int stateHash = Animator.StringToHash(giveKeyStateName);
+
+        // Ждём, пока Animator реально войдёт в state giveKey.
+        while (true)
+        {
+            AnimatorStateInfo stateInfo =
+                receptionistAnimator.GetCurrentAnimatorStateInfo(0);
+
+            if (stateInfo.shortNameHash == stateHash)
+                break;
+
+            yield return null;
+        }
+
+        float targetTime = giveKeyAudioFrame / animationFrameRate;
+
+        // Считаем время именно внутри state giveKey,
+        // а не от момента установки Trigger.
+        while (true)
+        {
+            AnimatorStateInfo stateInfo =
+                receptionistAnimator.GetCurrentAnimatorStateInfo(0);
+
+            if (stateInfo.shortNameHash != stateHash)
+                yield break;
+
+            float currentTime = stateInfo.normalizedTime * stateInfo.length;
+
+            if (currentTime >= targetTime)
+                break;
+
+            yield return null;
+        }
+
+        giveKeyAudioSource.Play();
     }
 
     private float GetKeysSwapDelay()
@@ -241,7 +324,10 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (unlockSecondDialogueWhenKeysSwapped)
             UnlockSecondDialogueInteraction();
 
-        Debug.Log("FindAboutJob: анимированные ключи скрыты, world keys показаны.", this);
+        Debug.Log(
+            "FindAboutJob: анимированные ключи скрыты, world keys показаны.",
+            this
+        );
     }
 
     private void UnlockSecondDialogueInteraction()
@@ -251,7 +337,10 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         EnableInteraction();
         ShowInteractionDot();
 
-        Debug.Log("FindAboutJob: второй диалог теперь доступен после появления ключей.", this);
+        Debug.Log(
+            "FindAboutJob: второй диалог теперь доступен после появления ключей.",
+            this
+        );
     }
 
     private void StartSecondDialogue()
@@ -287,24 +376,36 @@ public class FindAboutJob : MonoBehaviour, IInteractable
             if (questManager.IsQuestActive(questIdToComplete))
             {
                 questManager.CompleteQuest(questIdToComplete);
-                Debug.Log($"FindAboutJob: задание '{questIdToComplete}' завершено после второго диалога.", this);
+
+                Debug.Log(
+                    $"FindAboutJob: задание '{questIdToComplete}' завершено после второго диалога.",
+                    this
+                );
             }
         }
 
-        if (questManager != null && !string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
+        if (questManager != null &&
+            !string.IsNullOrEmpty(questIdToAddAfterSecondDialogue))
         {
             if (!questManager.IsQuestActive(questIdToAddAfterSecondDialogue) &&
                 !questManager.IsQuestCompleted(questIdToAddAfterSecondDialogue))
             {
                 questManager.AddQuest(questIdToAddAfterSecondDialogue);
-                Debug.Log($"FindAboutJob: добавлено новое задание: {questIdToAddAfterSecondDialogue}", this);
+
+                Debug.Log(
+                    $"FindAboutJob: добавлено новое задание: {questIdToAddAfterSecondDialogue}",
+                    this
+                );
             }
         }
 
         isCompleted = true;
         DisableInteraction();
 
-        Debug.Log($"FindAboutJob: второй диалог для {questIdToComplete} завершён. Объект больше не интерактивен.", this);
+        Debug.Log(
+            $"FindAboutJob: второй диалог для {questIdToComplete} завершён. Объект больше не интерактивен.",
+            this
+        );
     }
 
     private void PlayTalkAnimation()
@@ -447,7 +548,8 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (questManager == null)
             questManager = FindObjectOfType<QuestUIManager>();
 
-        if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
+        if (dialogueManager == null ||
+            dialogueManager.gameObject.name != dialogueManagerObjectName)
         {
             GameObject obj = GameObject.Find(dialogueManagerObjectName);
 
@@ -457,7 +559,8 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (dialogueManager == null)
         {
-            DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
+            DialogueManager[] managers =
+                FindObjectsOfType<DialogueManager>();
 
             foreach (DialogueManager manager in managers)
             {
@@ -471,13 +574,18 @@ public class FindAboutJob : MonoBehaviour, IInteractable
 
         if (interactionDot == null)
         {
-            GameObject obj = GameObject.Find(interactionDotObjectName);
+            GameObject obj =
+                GameObject.Find(interactionDotObjectName);
 
             if (obj != null)
                 interactionDot = obj.GetComponent<Image>();
         }
 
-        if (receptionistAnimator == null && autoFindAnimatorInChildren)
-            receptionistAnimator = GetComponentInChildren<Animator>();
+        if (receptionistAnimator == null &&
+            autoFindAnimatorInChildren)
+        {
+            receptionistAnimator =
+                GetComponentInChildren<Animator>();
+        }
     }
 }

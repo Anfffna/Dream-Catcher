@@ -105,7 +105,10 @@ MonoBehaviour:
   interactionKey: 101
   interactableLayers:
     serializedVersion: 2
-    m_Bits: 72
+    m_Bits: 8
+  interactionBlockingLayers:
+    serializedVersion: 2
+    m_Bits: 64
   interactionDot: {fileID: 0}
   defaultDotColor: {r: 0.74509805, g: 0.83137256, b: 0.6627451, a: 1}
 --- !u!82 &8993039441123364192
@@ -5147,7 +5150,7 @@ ParticleSystem:
     vectorLabel1_3: W
 --- !u!199 &5609869941523465185
 ParticleSystemRenderer:
-  serializedVersion: 6
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -5193,6 +5196,7 @@ ParticleSystemRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_RenderMode: 0
   m_MeshDistribution: 0
   m_SortMode: 0
@@ -5224,7 +5228,6 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
-  m_MaskInteraction: 0
 --- !u!1 &7861562636639200713
 GameObject:
   m_ObjectHideFlags: 0

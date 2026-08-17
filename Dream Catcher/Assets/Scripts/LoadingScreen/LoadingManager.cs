@@ -66,6 +66,18 @@ public class LoadingManager : MonoBehaviour
 
     public bool IsLoading => isLoading;
 
+    private void LateUpdate()
+    {
+        if (isLoading || LoadingBlocksPause)
+            ForceLoadingCursorHidden();
+    }
+
+    private void ForceLoadingCursorHidden()
+    {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
     public static bool IsLoadingScreenBlockingPause()
     {
         if (LoadingBlocksPause)
@@ -141,11 +153,7 @@ public class LoadingManager : MonoBehaviour
             return;
         }
 
-        // Скрываем курсор немедленно
-        Cursor.visible = false;
-
-        Cursor.lockState =
-            CursorLockMode.Locked;
+        ForceLoadingCursorHidden();
 
         if (loadingCoroutine != null)
         {
@@ -174,10 +182,7 @@ public class LoadingManager : MonoBehaviour
         isLoading = true;
         LoadingBlocksPause = true;
 
-        Cursor.visible = false;
-
-        Cursor.lockState =
-            CursorLockMode.Locked;
+        ForceLoadingCursorHidden();
 
         FindReferences();
         SelectRandomLoadingVisuals();

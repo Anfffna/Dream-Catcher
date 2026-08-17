@@ -659,8 +659,13 @@ public class PauseManager : MonoBehaviour
 
     public void ShowUICursor()
     {
-        Cursor.lockState =
-            CursorLockMode.None;
+        if (LoadingManager.IsLoadingScreenBlockingPause())
+        {
+            HideGameplayCursor();
+            return;
+        }
+
+        Cursor.lockState = CursorLockMode.None;
 
         SetDefaultCursor();
 
@@ -668,10 +673,16 @@ public class PauseManager : MonoBehaviour
     }
 
     public void ShowUICursorCentered(
-        MonoBehaviour owner)
+    MonoBehaviour owner)
     {
         if (owner == null)
             return;
+
+        if (LoadingManager.IsLoadingScreenBlockingPause())
+        {
+            HideGameplayCursor();
+            return;
+        }
 
         CursorCenterHelper.ShowCursorCentered(
             owner,

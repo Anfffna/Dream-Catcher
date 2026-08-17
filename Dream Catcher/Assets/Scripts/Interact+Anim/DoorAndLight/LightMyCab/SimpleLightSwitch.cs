@@ -1,7 +1,9 @@
 using UnityEngine;
 using System.Collections;
 
-public class SimpleLightSwitch : MonoBehaviour, IInteractable
+public class SimpleLightSwitch :
+    MonoBehaviour,
+    IInteractable
 {
     [Header("Lights")]
 
@@ -12,49 +14,21 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
     public Light roomLight2;
 
 
-    [Header("Первая лампа — Emission")]
+    [Header("Лампы — Emission")]
 
     [Tooltip(
-        "Материал первой лампы, у которого " +
-        "включается и выключается Emission."
-    )]
-    public Material lampMaterial;
-
-    [Tooltip(
-        "Цвет Emission первой лампы " +
-        "во включённом состоянии."
+        "Renderer первой лампы. " +
+        "Цвет Emission берётся из её материала автоматически."
     )]
     [SerializeField]
-    private Color emissionOnColor =
-        new Color32(
-            103,
-            86,
-            62,
-            255
-        );
-
-
-    [Header("Вторая лампа — замена материала")]
+    private Renderer lampRenderer1;
 
     [Tooltip(
-        "Renderer объекта второй лампы, " +
-        "у которого нужно менять материал."
+        "Renderer второй лампы. " +
+        "Цвет Emission берётся из её материала автоматически."
     )]
     [SerializeField]
-    private Renderer secondLampRenderer;
-
-    [Tooltip(
-        "Материал второй лампы, когда свет включён."
-    )]
-    [SerializeField]
-    private Material secondLampOnMaterial;
-
-    [Tooltip(
-        "Исходный материал второй лампы, " +
-        "который возвращается при выключении света."
-    )]
-    [SerializeField]
-    private Material secondLampOffMaterial;
+    private Renderer lampRenderer2;
 
 
     [Header("Interaction Layer")]
@@ -88,10 +62,39 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         false;
 
 
+    private MaterialPropertyBlock
+        lampPropertyBlock1;
+
+    private MaterialPropertyBlock
+        lampPropertyBlock2;
+
+
+    private Color originalEmissionColor1 =
+        Color.white;
+
+    private Color originalEmissionColor2 =
+        Color.white;
+
+
+    private static readonly int
+        EmissionColorId =
+            Shader.PropertyToID(
+                "_EmissionColor"
+            );
+
+
     private void Awake()
     {
         SetInteractableLayer();
         FindOutline();
+
+        lampPropertyBlock1 =
+            new MaterialPropertyBlock();
+
+        lampPropertyBlock2 =
+            new MaterialPropertyBlock();
+
+        RememberEmissionColors();
     }
 
 
@@ -101,14 +104,16 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         FindOutline();
 
         // Определяем исходное состояние
-        // по первой лампе.
+        // по первому доступному источнику света.
         if (roomLight1 != null)
         {
-            isOn = roomLight1.enabled;
+            isOn =
+                roomLight1.enabled;
         }
         else if (roomLight2 != null)
         {
-            isOn = roomLight2.enabled;
+            isOn =
+                roomLight2.enabled;
         }
 
         if (audioSource == null)
@@ -117,10 +122,8 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
                 GetComponent<AudioSource>();
         }
 
-        // Сразу синхронизируем:
-        // 1. оба источника света;
-        // 2. Emission первой лампы;
-        // 3. материал второй лампы.
+        // Синхронизируем свет
+        // и визуальный Emission ламп.
         ApplyLightState();
 
         if (showOutlineOnStart)
@@ -173,82 +176,90 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
                 isOn;
         }
 
-        // Первая лампа.
-        SetEmission(isOn);
+        SetLampEmission(
+            lampRenderer1,
+            lampPropertyBlock1,
+            originalEmissionColor1,
+            isOn
+        );
 
-        // Вторая лампа.
-        SetSecondLampMaterial(isOn);
+        SetLampEmission(
+            lampRenderer2,
+            lampPropertyBlock2,
+            originalEmissionColor2,
+            isOn
+        );
     }
 
 
     // =====================================================
-    // ПЕРВАЯ ЛАМПА — EMISSION
+    // EMISSION
     // =====================================================
 
-    private void SetEmission(bool enabled)
+    private void RememberEmissionColors()
     {
-        if (lampMaterial == null)
-            return;
-
-        if (!lampMaterial.HasProperty(
-                "_EmissionColor"))
-        {
-            return;
-        }
-
-        if (enabled)
-        {
-            lampMaterial.SetColor(
-                "_EmissionColor",
-                emissionOnColor
+        originalEmissionColor1 =
+            GetOriginalEmissionColor(
+                lampRenderer1
             );
 
-            lampMaterial.EnableKeyword(
-                "_EMISSION"
+        originalEmissionColor2 =
+            GetOriginalEmissionColor(
+                lampRenderer2
             );
-
-            lampMaterial.globalIlluminationFlags &=
-                ~MaterialGlobalIlluminationFlags
-                    .EmissiveIsBlack;
-        }
-        else
-        {
-            lampMaterial.SetColor(
-                "_EmissionColor",
-                Color.black
-            );
-
-            lampMaterial.DisableKeyword(
-                "_EMISSION"
-            );
-
-            lampMaterial.globalIlluminationFlags |=
-                MaterialGlobalIlluminationFlags
-                    .EmissiveIsBlack;
-        }
     }
 
 
-    // =====================================================
-    // ВТОРАЯ ЛАМПА — ЗАМЕНА МАТЕРИАЛА
-    // =====================================================
+    private Color GetOriginalEmissionColor(
+        Renderer targetRenderer)
+    {
+        if (targetRenderer == null)
+            return Color.white;
 
-    private void SetSecondLampMaterial(
+        Material material =
+            targetRenderer.sharedMaterial;
+
+        if (material == null)
+            return Color.white;
+
+        if (!material.HasProperty(
+                EmissionColorId))
+        {
+            return Color.white;
+        }
+
+        return material.GetColor(
+            EmissionColorId
+        );
+    }
+
+
+    private void SetLampEmission(
+        Renderer targetRenderer,
+        MaterialPropertyBlock propertyBlock,
+        Color emissionOnColor,
         bool enabled)
     {
-        if (secondLampRenderer == null)
+        if (targetRenderer == null)
             return;
 
-        Material targetMaterial =
+        if (propertyBlock == null)
+            return;
+
+        targetRenderer.GetPropertyBlock(
+            propertyBlock
+        );
+
+        propertyBlock.SetColor(
+            EmissionColorId,
             enabled
-                ? secondLampOnMaterial
-                : secondLampOffMaterial;
+                ? emissionOnColor
+                : Color.black
+        );
 
-        if (targetMaterial == null)
-            return;
-
-        secondLampRenderer.sharedMaterial =
-            targetMaterial;
+        targetRenderer.SetPropertyBlock(
+            propertyBlock
+        );
     }
 
 
@@ -358,7 +369,8 @@ public class SimpleLightSwitch : MonoBehaviour, IInteractable
         GameObject obj,
         int layer)
     {
-        obj.layer = layer;
+        obj.layer =
+            layer;
 
         for (int i = 0;
              i < obj.transform.childCount;

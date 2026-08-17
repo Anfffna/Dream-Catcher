@@ -18,6 +18,14 @@ public class InteractionController : MonoBehaviour
     [Header("Interactable Layers")]
     public LayerMask interactableLayers;
 
+    [Header("Interaction Blocking Layers")]
+
+    [Tooltip(
+        "Слои, которые перекрывают взаимодействие. " +
+        "Например стены, двери и другие препятствия."
+    )]
+    public LayerMask interactionBlockingLayers;
+
     [Header("UI")]
     public Image interactionDot;
     public Color defaultDotColor = Color.white;
@@ -115,28 +123,51 @@ public class InteractionController : MonoBehaviour
             playerCamera.transform.forward
         );
 
+        // Луч должен видеть одновременно:
+        // 1. интерактивные объекты;
+        // 2. препятствия между игроком и объектом.
+        LayerMask raycastLayers =
+            interactableLayers |
+            interactionBlockingLayers;
+
         if (Physics.Raycast(
             ray,
             out RaycastHit hit,
             interactionDistance,
-            interactableLayers))
+            raycastLayers,
+            QueryTriggerInteraction.Ignore))
         {
+            // Если первым луч встретил слой,
+            // который блокирует взаимодействие,
+            // дальше вообще ничего не делаем.
+            bool isBlockingLayer =
+                (interactionBlockingLayers.value &
+                 (1 << hit.collider.gameObject.layer)) != 0;
+
+            if (isBlockingLayer)
+            {
+                return;
+            }
+
             IInteractable interactable =
                 hit.collider.GetComponent<IInteractable>();
 
             if (interactable == null)
             {
                 interactable =
-                    hit.collider.GetComponentInParent<IInteractable>();
+                    hit.collider
+                        .GetComponentInParent<IInteractable>();
             }
 
             if (interactable != null)
             {
-                currentInteractable = interactable;
+                currentInteractable =
+                    interactable;
 
                 if (interactionDot != null)
                 {
-                    interactionDot.enabled = true;
+                    interactionDot.enabled =
+                        true;
 
                     interactionDot.color =
                         defaultDotColor;
