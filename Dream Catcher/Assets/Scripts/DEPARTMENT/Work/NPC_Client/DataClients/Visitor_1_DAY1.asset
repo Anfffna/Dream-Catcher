@@ -15,7 +15,7 @@ MonoBehaviour:
   visitorId: visitor_001
   clientName: "\u0418\u0412\u0410\u041D\u041E\u0412 \u041C.\u041C."
   occupation: "\u041C\u041B\u0410\u0414\u0428\u0418\u0419 \u0410\u041D\u0410\u041B\u0418\u0422\u0418\u041A"
-  voiceClip: {fileID: 8300000, guid: 34765bd97d587584d8b777e79f3585b4, type: 3}
+  voiceClip: {fileID: 8300000, guid: e3caaf6191afecc4cb7b464fe4abaecd, type: 3}
   caseVariants:
   - variantId: A
     registrationNumber: 3457-2356
@@ -43,7 +43,7 @@ MonoBehaviour:
         \u043F\u0440\u043E\u0441\u0442\u043E.."
       useCustomColor: 1
       colorHex: '#A997C9'
-      useAudio: 1
+      useAudio: 0
       voiceAudioSource: {fileID: 0}
       clickPauseDelay: 0
     - text: "\u0410-\u0430.. \u041C\u0435\u043D\u044F \u0432\u0447\u0435\u0440\u0430
@@ -153,7 +153,7 @@ MonoBehaviour:
         \u0432\u0435\u0440\u043D\u0435\u0442\u0435?"
       useCustomColor: 0
       colorHex: 
-      useAudio: 0
+      useAudio: 1
       voiceAudioSource: {fileID: 0}
       clickPauseDelay: 0
     finalDialogue:
@@ -162,7 +162,7 @@ MonoBehaviour:
         \u0435\u0449\u0435 \u0437\u0434\u0435\u0441\u044C \u0441\u0432\u0438\u0434\u0438\u043C\u0441\u044F."
       useCustomColor: 0
       colorHex: 
-      useAudio: 0
+      useAudio: 1
       voiceAudioSource: {fileID: 0}
       clickPauseDelay: 0
     dreamVideoClip: {fileID: 0}

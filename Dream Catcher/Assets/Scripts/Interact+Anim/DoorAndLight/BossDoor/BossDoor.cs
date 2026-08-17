@@ -270,8 +270,6 @@ public class BossDoor : MonoBehaviour, IInteractable
         stage = DoorStage.FirstClosing;
         SetDoorAvailable(false);
 
-        SetSaveBlocked(false);
-
         PlaySound(closeSound);
         PlayTriggerOnAllAnimators(closeTrigger, openTrigger);
 
