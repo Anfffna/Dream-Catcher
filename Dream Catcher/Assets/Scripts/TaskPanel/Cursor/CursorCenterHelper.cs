@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 public static class CursorCenterHelper
 {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
     {
@@ -28,30 +29,24 @@ public static class CursorCenterHelper
 
     [DllImport("user32.dll")]
     private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
 #endif
 
-    public static void ShowCursorCentered(MonoBehaviour owner, Texture2D cursorTexture, Vector2 hotspot)
+    public static void CenterCursor(MonoBehaviour owner)
     {
         if (owner == null)
             return;
 
-        owner.StartCoroutine(ShowCursorCenteredCoroutine(cursorTexture, hotspot));
+        owner.StartCoroutine(CenterCursorCoroutine());
     }
 
-    private static IEnumerator ShowCursorCenteredCoroutine(Texture2D cursorTexture, Vector2 hotspot)
+    private static IEnumerator CenterCursorCoroutine()
     {
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.None;
-
         WarpToCenter();
 
         yield return null;
 
         WarpToCenter();
-
-        Cursor.SetCursor(cursorTexture, hotspot, CursorMode.Auto);
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
 
         yield return null;
 
@@ -60,16 +55,20 @@ public static class CursorCenterHelper
 
     private static void WarpToCenter()
     {
-        Vector2 center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        Vector2 center = new Vector2(
+            Screen.width * 0.5f,
+            Screen.height * 0.5f
+        );
 
 #if ENABLE_INPUT_SYSTEM
+
         if (Mouse.current != null)
-        {
             Mouse.current.WarpCursorPosition(center);
-        }
+
 #endif
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+
         IntPtr window = GetActiveWindow();
 
         POINT point = new POINT
@@ -87,6 +86,7 @@ public static class CursorCenterHelper
         {
             SetCursorPos(point.X, point.Y);
         }
+
 #endif
     }
 }

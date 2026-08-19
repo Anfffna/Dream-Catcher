@@ -1,6 +1,7 @@
 using UnityEngine;
 
-public class WorkCursorController : MonoBehaviour
+public class WorkCursorController :
+    MonoBehaviour
 {
     private bool workCursorShown;
     private bool interactCursorActive;
@@ -45,10 +46,7 @@ public class WorkCursorController : MonoBehaviour
         }
         else
         {
-            Cursor.lockState =
-                CursorLockMode.Locked;
-
-            Cursor.visible = false;
+            ForceCursorHidden();
         }
     }
 
@@ -57,6 +55,15 @@ public class WorkCursorController : MonoBehaviour
     {
         if (!workCursorShown)
             return;
+
+        // ¬о врем€ загрузки Work Cursor
+        // вообще не имеет права показыватьс€.
+        if (LoadingManager
+            .IsLoadingScreenBlockingPause())
+        {
+            ForceCursorHidden();
+            return;
+        }
 
         Cursor.lockState =
             CursorLockMode.Confined;
@@ -79,12 +86,31 @@ public class WorkCursorController : MonoBehaviour
     }
 
 
+    private void ForceCursorHidden()
+    {
+        Cursor.visible = false;
+
+        Cursor.lockState =
+            CursorLockMode.Locked;
+    }
+
+
     private void OnApplicationFocus(
         bool hasFocus)
     {
         if (!hasFocus ||
             !workCursorShown)
         {
+            return;
+        }
+
+        // ѕри возвращении фокуса
+        // загрузка всЄ равно имеет
+        // абсолютный приоритет.
+        if (LoadingManager
+            .IsLoadingScreenBlockingPause())
+        {
+            ForceCursorHidden();
             return;
         }
 

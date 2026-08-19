@@ -66,18 +66,6 @@ public class LoadingManager : MonoBehaviour
 
     public bool IsLoading => isLoading;
 
-    private void LateUpdate()
-    {
-        if (isLoading || LoadingBlocksPause)
-            ForceLoadingCursorHidden();
-    }
-
-    private void ForceLoadingCursorHidden()
-    {
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
-    }
-
     public static bool IsLoadingScreenBlockingPause()
     {
         if (LoadingBlocksPause)
@@ -153,7 +141,8 @@ public class LoadingManager : MonoBehaviour
             return;
         }
 
-        ForceLoadingCursorHidden();
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.SetCursorBlocked(true);
 
         if (loadingCoroutine != null)
         {
@@ -181,8 +170,6 @@ public class LoadingManager : MonoBehaviour
     {
         isLoading = true;
         LoadingBlocksPause = true;
-
-        ForceLoadingCursorHidden();
 
         FindReferences();
         SelectRandomLoadingVisuals();
@@ -254,14 +241,17 @@ public class LoadingManager : MonoBehaviour
         while (!asyncLoad.isDone)
             yield return null;
 
-        // При загрузке сохранения ждём,
-        // пока SaveManager закончит восстановление.
+        // Если это загрузка сохранения — ждём полного восстановления.
         while (SaveManager.Instance != null &&
                SaveManager.Instance.IsLoadingSave)
         {
             yield return null;
         }
 
+        // Новая сцена уже активна, но loading screen всё ещё полностью виден.
+        // Даём Awake / Start / камере / игроку закончить инициализацию.
+        yield return null;
+        yield return new WaitForEndOfFrame();
         yield return null;
 
         FindReferences();
@@ -269,25 +259,24 @@ public class LoadingManager : MonoBehaviour
         if (loadingSpinner != null)
             loadingSpinner.HideSmooth();
 
-        // Фон и изображение уже составляют
-        // единый загрузочный экран.
+        // Только теперь плавно открываем уже загруженную сцену.
         yield return StartCoroutine(
-            FadeOut(
-                loadingRootCanvasGroup
-            )
+            FadeOut(loadingRootCanvasGroup)
         );
 
         HideLoadingVisualsInstantly();
         EnablePlayerFootsteps();
 
-        // Один полностью отрисованный кадр:
-        // загрузочный UI уже невидим,
-        // но курсор всё ещё запрещено показывать.
+        // Loading уже невидим, но ещё один кадр
+        // не разрешаем другим системам показывать курсор.
         yield return null;
 
         LoadingBlocksPause = false;
         isLoading = false;
         loadingCoroutine = null;
+
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.SetCursorBlocked(false);
     }
 
     private void SelectRandomLoadingVisuals()
@@ -394,8 +383,10 @@ public class LoadingManager : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed +=
-                Time.unscaledDeltaTime;
+            elapsed += Mathf.Min(
+                Time.unscaledDeltaTime,
+                0.05f
+            );
 
             float t =
                 Mathf.Clamp01(
@@ -422,8 +413,7 @@ public class LoadingManager : MonoBehaviour
         canvasGroup.alpha = 1f;
     }
 
-    private IEnumerator FadeOut(
-    CanvasGroup canvasGroup)
+    private IEnumerator FadeOut(CanvasGroup canvasGroup)
     {
         if (canvasGroup == null)
             yield break;
@@ -431,8 +421,7 @@ public class LoadingManager : MonoBehaviour
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = true;
 
-        float duration =
-            Mathf.Max(0f, fadeDuration);
+        float duration = Mathf.Max(0f, fadeDuration);
 
         if (duration <= 0f)
         {
@@ -440,34 +429,36 @@ public class LoadingManager : MonoBehaviour
             yield break;
         }
 
-        float startAlpha =
-            canvasGroup.alpha;
-
+        float startAlpha = canvasGroup.alpha;
         float elapsed = 0f;
 
         while (elapsed < duration)
         {
-            elapsed +=
-                Time.unscaledDeltaTime;
+            // После тяжёлой загрузки unscaledDeltaTime
+            // может оказаться огромным.
+            // Не даём одному кадру съесть весь fade.
+            float frameDelta = Mathf.Min(
+                Time.unscaledDeltaTime,
+                0.05f
+            );
 
-            float t =
-                Mathf.Clamp01(
-                    elapsed / duration
-                );
+            elapsed += frameDelta;
 
-            float smoothT =
-                Mathf.SmoothStep(
-                    0f,
-                    1f,
-                    t
-                );
+            float t = Mathf.Clamp01(
+                elapsed / duration
+            );
 
-            canvasGroup.alpha =
-                Mathf.Lerp(
-                    startAlpha,
-                    0f,
-                    smoothT
-                );
+            float smoothT = Mathf.SmoothStep(
+                0f,
+                1f,
+                t
+            );
+
+            canvasGroup.alpha = Mathf.Lerp(
+                startAlpha,
+                0f,
+                smoothT
+            );
 
             yield return null;
         }
@@ -496,6 +487,60 @@ public class LoadingManager : MonoBehaviour
 
         if (loadingSpinner != null)
             loadingSpinner.Hide();
+    }
+
+    public void QuitWithLoadingBackground()
+    {
+        if (isLoading)
+            return;
+
+        StartCoroutine(QuitWithLoadingBackgroundRoutine());
+    }
+
+    private IEnumerator QuitWithLoadingBackgroundRoutine()
+    {
+        isLoading = true;
+        LoadingBlocksPause = true;
+
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.SetCursorBlocked(true);
+
+        EnsureLoadingHierarchyActive();
+
+        if (loadingRootCanvasGroup != null)
+        {
+            loadingRootCanvasGroup.alpha = 1f;
+            loadingRootCanvasGroup.interactable = false;
+            loadingRootCanvasGroup.blocksRaycasts = true;
+        }
+
+        // Выбираем случайный фон.
+        SelectRandomVariant(loadingBackgroundVariants);
+
+        // Loading Image вообще не показываем.
+        if (loadingImageCanvasGroup != null)
+            loadingImageCanvasGroup.alpha = 0f;
+
+        // Сам фон начинаем с нуля.
+        if (loadingBackgroundCanvasGroup != null)
+            loadingBackgroundCanvasGroup.alpha = 0f;
+
+        if (loadingSpinner != null)
+            loadingSpinner.Hide();
+
+        // Плавно показываем только background.
+        yield return StartCoroutine(
+            FadeIn(loadingBackgroundCanvasGroup)
+        );
+
+        // Один кадр гарантированно показываем полностью готовый фон.
+        yield return new WaitForEndOfFrame();
+
+#if UNITY_EDITOR
+    UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     private void EnsureLoadingHierarchyActive()
@@ -592,6 +637,9 @@ public class LoadingManager : MonoBehaviour
         LoadingBlocksPause = false;
         isLoading = false;
         loadingCoroutine = null;
+
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.SetCursorBlocked(false);
     }
 
     private void FindReferences()

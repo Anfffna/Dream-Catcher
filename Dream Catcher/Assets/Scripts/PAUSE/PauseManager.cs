@@ -50,6 +50,7 @@ public class PauseManager : MonoBehaviour
     private bool isTransitioning = false;
     private CanvasGroup currentRightPanel = null;
     private bool pauseCursorEventsInitialized;
+    private bool cursorBlocked = false;
 
     public bool IsPaused => isPaused;
 
@@ -61,6 +62,7 @@ public class PauseManager : MonoBehaviour
             return;
         }
         Instance = this;
+        ApplyHiddenCursor();
     }
 
     void Start()
@@ -197,7 +199,7 @@ public class PauseManager : MonoBehaviour
 
         AddCursorEventsToAllButtons();
 
-        CursorCenterHelper.ShowCursorCentered(this, defaultCursor, defaultCursorHotspot);
+        ShowUICursorCentered(this);
 
         if (pausePanelFadeCoroutine != null)
             StopCoroutine(pausePanelFadeCoroutine);
@@ -639,29 +641,88 @@ public class PauseManager : MonoBehaviour
 
     // ----- ”правление кастомным курсором -----
 
-    public void SetDefaultCursor()
+    public void SetCursorBlocked(bool blocked)
+    {
+        cursorBlocked = blocked;
+
+        if (blocked)
+            ApplyHiddenCursor();
+    }
+
+    private bool IsCursorBlocked()
+    {
+        return cursorBlocked ||
+               LoadingManager.IsLoadingScreenBlockingPause();
+    }
+
+    private void ApplyHiddenCursor()
     {
         Cursor.SetCursor(
             defaultCursor,
             defaultCursorHotspot,
-            CursorMode.Auto
+            CursorMode.ForceSoftware
+        );
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    public void SetDefaultCursor()
+    {
+        if (IsCursorBlocked())
+        {
+            ApplyHiddenCursor();
+            return;
+        }
+
+        Cursor.SetCursor(
+            defaultCursor,
+            defaultCursorHotspot,
+            CursorMode.ForceSoftware
         );
     }
 
     public void SetInteractCursor()
     {
+        if (IsCursorBlocked())
+        {
+            ApplyHiddenCursor();
+            return;
+        }
+
         Cursor.SetCursor(
             interactCursor,
             interactCursorHotspot,
-            CursorMode.Auto
+            CursorMode.ForceSoftware
         );
     }
 
     public void ShowUICursor()
     {
-        if (LoadingManager.IsLoadingScreenBlockingPause())
+        if (IsCursorBlocked())
         {
-            HideGameplayCursor();
+            ApplyHiddenCursor();
+            return;
+        }
+
+        Cursor.lockState = CursorLockMode.None;
+        SetDefaultCursor();
+        Cursor.visible = true;
+    }
+
+    public void HideGameplayCursor()
+    {
+        ApplyHiddenCursor();
+    }
+
+    public void ShowUICursorCentered(MonoBehaviour owner)
+    {
+        if (owner == null)
+            return;
+
+        if (IsCursorBlocked())
+        {
+            ApplyHiddenCursor();
             return;
         }
 
@@ -670,33 +731,8 @@ public class PauseManager : MonoBehaviour
         SetDefaultCursor();
 
         Cursor.visible = true;
-    }
 
-    public void ShowUICursorCentered(
-    MonoBehaviour owner)
-    {
-        if (owner == null)
-            return;
-
-        if (LoadingManager.IsLoadingScreenBlockingPause())
-        {
-            HideGameplayCursor();
-            return;
-        }
-
-        CursorCenterHelper.ShowCursorCentered(
-            owner,
-            defaultCursor,
-            defaultCursorHotspot
-        );
-    }
-
-    public void HideGameplayCursor()
-    {
-        Cursor.visible = false;
-
-        Cursor.lockState =
-            CursorLockMode.Locked;
+        CursorCenterHelper.CenterCursor(owner);
     }
 
     private void AddCursorEventsToAllButtons()

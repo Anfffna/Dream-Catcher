@@ -43,17 +43,6 @@ public class MainMenuController : MonoBehaviour
     private Coroutine settingsFadeCoroutine;
     private Coroutine loadFadeCoroutine;
 
-    private void Awake()
-    {
-        // При появлении сцены Main Menu
-        // курсор сначала всегда скрыт.
-        // Покажем его только после окончания загрузки.
-        Cursor.lockState =
-            CursorLockMode.Locked;
-
-        Cursor.visible = false;
-    }
-
     private void Start()
     {
         if (quitPanel != null)
@@ -303,39 +292,38 @@ public class MainMenuController : MonoBehaviour
 
     private IEnumerator SetupMainMenuCursor()
     {
-        while (LoadingManager.Instance != null &&
-               LoadingManager.Instance.IsLoading)
-        {
-            Cursor.visible = false;
+        // Пока MainMenu готовится, курсору показываться нельзя.
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.SetCursorBlocked(true);
 
-            Cursor.lockState =
-                CursorLockMode.Locked;
-
+        while (LoadingManager.IsLoadingScreenBlockingPause())
             yield return null;
-        }
 
-        // Даём MainMenu полностью отрисоваться
-        yield return new WaitForEndOfFrame();
-
-        // Переходим уже на следующий кадр.
-        yield return null;
+        // Loading уже закончен, но даём его последнему
+        // полупрозрачному кадру полностью исчезнуть.
+        yield return new WaitForSecondsRealtime(0.23f);
 
         if (PauseManager.Instance == null)
             yield break;
 
-        PauseManager.Instance
-            .ShowUICursor();
+        PauseManager.Instance.SetCursorBlocked(false);
+        PauseManager.Instance.ShowUICursor();
 
-        PauseManager.Instance
-            .AddCursorEventsToButtons(
-                cursorButtonsRoot
-            );
+        PauseManager.Instance.AddCursorEventsToButtons(
+            cursorButtonsRoot
+        );
     }
 
     public void ConfirmQuit()
     {
+        if (LoadingManager.Instance != null)
+        {
+            LoadingManager.Instance.QuitWithLoadingBackground();
+            return;
+        }
+
 #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
+    UnityEditor.EditorApplication.isPlaying = false;
 #else
         Application.Quit();
 #endif

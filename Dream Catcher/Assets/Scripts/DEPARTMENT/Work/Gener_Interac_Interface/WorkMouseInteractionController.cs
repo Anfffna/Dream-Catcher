@@ -54,8 +54,13 @@ public class WorkMouseInteractionController :
             TaskPanelController.Instance != null &&
             TaskPanelController.Instance.BlocksWorldInteraction;
 
+        bool loadingBlocksWorld =
+            LoadingManager
+                .IsLoadingScreenBlockingPause();
+
         if (pauseBlocksWorld ||
-            taskPanelBlocksWorld)
+            taskPanelBlocksWorld ||
+            loadingBlocksWorld)
         {
             // Сбрасываем старый hover от объекта,
             // но НЕ меняем сам курсор:
