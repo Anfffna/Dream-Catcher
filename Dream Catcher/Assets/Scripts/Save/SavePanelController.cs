@@ -32,6 +32,13 @@ public class SavePanelController : MonoBehaviour
     private TMP_InputField activeInputField;
     private Button activeOkButton;
 
+    /*
+     * Конкретная визуальная плашка,
+     * выбранная для перезаписи.
+     */
+    private SaveSlot selectedSaveSlot;
+
+
     private void Awake()
     {
         if (yesButton != null)
@@ -50,10 +57,9 @@ public class SavePanelController : MonoBehaviour
             overwritePanel.SetActive(false);
     }
 
+
     private void Update()
     {
-        // Подтверждение сохранения клавишей Enter,
-        // но только когда сейчас реально открыто поле ввода.
         if (activeInputField == null)
             return;
 
@@ -63,14 +69,18 @@ public class SavePanelController : MonoBehaviour
         if (!activeInputField.gameObject.activeInHierarchy)
             return;
 
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        if (Input.GetKeyDown(KeyCode.Return) ||
+            Input.GetKeyDown(KeyCode.KeypadEnter))
         {
             OnOkClicked();
         }
     }
 
+
     public void PrepareSavePanel()
     {
+        ResetSelectedSaveSlot();
+
         selectedSaveIndex = -1;
         inputMode = InputMode.None;
 
@@ -83,142 +93,225 @@ public class SavePanelController : MonoBehaviour
         RefreshUI();
     }
 
+
     public void RefreshUI()
     {
         if (saveContainer == null)
         {
-            Debug.LogError("SavePanelController: saveContainer не назначен.");
+            Debug.LogError(
+                "SavePanelController: saveContainer не назначен."
+            );
+
             return;
         }
 
         if (SaveManager.Instance == null)
         {
-            Debug.LogError("SavePanelController: SaveManager.Instance == null.");
+            Debug.LogError(
+                "SavePanelController: SaveManager.Instance == null."
+            );
+
             return;
         }
 
         ClearContainer();
 
-        List<SaveData> saves = SaveManager.Instance.GetSaves();
+        List<SaveData> saves =
+            SaveManager.Instance.GetSaves();
 
         if (saves == null)
             saves = new List<SaveData>();
 
-        // Верхняя строка:
-        // либо поле ввода нового сохранения,
-        // либо кнопка "Новое сохранение".
+
+        // Верхняя строка.
         if (inputMode == InputMode.NewSave)
         {
             CreateInputSlot();
         }
         else
         {
-            if (saves.Count < SaveManager.Instance.maxSaves)
+            if (saves.Count <
+                SaveManager.Instance.maxSaves)
             {
-                GameObject newSaveObj = Instantiate(newSavePrefab, saveContainer);
-                AddButtonListener(newSaveObj, OnNewSaveClicked);
+                GameObject newSaveObj =
+                    Instantiate(
+                        newSavePrefab,
+                        saveContainer
+                    );
+
+                AddButtonListener(
+                    newSaveObj,
+                    OnNewSaveClicked
+                );
             }
         }
 
-        // Если сохранений нет — показываем "Пусто" ниже первой строки.
+
         if (saves.Count == 0)
         {
-            Instantiate(emptyPrefab, saveContainer);
+            Instantiate(
+                emptyPrefab,
+                saveContainer
+            );
+
             return;
         }
 
-        // Существующие сохранения.
-        // ВАЖНО:
-        // SaveManager сейчас добавляет новые сохранения в конец списка.
-        // Поэтому здесь мы отображаем список в обратном порядке,
-        // чтобы новое сохранение визуально появлялось сверху.
-        for (int i = saves.Count - 1; i >= 0; i--)
+
+        /*
+         * Существующие сохранения
+         * выводятся в обратном порядке.
+         */
+        for (int i = saves.Count - 1;
+             i >= 0;
+             i--)
         {
-            // Если это выбранное сохранение и игрок подтвердил перезапись,
-            // вместо этой конкретной плашки показываем поле ввода.
-            if (inputMode == InputMode.Overwrite && i == selectedSaveIndex)
+            /*
+             * При подтверждённой перезаписи
+             * выбранная плашка заменяется
+             * полем ввода нового названия.
+             */
+            if (inputMode == InputMode.Overwrite &&
+                i == selectedSaveIndex)
             {
                 CreateInputSlot();
                 continue;
             }
 
-            GameObject slotObj = Instantiate(saveSlotPrefab, saveContainer);
+            GameObject slotObj =
+                Instantiate(
+                    saveSlotPrefab,
+                    saveContainer
+                );
 
-            SaveSlot slot = slotObj.GetComponent<SaveSlot>();
+            SaveSlot slot =
+                slotObj.GetComponent<SaveSlot>();
 
             if (slot == null)
-                slot = slotObj.GetComponentInChildren<SaveSlot>(true);
+            {
+                slot =
+                    slotObj.GetComponentInChildren<SaveSlot>(
+                        true
+                    );
+            }
 
             if (slot != null)
             {
-                // Передаём настоящий индекс сохранения из SaveManager.
-                // Даже если визуально список перевёрнут, перезапись будет работать правильно.
-                slot.Setup(saves[i], i, this);
+                slot.Setup(
+                    saves[i],
+                    i,
+                    this
+                );
             }
             else
             {
-                Debug.LogError("SaveSlotPrefab: на префабе нет компонента SaveSlot.");
+                Debug.LogError(
+                    "SaveSlotPrefab: на префабе нет компонента SaveSlot."
+                );
             }
         }
     }
+
 
     private void ClearContainer()
     {
         activeInputField = null;
         activeOkButton = null;
 
-        for (int i = saveContainer.childCount - 1; i >= 0; i--)
+        /*
+         * Старые SaveSlot сейчас уничтожаются.
+         */
+        selectedSaveSlot = null;
+
+        for (int i = saveContainer.childCount - 1;
+             i >= 0;
+             i--)
         {
-            Destroy(saveContainer.GetChild(i).gameObject);
+            Destroy(
+                saveContainer
+                    .GetChild(i)
+                    .gameObject
+            );
         }
     }
+
 
     private void CreateInputSlot()
     {
         if (inputSavePrefab == null)
         {
-            Debug.LogError("SavePanelController: inputSavePrefab не назначен.");
+            Debug.LogError(
+                "SavePanelController: inputSavePrefab не назначен."
+            );
+
             return;
         }
 
-        GameObject inputObj = Instantiate(inputSavePrefab, saveContainer);
+        GameObject inputObj =
+            Instantiate(
+                inputSavePrefab,
+                saveContainer
+            );
 
-        activeInputField = inputObj.GetComponentInChildren<TMP_InputField>(true);
-        activeOkButton = inputObj.GetComponentInChildren<Button>(true);
+        activeInputField =
+            inputObj.GetComponentInChildren<TMP_InputField>(
+                true
+            );
+
+        activeOkButton =
+            inputObj.GetComponentInChildren<Button>(
+                true
+            );
+
 
         if (activeInputField != null)
         {
             activeInputField.text = "";
 
-            // Поле для названия сохранения лучше держать однострочным,
-            // чтобы Enter был подтверждением, а не переносом строки.
-            activeInputField.lineType = TMP_InputField.LineType.SingleLine;
+            activeInputField.lineType =
+                TMP_InputField.LineType.SingleLine;
 
-            // На случай, если TMP_InputField сам вызовет Submit по Enter.
-            activeInputField.onSubmit.RemoveAllListeners();
-            activeInputField.onSubmit.AddListener(OnInputSubmit);
+            activeInputField.onSubmit
+                .RemoveAllListeners();
+
+            activeInputField.onSubmit
+                .AddListener(OnInputSubmit);
 
             activeInputField.Select();
             activeInputField.ActivateInputField();
 
             if (EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(activeInputField.gameObject);
+            {
+                EventSystem.current
+                    .SetSelectedGameObject(
+                        activeInputField.gameObject
+                    );
+            }
         }
         else
         {
-            Debug.LogError("InputSavePrefab: не найден TMP_InputField.");
+            Debug.LogError(
+                "InputSavePrefab: не найден TMP_InputField."
+            );
         }
+
 
         if (activeOkButton != null)
         {
-            activeOkButton.onClick.RemoveAllListeners();
-            activeOkButton.onClick.AddListener(OnOkClicked);
+            activeOkButton.onClick
+                .RemoveAllListeners();
+
+            activeOkButton.onClick
+                .AddListener(OnOkClicked);
         }
         else
         {
-            Debug.LogError("InputSavePrefab: не найдена кнопка OK.");
+            Debug.LogError(
+                "InputSavePrefab: не найдена кнопка OK."
+            );
         }
     }
+
 
     private void OnInputSubmit(string text)
     {
@@ -231,16 +324,29 @@ public class SavePanelController : MonoBehaviour
         OnOkClicked();
     }
 
-    private void AddButtonListener(GameObject obj, UnityAction action)
-    {
-        Button button = obj.GetComponent<Button>();
 
-        if (button == null)
-            button = obj.GetComponentInChildren<Button>(true);
+    private void AddButtonListener(
+        GameObject obj,
+        UnityAction action)
+    {
+        Button button =
+            obj.GetComponent<Button>();
 
         if (button == null)
         {
-            Debug.LogError(obj.name + ": на объекте нет Button.");
+            button =
+                obj.GetComponentInChildren<Button>(
+                    true
+                );
+        }
+
+        if (button == null)
+        {
+            Debug.LogError(
+                obj.name +
+                ": на объекте нет Button."
+            );
+
             return;
         }
 
@@ -248,8 +354,11 @@ public class SavePanelController : MonoBehaviour
         button.onClick.AddListener(action);
     }
 
+
     public void OnNewSaveClicked()
     {
+        ResetSelectedSaveSlot();
+
         selectedSaveIndex = -1;
         inputMode = InputMode.NewSave;
 
@@ -259,30 +368,84 @@ public class SavePanelController : MonoBehaviour
         RefreshUI();
     }
 
+
+    /*
+     * Старая сигнатура остаётся,
+     * чтобы не ломать возможные ссылки.
+     */
     public void OnSaveSlotClicked(int index)
     {
+        OnSaveSlotClicked(
+            index,
+            null
+        );
+    }
+
+
+    public void OnSaveSlotClicked(
+        int index,
+        SaveSlot clickedSlot)
+    {
+        /*
+         * Снимаем Selected с предыдущей
+         * плашки, если выбрали другую.
+         */
+        if (selectedSaveSlot != null &&
+            selectedSaveSlot != clickedSlot)
+        {
+            selectedSaveSlot
+                .SetSelected(false);
+        }
+
+        selectedSaveSlot = clickedSlot;
         selectedSaveIndex = index;
+
         inputMode = InputMode.None;
+
+        /*
+         * Теперь выбранная плашка
+         * остаётся подсвеченной.
+         */
+        if (selectedSaveSlot != null)
+        {
+            selectedSaveSlot
+                .SetSelected(true);
+        }
 
         if (overwritePanel != null)
             overwritePanel.SetActive(true);
     }
+
 
     public void OnYesClicked()
     {
         if (selectedSaveIndex < 0)
             return;
 
-        inputMode = InputMode.Overwrite;
+        inputMode =
+            InputMode.Overwrite;
 
         if (overwritePanel != null)
             overwritePanel.SetActive(false);
 
+        /*
+         * RefreshUI заменит выбранную
+         * плашку полем ввода.
+         */
         RefreshUI();
     }
 
+
     public void OnNoClicked()
     {
+        /*
+         * Игрок отказался от перезаписи.
+         *
+         * Именно здесь полностью снимаем
+         * Selected с выбранного сохранения.
+         */
+        ResetSelectedSaveSlot();
+
         selectedSaveIndex = -1;
         inputMode = InputMode.None;
 
@@ -291,31 +454,46 @@ public class SavePanelController : MonoBehaviour
 
         RefreshUI();
     }
+
 
     public void OnOkClicked()
     {
         if (activeInputField == null)
             return;
 
-        string saveName = activeInputField.text.Trim();
+        string saveName =
+            activeInputField.text.Trim();
 
         if (string.IsNullOrEmpty(saveName))
         {
-            Debug.LogWarning("Введите название сохранения.");
+            Debug.LogWarning(
+                "Введите название сохранения."
+            );
+
             return;
         }
 
-        if (inputMode == InputMode.Overwrite && selectedSaveIndex >= 0)
+        if (inputMode == InputMode.Overwrite &&
+            selectedSaveIndex >= 0)
         {
-            SaveManager.Instance.OverwriteSave(selectedSaveIndex, saveName);
+            SaveManager.Instance
+                .OverwriteSave(
+                    selectedSaveIndex,
+                    saveName
+                );
         }
-        else if (inputMode == InputMode.NewSave)
+        else if (
+            inputMode == InputMode.NewSave)
         {
-            SaveManager.Instance.CreateNewSave(saveName);
+            SaveManager.Instance
+                .CreateNewSave(saveName);
         }
+
 
         selectedSaveIndex = -1;
         inputMode = InputMode.None;
+
+        selectedSaveSlot = null;
 
         activeInputField = null;
         activeOkButton = null;
@@ -324,5 +502,17 @@ public class SavePanelController : MonoBehaviour
             overwritePanel.SetActive(false);
 
         RefreshUI();
+    }
+
+
+    private void ResetSelectedSaveSlot()
+    {
+        if (selectedSaveSlot != null)
+        {
+            selectedSaveSlot
+                .SetSelected(false);
+        }
+
+        selectedSaveSlot = null;
     }
 }

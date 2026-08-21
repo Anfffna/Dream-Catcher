@@ -5,22 +5,35 @@ using UnityEngine.EventSystems;
 
 public class LoadSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    [Header("Texts")]
+    [Header("Тексты")]
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI timeText;
 
     [Header("Hover")]
-    public Color hoverTextColor = new Color32(190, 212, 169, 255); // #BED4A9
+    public Color hoverTextColor =
+        new Color32(190, 212, 169, 255); // #BED4A9
+
+    [Header("Выбранное сохранение")]
+    [Tooltip("Цвет плашки после клика. Она останется такой до выбора другой или нажатия Нет.")]
+    public Color selectedTextColor =
+        new Color32(190, 212, 169, 255); // #BED4A9
 
     private Color defaultNameColor;
     private Color defaultTimeColor;
+
     private bool colorsSaved = false;
+    private bool isSelected = false;
+    private bool isPointerInside = false;
 
     private int saveIndex;
     private LoadPanelController panelController;
     private Button button;
 
-    public void Setup(SaveData data, int index, LoadPanelController controller)
+
+    public void Setup(
+        SaveData data,
+        int index,
+        LoadPanelController controller)
     {
         saveIndex = index;
         panelController = controller;
@@ -32,6 +45,11 @@ public class LoadSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             timeText.text = data.dateTime;
 
         SaveDefaultColors();
+
+        isSelected = false;
+        isPointerInside = false;
+
+        ApplyVisualState();
 
         button = GetComponent<Button>();
 
@@ -45,9 +63,13 @@ public class LoadSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
         else
         {
-            Debug.LogError(gameObject.name + ": на LoadSlotPrefab нет Button.");
+            Debug.LogError(
+                gameObject.name +
+                ": на LoadSlotPrefab нет Button."
+            );
         }
     }
+
 
     private void SaveDefaultColors()
     {
@@ -63,24 +85,69 @@ public class LoadSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         colorsSaved = true;
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
+
+    public void OnPointerEnter(
+        PointerEventData eventData)
     {
-        SetHoverTextColor();
+        isPointerInside = true;
+
+        ApplyVisualState();
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+
+    public void OnPointerExit(
+        PointerEventData eventData)
     {
+        isPointerInside = false;
+
+        ApplyVisualState();
+    }
+
+
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+
+        ApplyVisualState();
+    }
+
+
+    private void ApplyVisualState()
+    {
+        if (!colorsSaved)
+            return;
+
+        /*
+         * SELECTED имеет приоритет над Hover.
+         *
+         * Поэтому если мышка ушла с уже выбранной
+         * плашки, её цвет не сбрасывается.
+         */
+        if (isSelected)
+        {
+            SetTextColor(selectedTextColor);
+            return;
+        }
+
+        if (isPointerInside)
+        {
+            SetTextColor(hoverTextColor);
+            return;
+        }
+
         SetDefaultTextColor();
     }
 
-    private void SetHoverTextColor()
+
+    private void SetTextColor(Color color)
     {
         if (nameText != null)
-            nameText.color = hoverTextColor;
+            nameText.color = color;
 
         if (timeText != null)
-            timeText.color = hoverTextColor;
+            timeText.color = color;
     }
+
 
     private void SetDefaultTextColor()
     {
@@ -91,15 +158,25 @@ public class LoadSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             timeText.color = defaultTimeColor;
     }
 
+
     private void OnDisable()
     {
+        isSelected = false;
+        isPointerInside = false;
+
         if (colorsSaved)
             SetDefaultTextColor();
     }
 
+
     public void OnClick()
     {
         if (panelController != null)
-            panelController.OnLoadSlotClicked(saveIndex);
+        {
+            panelController.OnLoadSlotClicked(
+                saveIndex,
+                this
+            );
+        }
     }
 }

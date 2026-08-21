@@ -61,19 +61,21 @@ public class MultiDoorInteractable : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (!isAvailable || isAnimating)
+        if (isAnimating)
             return;
 
-        if (!isOpen)
+        if (isOpen)
         {
-            OpenDoor();
+            if (allowManualClose)
+                CloseDoor();
+
             return;
         }
 
-        if (allowManualClose)
-        {
-            CloseDoor();
-        }
+        if (!isAvailable)
+            return;
+
+        OpenDoor();
     }
 
     public void OpenDoor()
@@ -107,9 +109,9 @@ public class MultiDoorInteractable : MonoBehaviour, IInteractable
         isOpen = true;
         isAnimating = false;
 
-        // Пока дверь открыта, интеракт выключен.
-        // Закроют её auto-close триггеры.
-        SetDoorAvailable(false);
+        // Если разрешено ручное закрытие,
+        // оставляем открытую дверь доступной для взаимодействия.
+        SetDoorAvailable(allowManualClose);
     }
 
     private IEnumerator CloseRoutine()

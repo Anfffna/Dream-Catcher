@@ -137,6 +137,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LoadSlot
   nameText: {fileID: 5224572028571756533}
   timeText: {fileID: 4703074097712599568}
+  hoverTextColor: {r: 0.74509805, g: 0.83137256, b: 0.6627451, a: 1}
+  selectedTextColor: {r: 0.8235294, g: 0.9098039, b: 0.7411765, a: 1}
 --- !u!1 &3090720250163131675
 GameObject:
   m_ObjectHideFlags: 0
@@ -240,6 +242,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -376,6 +379,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
