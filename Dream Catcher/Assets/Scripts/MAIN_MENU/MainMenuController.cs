@@ -147,6 +147,114 @@ public class MainMenuController : MonoBehaviour
         SaveManager.Instance.LoadLatestSave();
     }
 
+    // =========================================================
+    // ПЕРЕХОД ИЗ АНИМИРОВАННОГО ПУЛЬТА
+    // =========================================================
+
+    public void PlayTransitionButtonSound()
+    {
+        /*
+         * Используем тот же самый звук и тот же AudioSource,
+         * что и обычные кнопки MainMenu.
+         *
+         * Этот метод вызывается непосредственно
+         * в момент Animation Event нажатия пальцем.
+         */
+        PlayButtonSound();
+    }
+
+
+    public void StartNewGameWithoutLoadingScreen()
+    {
+        /*
+         * ВАЖНО:
+         * здесь НЕТ PlayButtonSound().
+         *
+         * Звук уже был проигран раньше,
+         * в момент физического нажатия кнопки.
+         */
+
+        Time.timeScale = 1f;
+
+
+        /*
+         * Полностью сохраняем существующую
+         * подготовку новой игры.
+         */
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.PrepareNewGame();
+
+
+            if (TestAgain)
+            {
+                SaveManager.Instance.DeleteAllSaves();
+
+
+                if (loadPanelController != null)
+                {
+                    loadPanelController
+                        .PrepareLoadPanel();
+                }
+            }
+        }
+
+
+        /*
+         * Главное отличие от обычного StartGame():
+         *
+         * LoadingManager НЕ вызываем.
+         *
+         * Загружаем House напрямую.
+         */
+        SceneManager.LoadSceneAsync(
+            firstSceneName
+        );
+    }
+
+
+    public void ContinueWithoutButtonSound()
+    {
+        /*
+         * Здесь тоже нет PlayButtonSound(),
+         * потому что он уже прозвучал
+         * в момент Animation Event.
+         */
+
+        Time.timeScale = 1f;
+
+
+        if (SaveManager.Instance == null)
+        {
+            Debug.LogWarning(
+                "MainMenuController: SaveManager.Instance == null. " +
+                "Продолжить невозможно."
+            );
+
+            return;
+        }
+
+
+        if (!SaveManager.Instance.HasAnySaves())
+        {
+            Debug.LogWarning(
+                "MainMenuController: сохранений нет. " +
+                "Продолжить невозможно."
+            );
+
+            return;
+        }
+
+
+        /*
+         * Это всё ещё обычная загрузка сохранения.
+         *
+         * Поэтому привычный LoadingManager
+         * продолжит работать как раньше.
+         */
+        SaveManager.Instance.LoadLatestSave();
+    }
+
     public void OnLoadButton()
     {
         PlayButtonSound();

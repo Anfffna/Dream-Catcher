@@ -151,6 +151,7 @@ GameObject:
   - component: {fileID: 26054151}
   - component: {fileID: 26054153}
   - component: {fileID: 26054152}
+  - component: {fileID: 26054154}
   m_Layer: 0
   m_Name: Point Light (2)
   m_TagString: Untagged
@@ -267,6 +268,31 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!114 &26054154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 26054150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1864e1d98d194d47a1e491e51887472, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LampFlicker
+  targetLight: {fileID: 26054153}
+  minIntensityMultiplier: 0.82
+  maxIntensityMultiplier: 1.05
+  minInterval: 0.08
+  maxInterval: 0.35
+  minTransitionDuration: 0.03
+  maxTransitionDuration: 0.12
+  deepFlickerChance: 0.07
+  deepFlickerMinMultiplier: 0.08
+  deepFlickerMaxMultiplier: 0.35
+  deepFlickerMinDuration: 0.025
+  deepFlickerMaxDuration: 0.08
+  restoreIntensityOnDisable: 1
 --- !u!1 &52087631
 GameObject:
   m_ObjectHideFlags: 0

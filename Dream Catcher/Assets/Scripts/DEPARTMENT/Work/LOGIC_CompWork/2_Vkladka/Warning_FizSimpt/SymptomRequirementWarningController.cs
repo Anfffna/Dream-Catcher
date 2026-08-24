@@ -15,6 +15,16 @@ public class SymptomRequirementWarningController :
     [SerializeField]
     private CanvasGroup canvasGroup;
 
+    [Header("Звук")]
+
+    [Tooltip("Источник звука уведомления.")]
+    [SerializeField]
+    private AudioSource notificationAudioSource;
+
+    [Tooltip("Звук при появлении предупреждения.")]
+    [SerializeField]
+    private AudioClip notificationSound;
+
     [Header("Движение")]
 
     [Tooltip("Смещение сообщения в скрытом состоянии.")]
@@ -133,8 +143,23 @@ public class SymptomRequirementWarningController :
         );
     }
 
+    private void PlayNotificationSound()
+    {
+        if (notificationAudioSource == null ||
+            notificationSound == null)
+        {
+            return;
+        }
+
+        notificationAudioSource.PlayOneShot(
+            notificationSound
+        );
+    }
+
     private IEnumerator WarningRoutine()
     {
+        PlayNotificationSound();
+
         yield return AnimateTo(
             visiblePosition,
             1f,

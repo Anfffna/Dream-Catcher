@@ -66,6 +66,17 @@ public class LoadingManager : MonoBehaviour
 
     public bool IsLoading => isLoading;
 
+    public bool IsLoadingBackgroundReady
+    {
+        get
+        {
+            return
+                isLoading &&
+                loadingBackgroundCanvasGroup != null &&
+                loadingBackgroundCanvasGroup.alpha >= 0.999f;
+        }
+    }
+
     public static bool IsLoadingScreenBlockingPause()
     {
         if (LoadingBlocksPause)

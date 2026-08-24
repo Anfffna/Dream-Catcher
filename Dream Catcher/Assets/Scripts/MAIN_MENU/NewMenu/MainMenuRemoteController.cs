@@ -18,7 +18,7 @@ public class MainMenuRemoteController : MonoBehaviour
     [SerializeField] private Animator remoteAnimator;
 
     [Tooltip(
-        "Точное название состояния покоя в Animator. " +
+        "Точное название состояния покоя. " +
         "У тебя это default_state."
     )]
     [SerializeField] private string defaultStateName = "default_state";
@@ -30,6 +30,11 @@ public class MainMenuRemoteController : MonoBehaviour
 
     [Tooltip("Существующий MainMenuTVZoomController.")]
     [SerializeField] private MainMenuTVZoomController tvZoomController;
+
+    [Tooltip(
+        "Моргание при Новой игре и Продолжить."
+    )]
+    [SerializeField] private MainMenuBlinkTransition blinkTransition;
 
 
     [Header("Названия Trigger в Animator")]
@@ -43,20 +48,11 @@ public class MainMenuRemoteController : MonoBehaviour
     private PendingAction pendingAction =
         PendingAction.None;
 
-    private bool buttonAnimationInProgress = false;
+    private bool buttonAnimationInProgress;
 
-    /*
-     * Показывает, было ли реальное действие меню
-     * уже выполнено Animation Event'ом.
-     */
-    private bool actionAlreadyExecuted = false;
+    private bool actionAlreadyExecuted;
 
-    /*
-     * Нельзя разблокировать кнопку сразу после SetTrigger,
-     * потому что Animator ещё несколько мгновений
-     * может находиться в default_state.
-     */
-    private bool hasLeftDefaultState = false;
+    private bool hasLeftDefaultState;
 
     private int defaultStateHash;
 
@@ -64,7 +60,9 @@ public class MainMenuRemoteController : MonoBehaviour
     private void Awake()
     {
         defaultStateHash =
-            Animator.StringToHash(defaultStateName);
+            Animator.StringToHash(
+                defaultStateName
+            );
     }
 
 
@@ -75,7 +73,7 @@ public class MainMenuRemoteController : MonoBehaviour
 
 
     // =========================================================
-    // КНОПКИ ПУЛЬТА
+    // КНОПКИ
     // =========================================================
 
     public void PressNewGame()
@@ -131,10 +129,6 @@ public class MainMenuRemoteController : MonoBehaviour
         PendingAction action,
         string triggerName)
     {
-        /*
-         * Текущее нажатие нельзя перебить
-         * другим нажатием.
-         */
         if (buttonAnimationInProgress)
             return;
 
@@ -155,7 +149,9 @@ public class MainMenuRemoteController : MonoBehaviour
 
         ResetAllTriggers();
 
-        remoteAnimator.SetTrigger(triggerName);
+        remoteAnimator.SetTrigger(
+            triggerName
+        );
     }
 
 
@@ -186,21 +182,11 @@ public class MainMenuRemoteController : MonoBehaviour
     // ANIMATION EVENT
     // =========================================================
 
-    /*
-     * Этот метод должен находиться
-     * на Animation Event в момент,
-     * когда палец физически нажимает кнопку.
-     */
     public void ExecutePendingAction()
     {
         if (!buttonAnimationInProgress)
             return;
 
-        /*
-         * Если Event каким-то образом
-         * был вызван дважды, действие
-         * второй раз не выполняем.
-         */
         if (actionAlreadyExecuted)
             return;
 
@@ -212,9 +198,20 @@ public class MainMenuRemoteController : MonoBehaviour
         {
             case PendingAction.NewGame:
 
-                if (mainMenuController != null)
+                if (blinkTransition != null)
                 {
-                    mainMenuController.StartGame();
+                    blinkTransition
+                        .PlayNewGame();
+                }
+                else if (mainMenuController != null)
+                {
+                    /*
+                     * Страховка:
+                     * если BlinkTransition забыли назначить,
+                     * старая рабочая логика не ломается.
+                     */
+                    mainMenuController
+                        .StartGame();
                 }
 
                 break;
@@ -222,7 +219,12 @@ public class MainMenuRemoteController : MonoBehaviour
 
             case PendingAction.Continue:
 
-                if (mainMenuController != null)
+                if (blinkTransition != null)
+                {
+                    blinkTransition
+                        .PlayContinue();
+                }
+                else if (mainMenuController != null)
                 {
                     mainMenuController
                         .OnContinueButton();
@@ -235,7 +237,8 @@ public class MainMenuRemoteController : MonoBehaviour
 
                 if (tvZoomController != null)
                 {
-                    tvZoomController.OpenLoad();
+                    tvZoomController
+                        .OpenLoad();
                 }
 
                 break;
@@ -245,7 +248,8 @@ public class MainMenuRemoteController : MonoBehaviour
 
                 if (tvZoomController != null)
                 {
-                    tvZoomController.OpenSettings();
+                    tvZoomController
+                        .OpenSettings();
                 }
 
                 break;
@@ -255,7 +259,8 @@ public class MainMenuRemoteController : MonoBehaviour
 
                 if (tvZoomController != null)
                 {
-                    tvZoomController.OpenQuit();
+                    tvZoomController
+                        .OpenQuit();
                 }
 
                 break;
@@ -281,10 +286,6 @@ public class MainMenuRemoteController : MonoBehaviour
                 .GetCurrentAnimatorStateInfo(0);
 
 
-        /*
-         * Сначала ждём, пока Animator
-         * действительно покинет default_state.
-         */
         if (!hasLeftDefaultState)
         {
             if (stateInfo.shortNameHash !=
@@ -298,18 +299,10 @@ public class MainMenuRemoteController : MonoBehaviour
         }
 
 
-        /*
-         * Пока идёт переход между состояниями,
-         * ничего не заканчиваем.
-         */
         if (remoteAnimator.IsInTransition(0))
             return;
 
 
-        /*
-         * Ждём настоящего возвращения
-         * в default_state.
-         */
         if (stateInfo.shortNameHash !=
             defaultStateHash)
         {
@@ -318,16 +311,8 @@ public class MainMenuRemoteController : MonoBehaviour
 
 
         /*
-         * ВАЖНАЯ СТРАХОВКА.
-         *
-         * Если Animation Event по какой-то причине
-         * не сработал до возврата в default_state,
-         * всё равно выполняем действие.
-         *
-         * В нормальной ситуации этот блок
-         * вообще ничего делать не будет,
-         * потому что actionAlreadyExecuted
-         * уже станет true в нужный кадр.
+         * Страховка на случай,
+         * если импортированный FBX пропустил Event.
          */
         if (!actionAlreadyExecuted &&
             pendingAction != PendingAction.None)
@@ -343,6 +328,7 @@ public class MainMenuRemoteController : MonoBehaviour
     private void FinishCurrentButtonAnimation()
     {
         buttonAnimationInProgress = false;
+
         actionAlreadyExecuted = false;
         hasLeftDefaultState = false;
 
@@ -351,20 +337,11 @@ public class MainMenuRemoteController : MonoBehaviour
     }
 
 
-    // =========================================================
-    // СТАРЫЙ FINISH EVENT
-    // =========================================================
-
-    /*
-     * Оставляем метод на случай,
-     * если FinishButtonAnimation всё ещё
-     * стоит в импортированных клипах.
-     *
-     * Разблокировка больше от него
-     * вообще не зависит.
-     */
     public void FinishButtonAnimation()
     {
-        // Намеренно пусто.
+        /*
+         * Старые Finish Events могут оставаться
+         * в FBX. Они больше ничего не решают.
+         */
     }
 }

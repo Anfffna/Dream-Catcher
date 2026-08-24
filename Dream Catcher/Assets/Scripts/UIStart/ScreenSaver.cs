@@ -56,6 +56,17 @@ public class ScreenSaver : MonoBehaviour
     private bool isRunning = false;
     private Coroutine blurRoutine;
 
+    public bool IsBackgroundReady
+    {
+        get
+        {
+            return
+                backgroundGroup != null &&
+                backgroundGroup.alpha >= 0.999f &&
+                gameObject.activeInHierarchy;
+        }
+    }
+
     void Start()
     {
         if (skipWhenLoadingSave &&
