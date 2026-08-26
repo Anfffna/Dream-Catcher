@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class LightSwitch :
     MonoBehaviour,
@@ -41,6 +42,24 @@ public class LightSwitch :
 
     public InviteDoor inviteDoor;
 
+    [Header("Первая реакция на свет")]
+
+    [Tooltip("DialogueManager.")]
+    [SerializeField]
+    private DialogueManager dialogueManager;
+
+    [Tooltip("Реплика ГГ после первого включения света.")]
+    [SerializeField]
+    private List<DialogueManager.DialogueLine>
+        firstLightLines =
+            new List<DialogueManager.DialogueLine>();
+
+    [Tooltip("Короткий эффект пьяного зрения.")]
+    [SerializeField]
+    private DrunkVisionEffect drunkVisionEffect;
+
+    [SerializeField]
+    private string dialogueManagerObjectName = "DialogueManager";
 
     [Header("Audio")]
 
@@ -167,6 +186,23 @@ public class LightSwitch :
 
         sequenceStarted = true;
 
+        FindDialogueManager();
+        // Реплика ГГ.
+        if (dialogueManager != null &&
+            firstLightLines != null &&
+            firstLightLines.Count > 0)
+        {
+            dialogueManager.StartDialogue(
+                firstLightLines
+            );
+        }
+
+        // Одновременно начинает плыть зрение.
+        if (drunkVisionEffect != null)
+        {
+            drunkVisionEffect.PlayEffect();
+        }
+
         if (inviteDoor != null)
         {
             inviteDoor.StartInviteDoorSequence();
@@ -265,6 +301,15 @@ public class LightSwitch :
             true;
     }
 
+    private void FindDialogueManager()
+    {
+        GameObject obj =
+            GameObject.Find(dialogueManagerObjectName);
+
+        if (obj != null)
+            dialogueManager =
+                obj.GetComponent<DialogueManager>();
+    }
 
     // =====================================================
     // QUEST MANAGER

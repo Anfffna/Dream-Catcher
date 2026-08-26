@@ -98,11 +98,8 @@ public class ClientQuestionDialogueController :
         if (answerRunning)
             return;
 
-        if (!complaintsAsked ||
-            !personalQuestionAsked)
-        {
+        if (!complaintsAsked)
             return;
-        }
 
         if (!choicesVisible)
             return;
@@ -110,7 +107,7 @@ public class ClientQuestionDialogueController :
         if (!Input.GetMouseButtonDown(0))
             return;
 
-        // Клик по одной из кнопок не закрывает окно.
+        // Клик по кнопке жалоб позволяет закрыть окно.
         // Кнопка самостоятельно повторно запустит свой ответ.
         if (IsPointerOverQuestionButton())
             return;

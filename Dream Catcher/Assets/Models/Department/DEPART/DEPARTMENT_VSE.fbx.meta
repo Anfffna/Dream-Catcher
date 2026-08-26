@@ -1,7 +1,7 @@
 fileFormatVersion: 2
 guid: bfb0f2027c2696f41ad2adf06fd792e8
 ModelImporter:
-  serializedVersion: 24200
+  serializedVersion: 24300
   internalIDToNameTable: []
   externalObjects:
   - first:
@@ -249,6 +249,7 @@ ModelImporter:
     materialName: 0
     materialSearch: 1
     materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -286,7 +287,7 @@ ModelImporter:
     nodeNameCollisionStrategy: 1
     fileIdsGeneration: 2
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
     keepQuads: 0
     weldVertices: 1
