@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class ButtonsPauseMenu : MonoBehaviour
 {
@@ -46,30 +47,83 @@ public class ButtonsPauseMenu : MonoBehaviour
     // ----- Кнопка "Главное меню" -----
     public void OnMainMenu()
     {
-        // НЕ вызываем ResumeGame().
+        StartCoroutine(
+            GoToMainMenuRoutine()
+        );
+    }
+
+    private IEnumerator GoToMainMenuRoutine()
+    {
+        IndicatorHover.ResetSelection();
+
+
+        if (LoadingManager.Instance != null)
+        {
+            /*
+             * Сразу запускаем Loading Screen.
+             * Pause Menu пока остаётся как есть,
+             * поэтому никакого мелькания игры нет.
+             */
+            LoadingManager.Instance
+                .StartLoading("MainMenu");
+
+
+            /*
+             * Ждём, пока LoadingManager
+             * действительно начнёт работу.
+             */
+            while (!LoadingManager.Instance.IsLoading)
+            {
+                yield return null;
+            }
+
+
+            /*
+             * Ждём, пока фон загрузки
+             * полностью закроет экран.
+             */
+            while (!LoadingManager.Instance
+                       .IsLoadingBackgroundReady)
+            {
+                yield return null;
+            }
+
+
+            /*
+             * Теперь Pause Menu уже находится
+             * ПОД непрозрачным Loading Screen,
+             * поэтому можно спокойно всё сбросить.
+             */
+            if (PauseManager.Instance != null)
+            {
+                PauseManager.Instance
+                    .HidePauseMenuBeforeLoading();
+            }
+
+
+            yield break;
+        }
+
+
+        /*
+         * Запасной вариант,
+         * если LoadingManager вдруг отсутствует.
+         */
         if (PauseManager.Instance != null)
         {
             PauseManager.Instance
                 .HidePauseMenuBeforeLoading();
         }
 
-        IndicatorHover.ResetSelection();
 
-        if (LoadingManager.Instance != null)
-        {
-            LoadingManager.Instance
-                .StartLoading("MainMenu");
-        }
-        else
-        {
-            Cursor.visible = false;
-            Cursor.lockState =
-                CursorLockMode.Locked;
+        Cursor.visible = false;
+        Cursor.lockState =
+            CursorLockMode.Locked;
 
-            SceneManager.LoadScene(
-                "MainMenu"
-            );
-        }
+
+        SceneManager.LoadScene(
+            "MainMenu"
+        );
     }
 
     private void PlayButtonSound()

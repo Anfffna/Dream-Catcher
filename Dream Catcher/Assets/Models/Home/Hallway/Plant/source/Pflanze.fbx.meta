@@ -1,14 +1,20 @@
 fileFormatVersion: 2
 guid: 8774d835e1c1563469fd6469b3d210c3
 ModelImporter:
-  serializedVersion: 24200
+  serializedVersion: 24300
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pflanzenmaterial
+    second: {fileID: 2100000, guid: b6824f4cc31d71248b4d160aa4c8894f, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
     materialSearch: 1
     materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0

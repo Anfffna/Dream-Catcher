@@ -60,7 +60,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
     private bool transitionRunning;
-    private bool madePersistent;
 
     private float topStartY;
     private float bottomStartY;
@@ -78,9 +77,11 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         CaptureInitialState();
 
+        SetEyesOpenImmediate();
+
         if (blinkCanvasGroup != null)
         {
-            blinkCanvasGroup.alpha = 1f;
+            blinkCanvasGroup.alpha = 0f;
             blinkCanvasGroup.interactable = false;
             blinkCanvasGroup.blocksRaycasts = false;
         }
@@ -96,7 +97,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
         if (transitionRunning)
             return;
 
-        if (mainMenuController == null)
+        if (!FindMainMenuController())
             return;
 
 
@@ -124,7 +125,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
         if (transitionRunning)
             return;
 
-        if (mainMenuController == null)
+        if (!FindMainMenuController())
             return;
 
 
@@ -181,12 +182,23 @@ public class MainMenuBlinkTransition : MonoBehaviour
         transitionRunning = true;
 
 
+        /*
+         * Включаем Canvas только
+         * непосредственно перед переходом.
+         */
         if (blinkCanvasGroup != null)
         {
             blinkCanvasGroup.alpha = 1f;
             blinkCanvasGroup.interactable = false;
             blinkCanvasGroup.blocksRaycasts = true;
         }
+
+
+        /*
+         * Каждый переход начинается
+         * с исходного открытого положения.
+         */
+        SetEyesOpenImmediate();
 
 
         if (PauseManager.Instance != null)
@@ -196,12 +208,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
         }
 
 
-        /*
-         * Просто запоминаем текущее состояние
-         * назначенного Global Volume.
-         *
-         * Никаких поисков Volume здесь больше нет.
-         */
         initialBlurWeight =
             blurVolume != null
                 ? blurVolume.weight
@@ -224,24 +230,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
         // =====================================================
 
         yield return CloseEyes();
-
-
-        /*
-         * Здесь:
-         *
-         * Top = 180
-         * Bottom = -180
-         * CanvasGroup Alpha = 1
-         * Blur = maxBlurWeight
-         */
-
-
-        /*
-         * Веки должны пережить
-         * смену сцены.
-         */
-        MakePersistent();
-
 
         // =====================================================
         // ПРОДОЛЖИТЬ
@@ -319,13 +307,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             transitionRunning = false;
-
-
-            /*
-             * LoadingManager продолжает
-             * свою загрузку самостоятельно.
-             */
-            Destroy(gameObject);
 
             yield break;
         }
@@ -476,8 +457,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         transitionRunning = false;
-
-        Destroy(gameObject);
     }
 
 
@@ -792,6 +771,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
             blinkCanvasGroup.blocksRaycasts = false;
         }
 
+        SetEyesOpenImmediate();
 
         SetBlurImmediate(
             initialBlurWeight
@@ -936,6 +916,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
             blinkCanvasGroup.blocksRaycasts = false;
         }
 
+        SetEyesOpenImmediate();
 
         if (!screenSaverOwnsSameBlur)
         {
@@ -989,6 +970,17 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         SetBottomY(
             bottomClosedY
+        );
+    }
+
+    private void SetEyesOpenImmediate()
+    {
+        SetTopY(
+            topStartY
+        );
+
+        SetBottomY(
+            bottomStartY
         );
     }
 
@@ -1048,6 +1040,20 @@ public class MainMenuBlinkTransition : MonoBehaviour
             Mathf.Clamp01(weight);
     }
 
+    private bool FindMainMenuController()
+    {
+        if (mainMenuController != null)
+            return true;
+
+
+        mainMenuController =
+            FindFirstObjectByType<MainMenuController>(
+                FindObjectsInactive.Include
+            );
+
+
+        return mainMenuController != null;
+    }
 
     // =========================================================
     // ЕСЛИ NEW GAME НЕ ЗАГРУЗИЛСЯ
@@ -1076,39 +1082,5 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         transitionRunning = false;
-
-        Destroy(gameObject);
-    }
-
-
-    // =========================================================
-    // ПЕРЕЖИВАЕМ СМЕНУ СЦЕНЫ
-    // =========================================================
-
-    private void MakePersistent()
-    {
-        if (madePersistent)
-            return;
-
-
-        madePersistent = true;
-
-
-        /*
-         * DontDestroyOnLoad корректно работает
-         * с root GameObject.
-         */
-        if (transform.parent != null)
-        {
-            transform.SetParent(
-                null,
-                true
-            );
-        }
-
-
-        DontDestroyOnLoad(
-            gameObject
-        );
     }
 }

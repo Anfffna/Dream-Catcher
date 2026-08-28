@@ -63,6 +63,8 @@ public class MainMenuRemoteController : MonoBehaviour
             Animator.StringToHash(
                 defaultStateName
             );
+
+        FindBlinkTransition();
     }
 
 
@@ -198,20 +200,10 @@ public class MainMenuRemoteController : MonoBehaviour
         {
             case PendingAction.NewGame:
 
-                if (blinkTransition != null)
+                if (FindBlinkTransition())
                 {
                     blinkTransition
                         .PlayNewGame();
-                }
-                else if (mainMenuController != null)
-                {
-                    /*
-                     * Страховка:
-                     * если BlinkTransition забыли назначить,
-                     * старая рабочая логика не ломается.
-                     */
-                    mainMenuController
-                        .StartGame();
                 }
 
                 break;
@@ -219,15 +211,10 @@ public class MainMenuRemoteController : MonoBehaviour
 
             case PendingAction.Continue:
 
-                if (blinkTransition != null)
+                if (FindBlinkTransition())
                 {
                     blinkTransition
                         .PlayContinue();
-                }
-                else if (mainMenuController != null)
-                {
-                    mainMenuController
-                        .OnContinueButton();
                 }
 
                 break;
@@ -324,6 +311,18 @@ public class MainMenuRemoteController : MonoBehaviour
         FinishCurrentButtonAnimation();
     }
 
+    private bool FindBlinkTransition()
+    {
+        if (blinkTransition != null)
+            return true;
+
+        blinkTransition =
+            FindFirstObjectByType<MainMenuBlinkTransition>(
+                FindObjectsInactive.Include
+            );
+
+        return blinkTransition != null;
+    }
 
     private void FinishCurrentButtonAnimation()
     {

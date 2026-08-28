@@ -53,6 +53,13 @@ public class LoadingManager : MonoBehaviour
     [Tooltip("Время появления и исчезновения каждого слоя.")]
     [SerializeField] private float fadeDuration = 0.5f;
 
+    [Tooltip(
+    "На сколько секунд верхняя картинка начинает появляться раньше фона. " +
+    "0 = оба слоя появляются одновременно."
+    )]
+    [SerializeField]
+    private float loadingImageHeadStart = 0f;
+
     [Header("Игрок")]
     [SerializeField] private PlayerController playerController;
 
@@ -186,18 +193,10 @@ public class LoadingManager : MonoBehaviour
         SelectRandomLoadingVisuals();
         PrepareLoadingVisuals();
 
-        // Сначала плавно показываем цветной фон.
+        // Фон и верхняя картинка
+        // проявляются практически одновременно.
         yield return StartCoroutine(
-            FadeIn(
-                loadingBackgroundCanvasGroup
-            )
-        );
-
-        // Затем плавно показываем цветную картинку.
-        yield return StartCoroutine(
-            FadeIn(
-                loadingImageCanvasGroup
-            )
+            FadeInLoadingVisualsTogether()
         );
 
         DisablePlayerFootsteps();
@@ -367,6 +366,72 @@ public class LoadingManager : MonoBehaviour
         canvasGroup.alpha = 0f;
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = true;
+    }
+
+    private IEnumerator FadeInLoadingVisualsTogether()
+    {
+        float headStart =
+            Mathf.Max(
+                0f,
+                loadingImageHeadStart
+            );
+
+
+        Coroutine imageFade = null;
+        Coroutine backgroundFade = null;
+
+
+        /*
+         * Сначала запускаем верхнюю картинку.
+         */
+        if (loadingImageCanvasGroup != null)
+        {
+            imageFade =
+                StartCoroutine(
+                    FadeIn(
+                        loadingImageCanvasGroup
+                    )
+                );
+        }
+
+
+        /*
+         * Если Head Start = 0,
+         * фон запускается в тот же кадр.
+         */
+        if (headStart > 0f)
+        {
+            yield return
+                new WaitForSecondsRealtime(
+                    headStart
+                );
+        }
+
+
+        if (loadingBackgroundCanvasGroup != null)
+        {
+            backgroundFade =
+                StartCoroutine(
+                    FadeIn(
+                        loadingBackgroundCanvasGroup
+                    )
+                );
+        }
+
+
+        /*
+         * Ждём завершения обоих Fade.
+         */
+        if (imageFade != null)
+        {
+            yield return imageFade;
+        }
+
+
+        if (backgroundFade != null)
+        {
+            yield return backgroundFade;
+        }
     }
 
     private IEnumerator FadeIn(
