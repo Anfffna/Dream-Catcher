@@ -1,70 +1,98 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using System.Collections;
 
 public class MainMenuBlinkTransition : MonoBehaviour
 {
     [Header("Веки")]
+
     [Tooltip("Верхнее веко.")]
-    [SerializeField] private RectTransform topEyelid;
+    [SerializeField]
+    private RectTransform topEyelid;
 
     [Tooltip("Нижнее веко.")]
-    [SerializeField] private RectTransform bottomEyelid;
+    [SerializeField]
+    private RectTransform bottomEyelid;
 
     [Tooltip("CanvasGroup общего Canvas с веками.")]
-    [SerializeField] private CanvasGroup blinkCanvasGroup;
+    [SerializeField]
+    private CanvasGroup blinkCanvasGroup;
 
 
     [Header("Закрытое положение")]
+
     [Tooltip("Pos Y верхнего века при полностью закрытых глазах.")]
-    [SerializeField] private float topClosedY = 180f;
+    [SerializeField]
+    private float topClosedY = 180f;
 
     [Tooltip("Pos Y нижнего века при полностью закрытых глазах.")]
-    [SerializeField] private float bottomClosedY = -180f;
+    [SerializeField]
+    private float bottomClosedY = -180f;
 
 
     [Header("Размытие")]
-    [Tooltip(
-        "Рабочий Global Volume с блюром. " +
-        "Назначь тот же Volume, который используется паузой."
-    )]
-    [SerializeField] private Volume blurVolume;
 
     [Tooltip(
-        "На какой части закрывания начинает появляться блюр. " +
-        "Например 0.6 = блюр начинает усиливаться после 60% закрывания."
+        "Отдельный Global Volume для моргания. " +
+        "Назначается вручную в Inspector."
+    )]
+    [SerializeField]
+    private Volume blurVolume;
+
+    [Tooltip(
+        "На какой части закрывания начинает появляться размытие. " +
+        "0 = с самого начала."
     )]
     [Range(0f, 1f)]
-    [SerializeField] private float blurStartNormalized = 0.6f;
+    [SerializeField]
+    private float blurStartNormalized = 0f;
 
-    [Tooltip("Максимальный Weight блюра.")]
-    [Range(0f, 1f)]
-    [SerializeField] private float maxBlurWeight = 1f;
+    [Tooltip(
+        "Aperture в начале. " +
+        "Большое значение = почти нет размытия."
+    )]
+    [Range(1f, 32f)]
+    [SerializeField]
+    private float sharpAperture = 32f;
+
+    [Tooltip(
+        "Aperture в конце закрывания. " +
+        "Маленькое значение = сильное размытие."
+    )]
+    [Range(1f, 32f)]
+    [SerializeField]
+    private float blurredAperture = 1f;
 
 
     [Header("Скорость")]
+
     [Tooltip("Сколько секунд закрываются глаза.")]
-    [SerializeField] private float closeDuration = 0.42f;
+    [SerializeField]
+    private float closeDuration = 0.42f;
 
     [Tooltip(
         "За сколько секунд закрытые веки растворяются " +
-        "над загрузочным экраном или ScreenSaver."
+        "над Loading Screen или ScreenSaver."
     )]
-    [SerializeField] private float fadeAwayDuration = 0.5f;
+    [SerializeField]
+    private float fadeAwayDuration = 0.5f;
 
 
     [Header("Меню")]
-    [Tooltip("Существующий MainMenuController.")]
-    [SerializeField] private MainMenuController mainMenuController;
 
+    [Tooltip("MainMenuController текущей сцены.")]
+    [SerializeField]
+    private MainMenuController mainMenuController;
+
+
+    private DepthOfField blinkDepthOfField;
 
     private bool transitionRunning;
 
     private float topStartY;
     private float bottomStartY;
-
-    private float initialBlurWeight;
 
 
     // =========================================================
@@ -77,6 +105,8 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         CaptureInitialState();
 
+        InitializeBlur();
+
         SetEyesOpenImmediate();
 
         if (blinkCanvasGroup != null)
@@ -85,6 +115,54 @@ public class MainMenuBlinkTransition : MonoBehaviour
             blinkCanvasGroup.interactable = false;
             blinkCanvasGroup.blocksRaycasts = false;
         }
+    }
+
+
+    // =========================================================
+    // НАСТРОЙКА BLUR
+    // =========================================================
+
+    private void InitializeBlur()
+    {
+        blinkDepthOfField = null;
+
+        if (blurVolume == null)
+            return;
+
+        /*
+         * Берём runtime-копию назначенного Volume Profile.
+         *
+         * Никаких FindObject здесь нет.
+         * Volume уже назначен руками в Inspector.
+         *
+         * TryGet выполняется только один раз при Start().
+         */
+        VolumeProfile runtimeProfile =
+            blurVolume.profile;
+
+        if (runtimeProfile == null)
+            return;
+
+        runtimeProfile.TryGet(
+            out blinkDepthOfField
+        );
+
+        if (blinkDepthOfField != null)
+        {
+            blinkDepthOfField
+                .aperture
+                .overrideState = true;
+
+            blinkDepthOfField
+                .aperture
+                .value = sharpAperture;
+        }
+
+        /*
+         * Пока моргания нет,
+         * наш отдельный Volume ничего не делает.
+         */
+        blurVolume.weight = 0f;
     }
 
 
@@ -101,11 +179,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
             return;
 
 
-        /*
-         * Звук происходит сразу:
-         * этот метод вызывается Animation Event'ом
-         * в момент физического нажатия кнопки пульта.
-         */
         mainMenuController
             .PlayTransitionButtonSound();
 
@@ -131,7 +204,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         /*
          * Если сохранений нет,
-         * не запускаем моргание.
+         * моргание не запускаем.
          */
         if (SaveManager.Instance == null ||
             !SaveManager.Instance.HasAnySaves())
@@ -143,10 +216,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
         }
 
 
-        /*
-         * Звук — в момент физического
-         * нажатия пальцем.
-         */
         mainMenuController
             .PlayTransitionButtonSound();
 
@@ -158,7 +227,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
     // =========================================================
-    // ПОДТВЕРЖДЕНИЕ ВЫХОДА
+    // ВЫХОД ИЗ ИГРЫ
     // =========================================================
 
     public void PlayQuitAndExit()
@@ -174,7 +243,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
     // =========================================================
-    // ОБЩАЯ ПОДГОТОВКА
+    // ПОДГОТОВКА ПЕРЕХОДА
     // =========================================================
 
     private void PrepareTransition()
@@ -183,22 +252,18 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         /*
-         * Включаем Canvas только
-         * непосредственно перед переходом.
+         * Каждый новый переход начинаем
+         * из настоящего открытого положения.
          */
+        SetEyesOpenImmediate();
+
+
         if (blinkCanvasGroup != null)
         {
             blinkCanvasGroup.alpha = 1f;
             blinkCanvasGroup.interactable = false;
             blinkCanvasGroup.blocksRaycasts = true;
         }
-
-
-        /*
-         * Каждый переход начинается
-         * с исходного открытого положения.
-         */
-        SetEyesOpenImmediate();
 
 
         if (PauseManager.Instance != null)
@@ -208,10 +273,21 @@ public class MainMenuBlinkTransition : MonoBehaviour
         }
 
 
-        initialBlurWeight =
-            blurVolume != null
-                ? blurVolume.weight
-                : 0f;
+        /*
+         * Ставим Aperture в резкое состояние,
+         * а сам Volume включаем сразу.
+         *
+         * Weight больше НЕ анимируется.
+         */
+        SetBlurApertureImmediate(
+            sharpAperture
+        );
+
+
+        if (blurVolume != null)
+        {
+            blurVolume.weight = 1f;
+        }
     }
 
 
@@ -231,25 +307,19 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         yield return CloseEyes();
 
+
         // =====================================================
-        // ПРОДОЛЖИТЬ
+        // CONTINUE
         // =====================================================
 
         if (continueGame)
         {
-            /*
-             * Звук здесь уже НЕ проигрываем.
-             *
-             * Он прозвучал раньше,
-             * в момент Animation Event.
-             */
             mainMenuController
                 .ContinueWithoutButtonSound();
 
 
             /*
-             * Ждём, пока обычный LoadingManager
-             * реально начнёт загрузку.
+             * Ждём запуска LoadingManager.
              */
             float loadingStartTimeout = 5f;
 
@@ -272,11 +342,8 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * Ждём, пока его background
-             * полностью проявится.
-             *
-             * До этого веки остаются
-             * полностью непрозрачными.
+             * Ждём, пока loading background
+             * полностью закроет экран.
              */
             if (LoadingManager.Instance != null &&
                 LoadingManager.Instance.IsLoading)
@@ -299,8 +366,8 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * Теперь под веками уже
-             * готов обычный Loading Screen.
+             * Loading Screen уже под веками.
+             * Растворяем веки и убираем наш blur.
              */
             yield return
                 FadeClosedEyesAway();
@@ -313,7 +380,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         // =====================================================
-        // НОВАЯ ИГРА
+        // NEW GAME
         // =====================================================
 
         string oldSceneName =
@@ -323,9 +390,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         /*
-         * Только New Game:
-         *
-         * House загружается напрямую,
+         * New Game загружает House напрямую,
          * без обычного Loading Screen.
          */
         mainMenuController
@@ -360,12 +425,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
             yield return null;
         }
-
-
-        /*
-         * House уже активен,
-         * но веки всё ещё полностью закрыты.
-         */
 
 
         // =====================================================
@@ -422,29 +481,24 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
         /*
-         * Даём Unity реально отрисовать
-         * ScreenSaver хотя бы один кадр.
+         * Даём House реально отрисовать
+         * хотя бы один кадр под веками.
          */
         yield return
             new WaitForEndOfFrame();
 
 
         // =====================================================
-        // РАСТВОРЯЕМ ВЕКИ НАД SCREEN SAVER
+        // РАСТВОРЯЕМ ВЕКИ
         // =====================================================
 
         yield return
-            FadeClosedEyesForNewGame(
-                screenSaver
-            );
+            FadeClosedEyesForNewGame();
 
 
         /*
-         * В New Game LoadingManager
-         * вообще не запускался.
-         *
-         * Поэтому нашу блокировку курсора
-         * снимаем самостоятельно.
+         * New Game не использует обычный LoadingManager,
+         * поэтому снимаем блокировку сами.
          */
         if (PauseManager.Instance != null)
         {
@@ -469,27 +523,13 @@ public class MainMenuBlinkTransition : MonoBehaviour
         PrepareTransition();
 
 
-        /*
-         * Просто закрываем глаза.
-         *
-         * Никакого LoadingManager
-         * при выходе больше нет.
-         */
         yield return CloseEyes();
 
 
-        /*
-         * Даём полностью закрытому экрану
-         * реально отрисоваться.
-         */
         yield return
             new WaitForEndOfFrame();
 
 
-        /*
-         * И только после этого
-         * закрываем игру.
-         */
 #if UNITY_EDITOR
 
         UnityEditor.EditorApplication
@@ -519,10 +559,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
         float timer = 0f;
 
 
-        /*
-         * Берём именно исходные позиции,
-         * в которых веки стояли в сцене.
-         */
         float startTopY =
             topStartY;
 
@@ -530,23 +566,12 @@ public class MainMenuBlinkTransition : MonoBehaviour
             bottomStartY;
 
 
-        /*
-         * На случай, если Weight
-         * кто-то поменял после Start().
-         */
-        if (blurVolume != null)
-        {
-            initialBlurWeight =
-                blurVolume.weight;
-        }
-
-
         if (closeDuration <= 0f)
         {
             SetEyesClosedImmediate();
 
-            SetBlurImmediate(
-                maxBlurWeight
+            SetBlurApertureImmediate(
+                blurredAperture
             );
 
             yield break;
@@ -566,7 +591,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
                 );
 
 
-            float smoothT =
+            float smoothEyesT =
                 Mathf.SmoothStep(
                     0f,
                     1f,
@@ -582,7 +607,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
                 Mathf.Lerp(
                     startTopY,
                     topClosedY,
-                    smoothT
+                    smoothEyesT
                 )
             );
 
@@ -595,7 +620,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
                 Mathf.Lerp(
                     startBottomY,
                     bottomClosedY,
-                    smoothT
+                    smoothEyesT
                 )
             );
 
@@ -604,15 +629,8 @@ public class MainMenuBlinkTransition : MonoBehaviour
             // BLUR
             // =================================================
 
-            if (blurVolume != null &&
-                t >= blurStartNormalized)
+            if (t >= blurStartNormalized)
             {
-                /*
-                 * Превращаем участок
-                 * blurStartNormalized -> 1
-                 *
-                 * снова в диапазон 0 -> 1.
-                 */
                 float blurT =
                     Mathf.InverseLerp(
                         blurStartNormalized,
@@ -621,20 +639,27 @@ public class MainMenuBlinkTransition : MonoBehaviour
                     );
 
 
-                float smoothBlurT =
-                    Mathf.SmoothStep(
-                        0f,
-                        1f,
+                /*
+                 * ВАЖНО:
+                 * здесь больше не меняется Volume Weight.
+                 *
+                 * Focus Distance и Focal Length
+                 * остаются такими, какими ты их
+                 * настроила в Volume Profile.
+                 *
+                 * Двигается только Aperture.
+                 */
+                float aperture =
+                    Mathf.Lerp(
+                        sharpAperture,
+                        blurredAperture,
                         blurT
                     );
 
 
-                blurVolume.weight =
-                    Mathf.Lerp(
-                        initialBlurWeight,
-                        maxBlurWeight,
-                        smoothBlurT
-                    );
+                SetBlurApertureImmediate(
+                    aperture
+                );
             }
 
 
@@ -644,18 +669,19 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         /*
          * Гарантируем точное
-         * конечное положение.
+         * конечное состояние.
          */
         SetEyesClosedImmediate();
 
-        SetBlurImmediate(
-            maxBlurWeight
+
+        SetBlurApertureImmediate(
+            blurredAperture
         );
     }
 
 
     // =========================================================
-    // FADE ЗАКРЫТЫХ ВЕК ДЛЯ CONTINUE
+    // FADE ДЛЯ CONTINUE
     // =========================================================
 
     private IEnumerator FadeClosedEyesAway()
@@ -663,31 +689,14 @@ public class MainMenuBlinkTransition : MonoBehaviour
         float timer = 0f;
 
 
-        float startBlurWeight =
-            blurVolume != null
-                ? blurVolume.weight
-                : 0f;
-
-
-        /*
-         * Веки физически НЕ открываются.
-         */
         SetEyesClosedImmediate();
 
 
         if (fadeAwayDuration <= 0f)
         {
-            if (blinkCanvasGroup != null)
-            {
-                blinkCanvasGroup.alpha = 0f;
-                blinkCanvasGroup.blocksRaycasts = false;
-            }
-
-
-            SetBlurImmediate(
-                initialBlurWeight
-            );
-
+            HideBlinkCanvasImmediate();
+            DisableBlinkBlurImmediate();
+            SetEyesOpenImmediate();
 
             yield break;
         }
@@ -695,11 +704,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         while (timer < fadeAwayDuration)
         {
-            /*
-             * После тяжёлого кадра загрузки
-             * не разрешаем одному огромному
-             * deltaTime проглотить весь fade.
-             */
             float frameDelta =
                 Mathf.Min(
                     Time.unscaledDeltaTime,
@@ -726,14 +730,13 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * Веки всё время остаются
-             * в закрытом положении.
+             * Веки физически остаются закрытыми.
              */
             SetEyesClosedImmediate();
 
 
             /*
-             * Растворяем только CanvasGroup.
+             * Растворяем Canvas век.
              */
             if (blinkCanvasGroup != null)
             {
@@ -747,35 +750,32 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * И одновременно возвращаем
-             * наш blur к исходному состоянию.
+             * Одновременно возвращаем
+             * Aperture к резкому состоянию.
              */
-            if (blurVolume != null)
-            {
-                blurVolume.weight =
-                    Mathf.Lerp(
-                        startBlurWeight,
-                        initialBlurWeight,
-                        smoothT
-                    );
-            }
+            SetBlurApertureImmediate(
+                Mathf.Lerp(
+                    blurredAperture,
+                    sharpAperture,
+                    smoothT
+                )
+            );
 
 
             yield return null;
         }
 
 
-        if (blinkCanvasGroup != null)
-        {
-            blinkCanvasGroup.alpha = 0f;
-            blinkCanvasGroup.blocksRaycasts = false;
-        }
+        HideBlinkCanvasImmediate();
 
+        DisableBlinkBlurImmediate();
+
+        /*
+         * Canvas уже полностью прозрачный,
+         * поэтому незаметно возвращаем веки
+         * за экран.
+         */
         SetEyesOpenImmediate();
-
-        SetBlurImmediate(
-            initialBlurWeight
-        );
     }
 
 
@@ -783,31 +783,9 @@ public class MainMenuBlinkTransition : MonoBehaviour
     // FADE ДЛЯ NEW GAME
     // =========================================================
 
-    private IEnumerator FadeClosedEyesForNewGame(
-        ScreenSaver screenSaver)
+    private IEnumerator FadeClosedEyesForNewGame()
     {
         float timer = 0f;
-
-
-        /*
-         * В House ScreenSaver сам управляет
-         * своим wake-up blur.
-         *
-         * Если это тот же самый Volume,
-         * мы после загрузки House
-         * больше Weight не трогаем.
-         */
-        bool screenSaverOwnsSameBlur =
-            screenSaver != null &&
-            screenSaver.wakeUpBlurVolume != null &&
-            screenSaver.wakeUpBlurVolume ==
-                blurVolume;
-
-
-        float startBlurWeight =
-            blurVolume != null
-                ? blurVolume.weight
-                : 0f;
 
 
         SetEyesClosedImmediate();
@@ -815,28 +793,9 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         if (fadeAwayDuration <= 0f)
         {
-            if (blinkCanvasGroup != null)
-            {
-                blinkCanvasGroup.alpha = 0f;
-                blinkCanvasGroup.blocksRaycasts = false;
-            }
-
-
-            /*
-             * Если ScreenSaver использует
-             * другой Volume,
-             * возвращаем наш обратно.
-             *
-             * Если тот же —
-             * теперь им владеет ScreenSaver.
-             */
-            if (!screenSaverOwnsSameBlur)
-            {
-                SetBlurImmediate(
-                    initialBlurWeight
-                );
-            }
-
+            HideBlinkCanvasImmediate();
+            DisableBlinkBlurImmediate();
+            SetEyesOpenImmediate();
 
             yield break;
         }
@@ -870,13 +829,14 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * Веки НЕ открываются.
+             * Веки не открываются физически.
              */
             SetEyesClosedImmediate();
 
 
             /*
-             * Только растворяем их.
+             * Только растворяем их
+             * над уже готовым ScreenSaver.
              */
             if (blinkCanvasGroup != null)
             {
@@ -890,45 +850,48 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
 
             /*
-             * Если ScreenSaver уже управляет
-             * этим же Volume —
-             * вообще не вмешиваемся.
+             * Наш MainMenu blur одновременно
+             * плавно исчезает.
              */
-            if (!screenSaverOwnsSameBlur &&
-                blurVolume != null)
-            {
-                blurVolume.weight =
-                    Mathf.Lerp(
-                        startBlurWeight,
-                        initialBlurWeight,
-                        smoothT
-                    );
-            }
+            SetBlurApertureImmediate(
+                Mathf.Lerp(
+                    blurredAperture,
+                    sharpAperture,
+                    smoothT
+                )
+            );
 
 
             yield return null;
         }
 
 
-        if (blinkCanvasGroup != null)
-        {
-            blinkCanvasGroup.alpha = 0f;
-            blinkCanvasGroup.blocksRaycasts = false;
-        }
+        HideBlinkCanvasImmediate();
+
+        DisableBlinkBlurImmediate();
 
         SetEyesOpenImmediate();
-
-        if (!screenSaverOwnsSameBlur)
-        {
-            SetBlurImmediate(
-                initialBlurWeight
-            );
-        }
     }
 
 
     // =========================================================
-    // ИСХОДНОЕ СОСТОЯНИЕ
+    // BLINK CANVAS
+    // =========================================================
+
+    private void HideBlinkCanvasImmediate()
+    {
+        if (blinkCanvasGroup == null)
+            return;
+
+
+        blinkCanvasGroup.alpha = 0f;
+        blinkCanvasGroup.interactable = false;
+        blinkCanvasGroup.blocksRaycasts = false;
+    }
+
+
+    // =========================================================
+    // ИСХОДНОЕ СОСТОЯНИЕ ВЕК
     // =========================================================
 
     private void CaptureInitialState()
@@ -949,12 +912,6 @@ public class MainMenuBlinkTransition : MonoBehaviour
                     .anchoredPosition
                     .y;
         }
-
-
-        initialBlurWeight =
-            blurVolume != null
-                ? blurVolume.weight
-                : 0f;
     }
 
 
@@ -972,6 +929,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
             bottomClosedY
         );
     }
+
 
     private void SetEyesOpenImmediate()
     {
@@ -1029,19 +987,53 @@ public class MainMenuBlinkTransition : MonoBehaviour
     // BLUR
     // =========================================================
 
-    private void SetBlurImmediate(
-        float weight)
+    private void SetBlurApertureImmediate(
+        float aperture)
     {
-        if (blurVolume == null)
+        if (blinkDepthOfField == null)
             return;
 
 
-        blurVolume.weight =
-            Mathf.Clamp01(weight);
+        blinkDepthOfField
+            .aperture
+            .value =
+            Mathf.Clamp(
+                aperture,
+                1f,
+                32f
+            );
     }
+
+
+    private void DisableBlinkBlurImmediate()
+    {
+        SetBlurApertureImmediate(
+            sharpAperture
+        );
+
+
+        if (blurVolume != null)
+        {
+            blurVolume.weight = 0f;
+        }
+    }
+
+
+    // =========================================================
+    // MAIN MENU CONTROLLER
+    // =========================================================
 
     private bool FindMainMenuController()
     {
+        /*
+         * Этот поиск нужен из-за того,
+         * что BlinkTransition persistent,
+         * а MainMenuController создаётся
+         * заново при каждом входе в MainMenu.
+         *
+         * Он выполняется только при нажатии
+         * New Game / Continue, не в Update.
+         */
         if (mainMenuController != null)
             return true;
 
@@ -1055,18 +1047,13 @@ public class MainMenuBlinkTransition : MonoBehaviour
         return mainMenuController != null;
     }
 
+
     // =========================================================
     // ЕСЛИ NEW GAME НЕ ЗАГРУЗИЛСЯ
     // =========================================================
 
     private IEnumerator RecoverAfterFailedLoad()
     {
-        /*
-         * Даже при ошибке веки назад
-         * физически не открываем.
-         *
-         * Просто растворяем слой.
-         */
         yield return
             FadeClosedEyesAway();
 

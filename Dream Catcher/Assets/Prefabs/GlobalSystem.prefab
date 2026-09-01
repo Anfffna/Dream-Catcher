@@ -2767,7 +2767,7 @@ MonoBehaviour:
   loadingImage: {fileID: 1498219203229736815}
   loadingImageCanvasGroup: {fileID: 5183183636265517348}
   loadingSpinner: {fileID: 5014213721987740134}
-  fadeDuration: 1
+  fadeDuration: 0.3
   loadingImageHeadStart: 0
   playerController: {fileID: 0}
   autoFindReferences: 1
@@ -9625,13 +9625,14 @@ RectTransform:
   - {fileID: 8705673606425225545}
   - {fileID: 7759785434249346473}
   - {fileID: 856282875952170748}
-  - {fileID: 6513686321085771265}
-  - {fileID: 2957507242198956782}
   - {fileID: 8982541508764016463}
   - {fileID: 8560029822972769158}
   - {fileID: 1943443225002852096}
   - {fileID: 4647329371793877906}
   - {fileID: 4177965727355276829}
+  - {fileID: 6513686321085771265}
+  - {fileID: 2957507242198956782}
+  - {fileID: 6874754428525743985}
   - {fileID: 1241614259134024566}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -10673,6 +10674,55 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &8652650310841516403
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6874754428525743985}
+  - component: {fileID: 6161379133533889591}
+  m_Layer: 0
+  m_Name: BlurMenuEyes
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6874754428525743985
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8652650310841516403}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.009660601, y: 0.7070408, z: 0.009660601, w: 0.7070408}
+  m_LocalPosition: {x: -952.6485, y: -538.97906, z: -2.920258}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1359287595983016761}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6161379133533889591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8652650310841516403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 0
+  sharedProfile: {fileID: 11400000, guid: 352443ee604dbee4593e2b78c4cab0d0, type: 2}
 --- !u!1 &8654748190229193357
 GameObject:
   m_ObjectHideFlags: 0
@@ -10909,9 +10959,9 @@ MonoBehaviour:
   blinkCanvasGroup: {fileID: 678571745580460182}
   topClosedY: 180
   bottomClosedY: -180
-  blurVolume: {fileID: 6433492586192525242}
+  blurVolume: {fileID: 6161379133533889591}
   blurStartNormalized: 0
-  maxBlurWeight: 1
+  maxBlurWeight: 0.8
   closeDuration: 1
   fadeAwayDuration: 1
   mainMenuController: {fileID: 0}
