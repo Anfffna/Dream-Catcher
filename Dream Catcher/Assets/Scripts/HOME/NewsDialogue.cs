@@ -51,6 +51,17 @@ public class NewsDialogue : MonoBehaviour
     public bool hidePanelOnStart = true;
     public bool hidePanelOnEnd = true;
 
+    [Header("Auto Close Last Line")]
+
+    [Tooltip(
+    "Через сколько секунд последняя реплика каждого диалога " +
+    "сама пропускается. Пауза игры в это время не учитывается. " +
+    "0 = отключено."
+    )]
+    [Min(0f)]
+    [SerializeField]
+    private float lastLineAutoCloseDelay = 5f;
+
     private int currentLineIndex = 0;
 
     public static bool NewsBlocksPause { get; private set; }
@@ -67,6 +78,7 @@ public class NewsDialogue : MonoBehaviour
     private bool waitingForClickToResume = false;
 
     private Coroutine typingCoroutine;
+    private Coroutine lastLineAutoCloseCoroutine;
 
     void Start()
     {
@@ -253,6 +265,7 @@ public class NewsDialogue : MonoBehaviour
 
     void ShowLine(string line)
     {
+        StopLastLineAutoClose();
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
 
@@ -261,6 +274,7 @@ public class NewsDialogue : MonoBehaviour
 
     void ShowLineColored(string line, string hexColor)
     {
+        StopLastLineAutoClose();
         if (typingCoroutine != null)
             StopCoroutine(typingCoroutine);
 
@@ -292,6 +306,7 @@ public class NewsDialogue : MonoBehaviour
 
         isTyping = false;
         typingCoroutine = null;
+        TryStartLastLineAutoClose();
     }
 
     void SkipTyping()
@@ -322,10 +337,136 @@ public class NewsDialogue : MonoBehaviour
 
         isTyping = false;
         typingCoroutine = null;
+        TryStartLastLineAutoClose();
+    }
+
+    private void TryStartLastLineAutoClose()
+    {
+        StopLastLineAutoClose();
+
+        if (!dialogueActive)
+            return;
+
+        if (lastLineAutoCloseDelay <= 0f)
+            return;
+
+        if (!IsCurrentLineLast())
+            return;
+
+        lastLineAutoCloseCoroutine =
+            StartCoroutine(
+                LastLineAutoCloseRoutine()
+            );
+    }
+
+
+    private bool IsCurrentLineLast()
+    {
+        /*
+         * Если сейчас идёт диалог после вставания —
+         * смотрим последний элемент standDialogueLines.
+         */
+        if (standDialogueStarted)
+        {
+            return
+                standDialogueLines != null &&
+                standDialogueLines.Count > 0 &&
+                currentLineIndex >=
+                    standDialogueLines.Count - 1;
+        }
+
+        /*
+         * Иначе смотрим последний элемент
+         * обычного dialogueLines.
+         */
+        return
+            dialogueLines != null &&
+            dialogueLines.Count > 0 &&
+            currentLineIndex >=
+                dialogueLines.Count - 1;
+    }
+
+
+    private IEnumerator LastLineAutoCloseRoutine()
+    {
+        /*
+         * WaitForSeconds использует scaled time.
+         *
+         * Поэтому при Time.timeScale = 0
+         * эти 5 секунд не проходят.
+         */
+        yield return new WaitForSeconds(
+            lastLineAutoCloseDelay
+        );
+
+        lastLineAutoCloseCoroutine = null;
+
+
+        if (!dialogueActive ||
+            isTyping ||
+            !IsCurrentLineLast())
+        {
+            yield break;
+        }
+
+
+        // =====================================================
+        // ПОСЛЕДНЯЯ РЕПЛИКА ОСНОВНЫХ НОВОСТЕЙ
+        // =====================================================
+
+        if (!standDialogueStarted)
+        {
+            EndDialogue();
+
+            StartCoroutine(
+                StartStandDialogueDelayed()
+            );
+
+            yield break;
+        }
+
+
+        // =====================================================
+        // ПОСЛЕДНЯЯ РЕПЛИКА ПОСЛЕ ВСТАВАНИЯ
+        // =====================================================
+
+        EndDialogue();
+
+        allDialoguesFinished = true;
+        NewsBlocksPause = false;
+
+        FindReferences();
+
+        if (taskPanelController != null)
+        {
+            taskPanelController.panelUnlocked =
+                true;
+        }
+
+        if (questUIManager != null)
+        {
+            questUIManager.AddQuest(
+                "turn_on_light"
+            );
+        }
+    }
+
+
+    private void StopLastLineAutoClose()
+    {
+        if (lastLineAutoCloseCoroutine == null)
+            return;
+
+        StopCoroutine(
+            lastLineAutoCloseCoroutine
+        );
+
+        lastLineAutoCloseCoroutine = null;
     }
 
     void EndDialogue()
     {
+        StopLastLineAutoClose();
         dialogueActive = false;
         isTyping = false;
         waitingForClickToResume = false;
@@ -382,6 +523,7 @@ public class NewsDialogue : MonoBehaviour
 
     private void OnDestroy()
     {
+        StopLastLineAutoClose();
         NewsBlocksPause = false;
     }
 }

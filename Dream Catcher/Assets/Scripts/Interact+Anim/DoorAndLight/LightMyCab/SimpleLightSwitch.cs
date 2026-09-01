@@ -1,34 +1,38 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using System.Collections;
 
 public class SimpleLightSwitch :
     MonoBehaviour,
     IInteractable
 {
-    [Header("Lights")]
+    [Header("Light")]
 
-    [Tooltip("Первый источник света.")]
-    public Light roomLight1;
+    [Tooltip("Источник света.")]
+    [FormerlySerializedAs("roomLight1")]
+    [SerializeField]
+    private Light roomLight;
 
-    [Tooltip("Второй источник света.")]
-    public Light roomLight2;
 
-
-    [Header("Лампы — Emission")]
+    [Header("Лампа — Emission")]
 
     [Tooltip(
-        "Renderer первой лампы. " +
+        "Renderer лампы. " +
         "Цвет Emission берётся из её материала автоматически."
     )]
+    [FormerlySerializedAs("lampRenderer1")]
     [SerializeField]
-    private Renderer lampRenderer1;
+    private Renderer lampRenderer;
+
+
+    [Header("Анимация кнопки")]
 
     [Tooltip(
-        "Renderer второй лампы. " +
-        "Цвет Emission берётся из её материала автоматически."
+        "Animator кнопки выключателя. " +
+        "Можно оставить пустым, если у этого выключателя нет анимации."
     )]
     [SerializeField]
-    private Renderer lampRenderer2;
+    private Animator switchAnimator;
 
 
     [Header("Interaction Layer")]
@@ -63,16 +67,9 @@ public class SimpleLightSwitch :
 
 
     private MaterialPropertyBlock
-        lampPropertyBlock1;
+        lampPropertyBlock;
 
-    private MaterialPropertyBlock
-        lampPropertyBlock2;
-
-
-    private Color originalEmissionColor1 =
-        Color.white;
-
-    private Color originalEmissionColor2 =
+    private Color originalEmissionColor =
         Color.white;
 
 
@@ -83,18 +80,32 @@ public class SimpleLightSwitch :
             );
 
 
+    /*
+     * Названия Trigger фиксированные.
+     * В Inspector их задавать не нужно.
+     */
+    private static readonly int
+        VklTrigger =
+            Animator.StringToHash(
+                "Vkl"
+            );
+
+    private static readonly int
+        ViklTrigger =
+            Animator.StringToHash(
+                "Vikl"
+            );
+
+
     private void Awake()
     {
         SetInteractableLayer();
         FindOutline();
 
-        lampPropertyBlock1 =
+        lampPropertyBlock =
             new MaterialPropertyBlock();
 
-        lampPropertyBlock2 =
-            new MaterialPropertyBlock();
-
-        RememberEmissionColors();
+        RememberEmissionColor();
     }
 
 
@@ -103,17 +114,14 @@ public class SimpleLightSwitch :
         SetInteractableLayer();
         FindOutline();
 
-        // Определяем исходное состояние
-        // по первому доступному источнику света.
-        if (roomLight1 != null)
+        /*
+         * Исходное состояние выключателя
+         * берём из самого Light.
+         */
+        if (roomLight != null)
         {
             isOn =
-                roomLight1.enabled;
-        }
-        else if (roomLight2 != null)
-        {
-            isOn =
-                roomLight2.enabled;
+                roomLight.enabled;
         }
 
         if (audioSource == null)
@@ -122,8 +130,12 @@ public class SimpleLightSwitch :
                 GetComponent<AudioSource>();
         }
 
-        // Синхронизируем свет
-        // и визуальный Emission ламп.
+        /*
+         * Только синхронизируем свет
+         * и Emission.
+         *
+         * Анимацию при старте НЕ запускаем.
+         */
         ApplyLightState();
 
         if (showOutlineOnStart)
@@ -149,6 +161,8 @@ public class SimpleLightSwitch :
 
         ApplyLightState();
 
+        PlaySwitchAnimation();
+
         if (audioSource != null)
         {
             audioSource.Play();
@@ -159,36 +173,60 @@ public class SimpleLightSwitch :
 
 
     // =====================================================
-    // ОБЩЕЕ СОСТОЯНИЕ СВЕТА
+    // СОСТОЯНИЕ СВЕТА
     // =====================================================
 
     private void ApplyLightState()
     {
-        if (roomLight1 != null)
+        if (roomLight != null)
         {
-            roomLight1.enabled =
-                isOn;
-        }
-
-        if (roomLight2 != null)
-        {
-            roomLight2.enabled =
+            roomLight.enabled =
                 isOn;
         }
 
         SetLampEmission(
-            lampRenderer1,
-            lampPropertyBlock1,
-            originalEmissionColor1,
+            lampRenderer,
+            lampPropertyBlock,
+            originalEmissionColor,
             isOn
         );
+    }
 
-        SetLampEmission(
-            lampRenderer2,
-            lampPropertyBlock2,
-            originalEmissionColor2,
-            isOn
-        );
+
+    // =====================================================
+    // АНИМАЦИЯ КНОПКИ
+    // =====================================================
+
+    private void PlaySwitchAnimation()
+    {
+        if (switchAnimator == null)
+            return;
+
+
+        /*
+         * На всякий случай очищаем
+         * противоположный Trigger.
+         */
+        if (isOn)
+        {
+            switchAnimator.ResetTrigger(
+                ViklTrigger
+            );
+
+            switchAnimator.SetTrigger(
+                VklTrigger
+            );
+        }
+        else
+        {
+            switchAnimator.ResetTrigger(
+                VklTrigger
+            );
+
+            switchAnimator.SetTrigger(
+                ViklTrigger
+            );
+        }
     }
 
 
@@ -196,16 +234,11 @@ public class SimpleLightSwitch :
     // EMISSION
     // =====================================================
 
-    private void RememberEmissionColors()
+    private void RememberEmissionColor()
     {
-        originalEmissionColor1 =
+        originalEmissionColor =
             GetOriginalEmissionColor(
-                lampRenderer1
-            );
-
-        originalEmissionColor2 =
-            GetOriginalEmissionColor(
-                lampRenderer2
+                lampRenderer
             );
     }
 

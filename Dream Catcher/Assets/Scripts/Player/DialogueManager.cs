@@ -43,6 +43,17 @@ public class DialogueManager :
     public List<DialogueLine> dialogueLines =
         new List<DialogueLine>();
 
+    [Header("Auto Close Last Line")]
+
+    [Tooltip(
+    "Через сколько секунд последняя реплика обычного диалога " +
+    "сама закроется. Время во время паузы игры не учитывается. " +
+    "0 = отключено."
+    )]
+    [Min(0f)]
+    [SerializeField]
+    private float lastLineAutoCloseDelay = 8f;
+
     public float lettersPerSecond = 35f;
     public bool hidePanelOnStart = true;
     public bool hidePanelOnEnd = true;
@@ -94,6 +105,7 @@ public class DialogueManager :
 
     private Coroutine typingCoroutine;
     private Coroutine pauseCoroutine;
+    private Coroutine lastLineAutoCloseCoroutine;
 
     private PlayerController playerController;
 
@@ -339,6 +351,8 @@ public class DialogueManager :
     private void ShowLine(
         DialogueLine line)
     {
+        StopLastLineAutoClose();
+
         if (typingCoroutine != null)
         {
             StopCoroutine(
@@ -447,6 +461,11 @@ public class DialogueManager :
         }
 
         waitingForClickAfterTyping = true;
+
+        if (isLastLine)
+        {
+            StartLastLineAutoClose();
+        }
     }
 
     private void SkipTyping()
@@ -494,9 +513,15 @@ public class DialogueManager :
 
             UnregisterActiveDialogue();
         }
+
         else
         {
             waitingForClickAfterTyping = true;
+
+            if (isLastLine)
+            {
+                StartLastLineAutoClose();
+            }
         }
 
         if (!skipProtection)
@@ -519,6 +544,7 @@ public class DialogueManager :
 
     private void StartClickPauseAndNext()
     {
+        StopLastLineAutoClose();
         PauseCurrentVoiceAudio();
 
         float delay =
@@ -699,6 +725,103 @@ public class DialogueManager :
             );
     }
 
+    private void StartLastLineAutoClose()
+    {
+        StopLastLineAutoClose();
+
+        if (lastLineAutoCloseDelay <= 0f)
+            return;
+
+        /*
+         * Автозакрытие только для обычных диалогов.
+         *
+         * ChoicePrompt должен ждать выбора игрока.
+         * KeepLastLineVisible специально оставляет
+         * последнюю реплику на экране.
+         */
+        if (currentRunMode != DialogueRunMode.Normal)
+            return;
+
+        if (dialogueLines == null ||
+            currentLineIndex <
+                dialogueLines.Count - 1)
+        {
+            return;
+        }
+
+        lastLineAutoCloseCoroutine =
+            StartCoroutine(
+                LastLineAutoCloseRoutine()
+            );
+    }
+
+
+    private IEnumerator LastLineAutoCloseRoutine()
+    {
+        float elapsed = 0f;
+
+        while (elapsed <
+               lastLineAutoCloseDelay)
+        {
+            /*
+             * Если диалог уже закончился
+             * или игрок сам переключил реплику —
+             * таймер больше не нужен.
+             */
+            if (!dialogueActive ||
+                !waitingForClickAfterTyping)
+            {
+                lastLineAutoCloseCoroutine =
+                    null;
+
+                yield break;
+            }
+
+            /*
+             * Time.deltaTime зависит от Time.timeScale.
+             *
+             * Поэтому при обычной игровой паузе
+             * с Time.timeScale = 0
+             * эти 8 секунд НЕ идут.
+             */
+            elapsed += Time.deltaTime;
+
+            yield return null;
+        }
+
+
+        lastLineAutoCloseCoroutine = null;
+
+
+        if (!dialogueActive ||
+            !waitingForClickAfterTyping)
+        {
+            yield break;
+        }
+
+
+        waitingForClickAfterTyping = false;
+
+        /*
+         * Это настоящая последняя реплика списка,
+         * поэтому просто заканчиваем диалог.
+         */
+        EndDialogue();
+    }
+
+
+    private void StopLastLineAutoClose()
+    {
+        if (lastLineAutoCloseCoroutine == null)
+            return;
+
+        StopCoroutine(
+            lastLineAutoCloseCoroutine
+        );
+
+        lastLineAutoCloseCoroutine = null;
+    }
+
     private void EndDialogue()
     {
         bool keepPanelVisible =
@@ -714,6 +837,7 @@ public class DialogueManager :
     private void EndDialogueInternal(
         bool keepPanelVisible)
     {
+        StopLastLineAutoClose();
         PauseCurrentVoiceAudio();
 
         dialogueActive = false;
@@ -840,6 +964,7 @@ public class DialogueManager :
 
     private void OnDisable()
     {
+        StopLastLineAutoClose();
         PauseCurrentVoiceAudio();
 
         if (typingCoroutine != null)

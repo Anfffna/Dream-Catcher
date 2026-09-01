@@ -47,6 +47,15 @@ public class SymptomRequirementWarningController :
     private float hideDuration =
         0.25f;
 
+    [Header("Связанная стрелка")]
+
+    [Tooltip(
+    "Стрелка, которая должна мигать при этом предупреждении. " +
+    "Можно оставить пустым."
+    )]
+    [SerializeField]
+    private BackToWorkViewButtonController warningArrow;
+
     private Vector2 visiblePosition;
     private Vector2 hiddenPosition;
 
@@ -106,6 +115,11 @@ public class SymptomRequirementWarningController :
             hiddenPosition,
             0f
         );
+
+        if (warningArrow != null)
+        {
+            warningArrow.StopWarningBlink();
+        }
     }
 
     public void ShowWarning()
@@ -141,6 +155,11 @@ public class SymptomRequirementWarningController :
             hiddenPosition,
             0f
         );
+
+        if (warningArrow != null)
+        {
+            warningArrow.StopWarningBlink();
+        }
     }
 
     private void PlayNotificationSound()
@@ -160,6 +179,11 @@ public class SymptomRequirementWarningController :
     {
         PlayNotificationSound();
 
+        if (warningArrow != null)
+        {
+            warningArrow.StartWarningBlink();
+        }
+
         yield return AnimateTo(
             visiblePosition,
             1f,
@@ -178,6 +202,11 @@ public class SymptomRequirementWarningController :
             0f,
             hideDuration
         );
+
+        if (warningArrow != null)
+        {
+            warningArrow.StopWarningBlink();
+        }
 
         warningRoutine = null;
     }

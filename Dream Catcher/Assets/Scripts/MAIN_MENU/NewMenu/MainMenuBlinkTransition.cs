@@ -704,14 +704,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         while (timer < fadeAwayDuration)
         {
-            float frameDelta =
-                Mathf.Min(
-                    Time.unscaledDeltaTime,
-                    0.05f
-                );
-
-
-            timer += frameDelta;
+            timer += Time.unscaledDeltaTime;
 
 
             float t =
@@ -803,14 +796,7 @@ public class MainMenuBlinkTransition : MonoBehaviour
 
         while (timer < fadeAwayDuration)
         {
-            float frameDelta =
-                Mathf.Min(
-                    Time.unscaledDeltaTime,
-                    0.05f
-                );
-
-
-            timer += frameDelta;
+            timer += Time.unscaledDeltaTime;
 
 
             float t =

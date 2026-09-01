@@ -101,7 +101,7 @@ MonoBehaviour:
   playerCameraObjectName: Camera
   interactionDotObjectName: InteractionDot
   playerCamera: {fileID: 2627596078083935626}
-  interactionDistance: 1
+  interactionDistance: 1.3
   interactionKey: 101
   interactableLayers:
     serializedVersion: 2

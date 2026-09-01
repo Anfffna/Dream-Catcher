@@ -37,6 +37,20 @@ public class BackToWorkViewButtonController :
     private float fadeDuration =
         0.7f;
 
+    [Header("ћигание предупреждени€")]
+
+    [Tooltip("ћинимальна€ прозрачность стрелки во врем€ мигани€.")]
+    [Range(0f, 1f)]
+    [SerializeField]
+    private float warningBlinkMinAlpha = 0.6f;
+
+    [Tooltip("—корость плавного мигани€.")]
+    [SerializeField]
+    private float warningBlinkSpeed = 1.5f;
+
+    private Coroutine warningBlinkCoroutine;
+    private bool warningBlinkRequested;
+
     private Coroutine fadeCoroutine;
 
     private bool returnInProgress;
@@ -193,9 +207,11 @@ public class BackToWorkViewButtonController :
     }
 
     private void StartFade(
-        bool visible,
-        float duration)
+    bool visible,
+    float duration)
     {
+        StopWarningBlinkRoutine();
+
         if (fadeCoroutine != null)
         {
             StopCoroutine(
@@ -212,6 +228,109 @@ public class BackToWorkViewButtonController :
                     duration
                 )
             );
+    }
+
+    public void StartWarningBlink()
+    {
+        warningBlinkRequested = true;
+
+        /*
+         * ≈сли стрелка уже полностью показана,
+         * сразу начинаем мигание.
+         *
+         * ≈сли она ещЄ по€вл€етс€,
+         * мигание запуститс€ после fade.
+         */
+        if (targetVisible &&
+            fadeCoroutine == null &&
+            canvasGroup != null &&
+            canvasGroup.alpha > 0.99f)
+        {
+            StartWarningBlinkRoutine();
+        }
+    }
+
+
+    public void StopWarningBlink()
+    {
+        warningBlinkRequested = false;
+
+        StopWarningBlinkRoutine();
+
+        /*
+         * ≈сли стрелка сейчас просто видима,
+         * возвращаем обычную прозрачность.
+         */
+        if (targetVisible &&
+            fadeCoroutine == null &&
+            canvasGroup != null)
+        {
+            canvasGroup.alpha = 1f;
+        }
+    }
+
+    private void StartWarningBlinkRoutine()
+    {
+        if (warningBlinkCoroutine != null)
+            return;
+
+        if (canvasGroup == null)
+            return;
+
+        warningBlinkCoroutine =
+            StartCoroutine(
+                WarningBlinkRoutine()
+            );
+    }
+
+
+    private void StopWarningBlinkRoutine()
+    {
+        if (warningBlinkCoroutine == null)
+            return;
+
+        StopCoroutine(
+            warningBlinkCoroutine
+        );
+
+        warningBlinkCoroutine = null;
+    }
+
+
+    private IEnumerator WarningBlinkRoutine()
+    {
+        float elapsed = 0f;
+
+        while (warningBlinkRequested &&
+               targetVisible)
+        {
+            elapsed +=
+                Time.unscaledDeltaTime;
+
+            float wave =
+                (Mathf.Sin(
+                    elapsed *
+                    warningBlinkSpeed *
+                    Mathf.PI * 2f
+                ) + 1f) * 0.5f;
+
+            canvasGroup.alpha =
+                Mathf.Lerp(
+                    warningBlinkMinAlpha,
+                    1f,
+                    wave
+                );
+
+            yield return null;
+        }
+
+        warningBlinkCoroutine = null;
+
+        if (targetVisible &&
+            canvasGroup != null)
+        {
+            canvasGroup.alpha = 1f;
+        }
     }
 
     private IEnumerator FadeRoutine(
@@ -327,6 +446,12 @@ public class BackToWorkViewButtonController :
         {
             returnInProgress =
                 false;
+        }
+
+        if (visible &&
+            warningBlinkRequested)
+        {
+            StartWarningBlinkRoutine();
         }
 
         fadeCoroutine = null;

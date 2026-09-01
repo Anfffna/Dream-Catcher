@@ -1395,7 +1395,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 1b9be0003262b414a977a7e43d8abef5, type: 3}
+  m_Resource: {fileID: 8300000, guid: 559262b32e1799947aca3d576be62d2e, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -3150,6 +3150,37 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 57}
   m_SizeDelta: {x: 583, y: 27}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &762503192 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7230717154746963387, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &762503194 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 537921150148567287, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+  m_PrefabInstance: {fileID: 2093807259}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 762503192}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+--- !u!114 &762503195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 762503192}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4790e4110feecec429a65f6ee3d08b72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlobalContrastByScene
+  volume: {fileID: 762503194}
+  defaultContrast: 20
+  mainMenuContrast: 0
 --- !u!1 &777486748
 GameObject:
   m_ObjectHideFlags: 0
@@ -5779,8 +5810,8 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 0.8867924, g: 0.67681444, b: 0.15895326, a: 1}
-  m_Intensity: 1
-  m_Range: 2
+  m_Intensity: 0.4
+  m_Range: 1.5
   m_SpotAngle: 137.12363
   m_InnerSpotAngle: 93.52485
   m_CookieSize2D: {x: 10, y: 10}
@@ -5842,7 +5873,7 @@ Transform:
   m_GameObject: {fileID: 1217680695}
   serializedVersion: 2
   m_LocalRotation: {x: -0.36145929, y: -0.60773945, z: 0.6077394, w: -0.36145926}
-  m_LocalPosition: {x: 6.796, y: 0.83, z: -3.39}
+  m_LocalPosition: {x: 6.898, y: 0.83, z: -3.586}
   m_LocalScale: {x: 113.14426, y: 79.20096, z: 113.14428}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6689,7 +6720,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 0.9411765, g: 0.81960785, b: 0.3882353, a: 1}
-  m_Intensity: 4
+  m_Intensity: 4.5
   m_Range: 5
   m_SpotAngle: 137.12363
   m_InnerSpotAngle: 93.52485
@@ -15658,6 +15689,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1720287660090059054, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      propertyPath: lastLineAutoCloseDelay
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 1885719627326630055, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -15688,7 +15723,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3510984176387270585, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: fadeAwayDuration
-      value: 0.05
+      value: 0.02
       objectReference: {fileID: 0}
     - target: {fileID: 3510984176387270585, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
       propertyPath: mainMenuController
@@ -15865,7 +15900,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7230717154746963387, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 762503195}
   m_SourcePrefab: {fileID: 100100000, guid: 5a21b33a7b05af54fba57805178c5f28, type: 3}
 --- !u!1 &2108489075
 GameObject:
