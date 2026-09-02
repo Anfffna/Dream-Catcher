@@ -425,7 +425,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 138976844}
         m_TargetAssemblyTypeName: MainMenuBlinkTransition, Assembly-CSharp
         m_MethodName: PlayQuitAndExit
         m_Mode: 1
@@ -3179,8 +3179,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalContrastByScene
   volume: {fileID: 762503194}
-  defaultContrast: 20
-  mainMenuContrast: 0
+  defaultContrast: 10
+  mainMenuContrast: 12
 --- !u!1 &777486748
 GameObject:
   m_ObjectHideFlags: 0
@@ -3752,7 +3752,7 @@ Transform:
   m_GameObject: {fileID: 882422007}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.045461, y: 0.002619, z: 0.01897}
+  m_LocalPosition: {x: -0.045461, y: 0.002505, z: 0.01897}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5810,8 +5810,8 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 0.8867924, g: 0.67681444, b: 0.15895326, a: 1}
-  m_Intensity: 0.4
-  m_Range: 1.5
+  m_Intensity: 0.55
+  m_Range: 1.6
   m_SpotAngle: 137.12363
   m_InnerSpotAngle: 93.52485
   m_CookieSize2D: {x: 10, y: 10}

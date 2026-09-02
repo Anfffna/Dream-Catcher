@@ -54,7 +54,20 @@ public class PlayerWorkSeatController : MonoBehaviour
         if (!IsSeated)
             return;
 
-        if (playerController == null || seatPoint == null)
+        if (playerController == null ||
+            seatPoint == null)
+        {
+            return;
+        }
+
+        /*
+         * ≈сли управление камерой временно заблокировано,
+         * рабочий обзор тоже не должен трогать камеру.
+         *
+         * Ќапример, во врем€ приближени€
+         * к монитору и обратного зума.
+         */
+        if (!playerController.canControl)
             return;
 
         playerController.UpdateWorkLookSettings(

@@ -156,11 +156,11 @@ public class BackToWorkViewButtonController :
             return;
         }
 
-        if (computerNavigation != null)
-        {
-            computerNavigation
-                .CloseAllPopups();
-        }
+        //if (computerNavigation != null)
+        //{
+        //    computerNavigation
+        //        .CloseAllPopups();
+        //}
 
         bool returnStarted =
             zoomComputerWork
