@@ -13,13 +13,6 @@ public class TVController : MonoBehaviour
     public string screenObjectName = "Quad";
     public Renderer screenRenderer;
 
-    [Header("Render Texture Cleanup")]
-    public bool clearScreenOnStart = true;
-    public bool clearScreenBeforeNoise = true;
-    public bool clearScreenBeforeNews = true;
-    public bool clearScreenAfterNewsEnd = true;
-    public Color clearColor = Color.black;
-
     [Header("Noise")]
     public AudioClip tvNoiseClip;
 
@@ -49,8 +42,8 @@ public class TVController : MonoBehaviour
         FindReferences();
         SetupScreenMaterial();
 
-        if (clearScreenOnStart)
-            ClearTVScreen();
+        // Изначально экран новостей скрыт.
+        SetScreenVisible(false);
     }
 
     void OnEnable()
@@ -102,8 +95,8 @@ public class TVController : MonoBehaviour
             videoPlayer.time = 0;
         }
 
-        if (clearScreenBeforeNoise)
-            ClearTVScreen();
+        // Пока только шум — Quad с новостями скрыт.
+        SetScreenVisible(false);
 
         if (tvAudioSource == null || tvNoiseClip == null)
             return;
@@ -157,7 +150,8 @@ public class TVController : MonoBehaviour
         videoPlayer.time = 0;
         videoPlayer.clip = clip;
 
-        ClearTVScreen();
+        // Новый клип установлен, но пока не запущен.
+        SetScreenVisible(false);
     }
 
     private IEnumerator FadeNoiseIn()
@@ -176,7 +170,11 @@ public class TVController : MonoBehaviour
                 ? 1f
                 : Mathf.Clamp01(t / noiseFadeInDuration);
 
-            tvAudioSource.volume = Mathf.Lerp(startVolume, noiseTargetVolume, k);
+            tvAudioSource.volume = Mathf.Lerp(
+                startVolume,
+                noiseTargetVolume,
+                k
+            );
 
             yield return null;
         }
@@ -200,7 +198,11 @@ public class TVController : MonoBehaviour
                     ? 1f
                     : Mathf.Clamp01(t / noiseFadeOutDuration);
 
-                tvAudioSource.volume = Mathf.Lerp(startVolume, 0f, k);
+                tvAudioSource.volume = Mathf.Lerp(
+                    startVolume,
+                    0f,
+                    k
+                );
 
                 yield return null;
             }
@@ -214,45 +216,36 @@ public class TVController : MonoBehaviour
         if (videoPlayer == null)
             yield break;
 
-        if (clearScreenBeforeNews)
-            ClearTVScreen();
-
         videoPlayer.Stop();
         videoPlayer.time = 0;
+
+        // Quad всё ещё скрыт, пока видео готовится.
+        SetScreenVisible(false);
 
         videoPlayer.Prepare();
 
         while (!videoPlayer.isPrepared)
             yield return null;
 
+        // Запускаем видео.
         videoPlayer.Play();
+
+        // И в этот же момент показываем Quad.
+        SetScreenVisible(true);
 
         noiseFadeCoroutine = null;
     }
 
     private void OnNewsVideoFinished(VideoPlayer vp)
     {
-        if (clearScreenAfterNewsEnd)
-            ClearTVScreen();
+        // Новости закончились — просто скрываем Quad.
+        SetScreenVisible(false);
     }
 
-    public void ClearTVScreen()
+    private void SetScreenVisible(bool visible)
     {
-        FindReferences();
-        SetupScreenMaterial();
-
-        if (targetTexture == null)
-            return;
-
-        if (!targetTexture.IsCreated())
-            targetTexture.Create();
-
-        RenderTexture previous = RenderTexture.active;
-
-        RenderTexture.active = targetTexture;
-        GL.Clear(true, true, clearColor);
-
-        RenderTexture.active = previous;
+        if (screenRenderer != null)
+            screenRenderer.enabled = visible;
     }
 
     private void SetupScreenMaterial()
@@ -266,18 +259,24 @@ public class TVController : MonoBehaviour
         if (screenRenderer == null)
             return;
 
-        // Важно: .material создаёт отдельный экземпляр материала только для телевизора.
-        // Так телевизор не будет случайно делить материал с постерами.
+        // Отдельный экземпляр материала только для телевизора.
+        // Цвета и Emission здесь НЕ меняются.
         if (screenMaterialInstance == null)
             screenMaterialInstance = screenRenderer.material;
 
         screenMaterialInstance.mainTexture = targetTexture;
 
         if (screenMaterialInstance.HasProperty("_BaseMap"))
-            screenMaterialInstance.SetTexture("_BaseMap", targetTexture);
+            screenMaterialInstance.SetTexture(
+                "_BaseMap",
+                targetTexture
+            );
 
         if (screenMaterialInstance.HasProperty("_EmissionMap"))
-            screenMaterialInstance.SetTexture("_EmissionMap", targetTexture);
+            screenMaterialInstance.SetTexture(
+                "_EmissionMap",
+                targetTexture
+            );
     }
 
     private void FindReferences()
@@ -305,7 +304,8 @@ public class TVController : MonoBehaviour
             return;
         }
 
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        Renderer[] renderers =
+            GetComponentsInChildren<Renderer>(true);
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -347,8 +347,12 @@ public class TVController : MonoBehaviour
             videoPlayer.time = 0;
         }
 
-        ClearTVScreen();
+        // При загрузке сейва новости уже пропущены,
+        // поэтому Quad скрыт.
+        SetScreenVisible(false);
 
-        Debug.Log("TVController: пропущен, потому что загружается сейв.");
+        Debug.Log(
+            "TVController: пропущен, потому что загружается сейв."
+        );
     }
 }

@@ -7123,7 +7123,7 @@ MonoBehaviour:
   clearScreenBeforeNoise: 1
   clearScreenBeforeNews: 1
   clearScreenAfterNewsEnd: 1
-  clearColor: {r: 0.093620524, g: 0.09913138, b: 0.10188681, a: 1}
+  clearColor: {r: 0.10943389, g: 0.10943389, b: 0.10943389, a: 1}
   tvNoiseClip: {fileID: 8300000, guid: 35fe571af8c90fe468b67f84846d760a, type: 3}
   noiseStartVolume: 0
   noiseTargetVolume: 0.5
