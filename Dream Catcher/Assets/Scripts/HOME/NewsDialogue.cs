@@ -128,7 +128,8 @@ public class NewsDialogue : MonoBehaviour
     {
         if (!dialogueActive) return;
 
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) ||
+            Input.GetKeyDown(KeyCode.Space))
         {
             if (isTyping)
             {

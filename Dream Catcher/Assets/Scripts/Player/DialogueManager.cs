@@ -149,7 +149,11 @@ public class DialogueManager :
         if (skipProtection)
             return;
 
-        if (!Input.GetMouseButtonDown(0))
+        bool skipPressed =
+            Input.GetMouseButtonDown(0) ||
+            Input.GetKeyDown(KeyCode.Space);
+
+        if (!skipPressed)
             return;
 
         // Исходная реплика меню вопросов

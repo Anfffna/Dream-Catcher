@@ -71,6 +71,90 @@ public class VisitorCaseData :
     }
 
     [Serializable]
+    public class ConditionalFinalDialogueData
+    {
+        public enum PersonalQuestionCondition
+        {
+            Any,
+            Asked,
+            NotAsked
+        }
+
+        [Header("Условия")]
+
+        [Tooltip(
+            "Условие по индивидуальному вопросу. " +
+            "Any — не учитывать."
+        )]
+        [SerializeField]
+        private PersonalQuestionCondition
+            personalQuestionCondition =
+                PersonalQuestionCondition.Any;
+
+        [Tooltip(
+            "Какое решение должно быть принято. " +
+            "None — решение пока не учитывать."
+        )]
+        [SerializeField]
+        private DirectionDecision requiredDecision =
+            DirectionDecision.None;
+
+
+        [Header("Диалог")]
+
+        [Tooltip(
+            "Финальный диалог, который используется, " +
+            "если все условия выше выполнены."
+        )]
+        [SerializeField]
+        private List<DialogueManager.DialogueLine>
+            dialogue =
+                new List<DialogueManager.DialogueLine>();
+
+
+        public List<DialogueManager.DialogueLine>
+            Dialogue =>
+                dialogue;
+
+
+        public bool HasDialogue =>
+            dialogue != null &&
+            dialogue.Count > 0;
+
+
+        public bool Matches(
+            bool personalQuestionAsked,
+            DirectionDecision actualDecision)
+        {
+            bool personalMatches =
+                personalQuestionCondition ==
+                    PersonalQuestionCondition.Any ||
+                (
+                    personalQuestionCondition ==
+                        PersonalQuestionCondition.Asked &&
+                    personalQuestionAsked
+                ) ||
+                (
+                    personalQuestionCondition ==
+                        PersonalQuestionCondition.NotAsked &&
+                    !personalQuestionAsked
+                );
+
+
+            bool decisionMatches =
+                requiredDecision ==
+                    DirectionDecision.None ||
+                requiredDecision ==
+                    actualDecision;
+
+
+            return
+                personalMatches &&
+                decisionMatches;
+        }
+    }
+
+    [Serializable]
     public class VisitorCaseVariant
     {
         [Header("Идентификатор варианта")]
@@ -144,6 +228,16 @@ public class VisitorCaseData :
             finalDialogue =
                 new List<DialogueManager.DialogueLine>();
 
+        [Tooltip(
+            "Особые варианты финального диалога. " +
+            "Проверяются сверху вниз. " +
+            "Если ни один не подходит — используется обычный Final Dialogue."
+        )]
+        [SerializeField]
+        private List<ConditionalFinalDialogueData>
+            conditionalFinalDialogues =
+                new List<ConditionalFinalDialogueData>();
+
         [Header("Запись сна")]
 
         [Tooltip("Видео сна для этого варианта. Пока можно оставить пустым.")]
@@ -169,6 +263,41 @@ public class VisitorCaseData :
         public List<DialogueManager.DialogueLine>
             FirstDialogue =>
                 firstDialogue;
+
+        public List<DialogueManager.DialogueLine>
+            ResolveFinalDialogue(
+                bool personalQuestionAsked,
+                DirectionDecision actualDecision =
+                    DirectionDecision.None)
+        {
+            if (conditionalFinalDialogues != null)
+            {
+                for (int i = 0;
+                     i < conditionalFinalDialogues.Count;
+                     i++)
+                {
+                    ConditionalFinalDialogueData
+                        conditionalDialogue =
+                            conditionalFinalDialogues[i];
+
+                    if (conditionalDialogue == null ||
+                        !conditionalDialogue.HasDialogue)
+                    {
+                        continue;
+                    }
+
+                    if (conditionalDialogue.Matches(
+                            personalQuestionAsked,
+                            actualDecision))
+                    {
+                        return
+                            conditionalDialogue.Dialogue;
+                    }
+                }
+            }
+
+            return finalDialogue;
+        }
 
         public bool GiveSon3DuringFirstDialogue =>
             giveSon3DuringFirstDialogue;

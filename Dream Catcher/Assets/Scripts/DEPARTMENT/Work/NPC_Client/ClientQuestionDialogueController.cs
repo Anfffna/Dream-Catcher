@@ -83,6 +83,9 @@ public class ClientQuestionDialogueController :
     public bool SymptomsDiscussed =>
     complaintsAsked;
 
+    public bool PersonalQuestionAsked =>
+    personalQuestionAsked;
+
     private void Awake()
     {
         FindReferences();

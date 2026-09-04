@@ -424,17 +424,21 @@ public class MainMenuController : MonoBehaviour
 
     public void ConfirmQuit()
     {
-        if (LoadingManager.Instance != null)
+        MainMenuBlinkTransition blinkTransition =
+            FindFirstObjectByType<MainMenuBlinkTransition>(
+                FindObjectsInactive.Include
+            );
+
+        if (blinkTransition == null)
         {
-            LoadingManager.Instance.QuitWithLoadingBackground();
+            Debug.LogWarning(
+                "MainMenuController: MainMenuBlinkTransition не найден."
+            );
+
             return;
         }
 
-#if UNITY_EDITOR
-    UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        blinkTransition.PlayQuitAndExit();
     }
 
     public void CancelQuit()

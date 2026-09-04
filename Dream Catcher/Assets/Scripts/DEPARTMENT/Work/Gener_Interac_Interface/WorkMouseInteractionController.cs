@@ -88,6 +88,16 @@ public class WorkMouseInteractionController :
             return;
         }
 
+        // Пока игрок переносит специальный предмет,
+        // никакие другие объекты рабочего места
+        // не принимают взаимодействие.
+        if (DeskCarryItemController
+                .AnyCarryInteractionActive)
+        {
+            SetHoveredInteractable(null);
+            return;
+        }
+
         bool isSeated =
             WorkSessionManager.Instance != null &&
             WorkSessionManager.Instance.IsSeated;

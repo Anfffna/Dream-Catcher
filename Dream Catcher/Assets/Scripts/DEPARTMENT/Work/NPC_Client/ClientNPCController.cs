@@ -91,7 +91,7 @@ public class ClientNPCController :
     [Tooltip(
     "Максимальное время ожидания " +
     "реального запуска Give_SON3."
-)]
+    )]
     [SerializeField]
     private float giveSon3StartTimeout =
     2f;
@@ -183,9 +183,24 @@ public class ClientNPCController :
     private Coroutine giveSon3Coroutine;
     private bool giveSon3AnimationReady;
 
+    private readonly HashSet<UnityEngine.Object>
+    finalCompletionBlockers =
+        new HashSet<UnityEngine.Object>();
+
     public bool IsFinished =>
         dialogueStage ==
             ClientDialogueStage.Completed;
+
+    public DialogueManager DialogueManagerReference =>
+    dialogueManager;
+
+    public ClientQuestionDialogueController
+        QuestionDialogueControllerReference =>
+            questionDialogueController;
+
+    public bool IsFinalDialogueRunning =>
+        dialogueStage ==
+            ClientDialogueStage.FinalDialogueRunning;
 
     public event Action<ClientNPCController>
         ClientFinished;
@@ -983,6 +998,41 @@ public class ClientNPCController :
         SetInteractionAvailable(true);
     }
 
+    public void BlockFinalCompletion(
+    UnityEngine.Object source)
+    {
+        if (source == null)
+            return;
+
+        finalCompletionBlockers.Add(
+            source
+        );
+    }
+
+
+    public void ReleaseFinalCompletion(
+        UnityEngine.Object source)
+    {
+        if (source == null)
+            return;
+
+        finalCompletionBlockers.Remove(
+            source
+        );
+    }
+
+
+    private bool IsFinalCompletionBlocked()
+    {
+        finalCompletionBlockers.RemoveWhere(
+            blocker =>
+                blocker == null
+        );
+
+        return
+            finalCompletionBlockers.Count > 0;
+    }
+
     private void StartGiveSon3Dialogue()
     {
         if (!directionSubmitted ||
@@ -1114,8 +1164,22 @@ public class ClientNPCController :
             return;
         }
 
-        if (activeVariant.FinalDialogue == null ||
-            activeVariant.FinalDialogue.Count == 0)
+        bool personalQuestionAsked =
+            questionDialogueController != null &&
+            questionDialogueController
+                .PersonalQuestionAsked;
+
+
+        List<DialogueManager.DialogueLine>
+            resolvedFinalDialogue =
+                activeVariant.ResolveFinalDialogue(
+                    personalQuestionAsked,
+                    DirectionDecision.None
+                );
+
+
+        if (resolvedFinalDialogue == null ||
+            resolvedFinalDialogue.Count == 0)
         {
             CompleteFinalDialogue();
             return;
@@ -1133,7 +1197,7 @@ public class ClientNPCController :
         ApplyVoiceSettings();
 
         dialogueManager.StartDialogue(
-            activeVariant.FinalDialogue,
+            resolvedFinalDialogue,
             false
         );
 
@@ -1178,6 +1242,17 @@ public class ClientNPCController :
         yield return null;
 
         RestoreWorkStateAfterDialogue();
+
+        /*
+         * Если особая ситуация клиента
+         * ещё выполняет свою анимацию,
+         * не запускаем финальную Take_SON3
+         * раньше времени.
+         */
+        while (IsFinalCompletionBlocked())
+        {
+            yield return null;
+        }
 
         CompleteFinalDialogue();
     }
@@ -1420,6 +1495,8 @@ public class ClientNPCController :
         directionTabOpened = false;
         directionSubmitted = false;
         waitingForSon3Return = false;
+
+        finalCompletionBlockers.Clear();
 
         if (son3 != null)
         {

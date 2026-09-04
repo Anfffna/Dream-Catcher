@@ -1,154 +1,500 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 public class SettingsManager : MonoBehaviour
 {
-    public static SettingsManager Instance { get; private set; }
+    public static SettingsManager Instance
+    {
+        get;
+        private set;
+    }
+
 
     [Header("Sliders")]
+
     public Slider volumeSlider;
+
     public Slider sensitivitySlider;
+
+    public Slider brightnessSlider;
+
+    public Slider grainSlider;
+
+
+    [Header("Глобальные визуальные эффекты")]
+
+    [Tooltip(
+        "Глобальный Volume Noise+ColorEff. " +
+        "Назначается вручную в Inspector."
+    )]
+    [SerializeField]
+    private Volume visualEffectsVolume;
+
+
+    private ColorAdjustments
+        colorAdjustments;
+
+    private FilmGrain
+        filmGrain;
+
 
     private bool isSubscribed = false;
 
+
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null &&
+            Instance != this)
         {
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
+
+        InitializeVisualEffects();
     }
+
 
     private void Start()
     {
         FindSlidersInScene();
+
         LoadSettings();
+
         SubscribeToSliders();
 
-        // Подписываемся на смену сцены
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneLoaded +=
+            OnSceneLoaded;
     }
+
 
     private void OnDestroy()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded -=
+            OnSceneLoaded;
     }
 
-    // Вызывается при загрузке любой сцены
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+
+    // =====================================================
+    // СМЕНА СЦЕНЫ
+    // =====================================================
+
+    private void OnSceneLoaded(
+        Scene scene,
+        LoadSceneMode mode)
     {
-        // Сбрасываем старые ссылки и ищем заново в новой сцене
         volumeSlider = null;
         sensitivitySlider = null;
+        brightnessSlider = null;
+        grainSlider = null;
+
         isSubscribed = false;
 
         FindSlidersInScene();
-        LoadSettings();
-        SubscribeToSliders();
 
-        Debug.Log($"SettingsManager: слайдеры обновлены для сцены {scene.name}");
+        LoadSettings();
+
+        SubscribeToSliders();
     }
+
 
     public void RefreshSliders()
     {
         volumeSlider = null;
         sensitivitySlider = null;
+        brightnessSlider = null;
+        grainSlider = null;
+
         isSubscribed = false;
 
         FindSlidersInScene();
+
         LoadSettings();
+
         SubscribeToSliders();
     }
 
+
+    // =====================================================
+    // ПОИСК СЛАЙДЕРОВ
+    // =====================================================
+
     private void FindSlidersInScene()
     {
-        string sceneName = SceneManager.GetActiveScene().name;
-        Slider[] allSliders = FindObjectsOfType<Slider>(true);
+        string sceneName =
+            SceneManager
+                .GetActiveScene()
+                .name;
 
-        foreach (Slider s in allSliders)
+        Slider[] allSliders =
+            FindObjectsOfType<Slider>(
+                true
+            );
+
+
+        foreach (Slider slider in allSliders)
         {
-            // Для MainMenu — ищем ТОЛЬКО локальные слайдеры (не внутри GlobalSystem)
+            /*
+             * В MainMenu берём только
+             * локальные слайдеры самой сцены,
+             * а не элементы внутри GlobalSystem.
+             */
             if (sceneName == "MainMenu")
             {
-                Transform parent = s.transform.parent;
-                bool isInGlobalSystem = false;
+                Transform parent =
+                    slider.transform.parent;
+
+                bool isInGlobalSystem =
+                    false;
+
+
                 while (parent != null)
                 {
-                    if (parent.name == "GlobalSystem" || parent.name == "DontDestroyOnLoad")
+                    if (parent.name ==
+                            "GlobalSystem" ||
+                        parent.name ==
+                            "DontDestroyOnLoad")
                     {
-                        isInGlobalSystem = true;
+                        isInGlobalSystem =
+                            true;
+
                         break;
                     }
-                    parent = parent.parent;
+
+                    parent =
+                        parent.parent;
                 }
 
-                if (isInGlobalSystem) continue; // пропускаем глобальные слайдеры
+
+                if (isInGlobalSystem)
+                    continue;
             }
 
-            if (s.name == "VolumeSlider" && volumeSlider == null)
-                volumeSlider = s;
-            if (s.name == "SensitivitySlider" && sensitivitySlider == null)
-                sensitivitySlider = s;
-        }
 
-        if (volumeSlider == null)
-            Debug.LogWarning($"VolumeSlider не найден в сцене {sceneName}!");
-        if (sensitivitySlider == null)
-            Debug.LogWarning($"SensitivitySlider не найден в сцене {sceneName}!");
+            if (slider.name ==
+                    "VolumeSlider" &&
+                volumeSlider == null)
+            {
+                volumeSlider =
+                    slider;
+            }
+
+
+            if (slider.name ==
+                    "SensitivitySlider" &&
+                sensitivitySlider == null)
+            {
+                sensitivitySlider =
+                    slider;
+            }
+
+
+            if (slider.name ==
+                    "BrightnessSlider" &&
+                brightnessSlider == null)
+            {
+                brightnessSlider =
+                    slider;
+            }
+
+
+            if (slider.name ==
+                    "GrainSlider" &&
+                grainSlider == null)
+            {
+                grainSlider =
+                    slider;
+            }
+        }
     }
+
+
+    // =====================================================
+    // ПОДПИСКА НА SLIDER
+    // =====================================================
 
     private void SubscribeToSliders()
     {
-        if (isSubscribed) return;
+        if (isSubscribed)
+            return;
+
 
         if (volumeSlider != null)
-            volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
+        {
+            volumeSlider
+                .onValueChanged
+                .AddListener(
+                    OnVolumeChanged
+                );
+        }
+
 
         if (sensitivitySlider != null)
-            sensitivitySlider.onValueChanged.AddListener(OnSensitivityChanged);
+        {
+            sensitivitySlider
+                .onValueChanged
+                .AddListener(
+                    OnSensitivityChanged
+                );
+        }
+
+
+        if (brightnessSlider != null)
+        {
+            brightnessSlider
+                .onValueChanged
+                .AddListener(
+                    OnBrightnessChanged
+                );
+        }
+
+
+        if (grainSlider != null)
+        {
+            grainSlider
+                .onValueChanged
+                .AddListener(
+                    OnGrainChanged
+                );
+        }
+
 
         isSubscribed = true;
     }
 
+
+    // =====================================================
+    // ЗАГРУЗКА НАСТРОЕК
+    // =====================================================
+
     public void LoadSettings()
     {
-        float volume = PlayerPrefs.GetFloat("Volume", 0.5f);
-        float sensitivity = PlayerPrefs.GetFloat("Sensitivity", 150f);
+        float volume =
+            PlayerPrefs.GetFloat(
+                "Volume",
+                0.5f
+            );
+
+        float sensitivity =
+            PlayerPrefs.GetFloat(
+                "Sensitivity",
+                150f
+            );
+
+        float brightness =
+            PlayerPrefs.GetFloat(
+                "Brightness",
+                0f
+            );
+
+        float grain =
+            PlayerPrefs.GetFloat(
+                "GrainIntensity",
+                0.8f
+            );
+
 
         if (volumeSlider != null)
-            volumeSlider.value = volume;
+        {
+            volumeSlider.value =
+                volume;
+        }
+
 
         if (sensitivitySlider != null)
-            sensitivitySlider.value = sensitivity;
+        {
+            sensitivitySlider.value =
+                sensitivity;
+        }
 
-        ApplyVolume(volume);
-        ApplySensitivity(sensitivity);
+
+        if (brightnessSlider != null)
+        {
+            brightnessSlider.value =
+                brightness;
+        }
+
+
+        if (grainSlider != null)
+        {
+            grainSlider.value =
+                grain;
+        }
+
+
+        ApplyVolume(
+            volume
+        );
+
+        ApplySensitivity(
+            sensitivity
+        );
+
+        ApplyBrightness(
+            brightness
+        );
+
+        ApplyGrain(
+            grain
+        );
     }
 
-    private void OnVolumeChanged(float value)
+
+    // =====================================================
+    // ИЗМЕНЕНИЯ SLIDER
+    // =====================================================
+
+    private void OnVolumeChanged(
+        float value)
     {
-        ApplyVolume(value);
-        PlayerPrefs.SetFloat("Volume", value);
+        ApplyVolume(
+            value
+        );
+
+        PlayerPrefs.SetFloat(
+            "Volume",
+            value
+        );
+
         PlayerPrefs.Save();
     }
 
-    private void OnSensitivityChanged(float value)
+
+    private void OnSensitivityChanged(
+        float value)
     {
-        ApplySensitivity(value);
-        PlayerPrefs.SetFloat("Sensitivity", value);
+        ApplySensitivity(
+            value
+        );
+
+        PlayerPrefs.SetFloat(
+            "Sensitivity",
+            value
+        );
+
         PlayerPrefs.Save();
     }
 
-    private void ApplyVolume(float value)
+
+    private void OnBrightnessChanged(
+        float value)
     {
-        AudioListener.volume = value;
+        ApplyBrightness(
+            value
+        );
+
+        PlayerPrefs.SetFloat(
+            "Brightness",
+            value
+        );
+
+        PlayerPrefs.Save();
     }
 
-    private void ApplySensitivity(float value)
+
+    private void OnGrainChanged(
+        float value)
     {
-        GameSettings.MouseSensitivity = value;
+        ApplyGrain(
+            value
+        );
+
+        PlayerPrefs.SetFloat(
+            "GrainIntensity",
+            value
+        );
+
+        PlayerPrefs.Save();
+    }
+
+
+    // =====================================================
+    // ПРИМЕНЕНИЕ НАСТРОЕК
+    // =====================================================
+
+    private void ApplyVolume(
+        float value)
+    {
+        AudioListener.volume =
+            value;
+    }
+
+
+    private void ApplySensitivity(
+        float value)
+    {
+        GameSettings.MouseSensitivity =
+            value;
+    }
+
+
+    private void ApplyBrightness(
+        float value)
+    {
+        if (colorAdjustments == null)
+            return;
+
+        colorAdjustments
+            .postExposure
+            .overrideState = true;
+
+        colorAdjustments
+            .postExposure
+            .value = value;
+    }
+
+
+    private void ApplyGrain(
+        float value)
+    {
+        if (filmGrain == null)
+            return;
+
+        filmGrain
+            .intensity
+            .overrideState = true;
+
+        filmGrain
+            .intensity
+            .value =
+            Mathf.Clamp01(
+                value
+            );
+    }
+
+
+    // =====================================================
+    // GLOBAL VOLUME
+    // =====================================================
+
+    private void InitializeVisualEffects()
+    {
+        colorAdjustments = null;
+        filmGrain = null;
+
+
+        if (visualEffectsVolume == null)
+            return;
+
+
+        VolumeProfile profile =
+            visualEffectsVolume.profile;
+
+
+        if (profile == null)
+            return;
+
+
+        profile.TryGet(
+            out colorAdjustments
+        );
+
+        profile.TryGet(
+            out filmGrain
+        );
     }
 }
