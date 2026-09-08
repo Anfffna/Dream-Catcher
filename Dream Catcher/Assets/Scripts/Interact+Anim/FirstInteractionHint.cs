@@ -1,84 +1,166 @@
 using UnityEngine;
-using System.Collections;
 
-public class FirstInteractionHint : MonoBehaviour
+public class FirstInteractionHint :
+    MonoBehaviour
 {
-    [Header("UI Hint")]
-    public CanvasGroup hintCanvasGroup;  // сюда перетащи CanvasGroup плашки
+    [Header("Общая UI-плашка")]
 
-    [Header("Fade Settings")]
-    public float fadeDuration = 0.5f;    // время появления/исчезновения
+    [Tooltip(
+        "Универсальный ClickInteractionHint, " +
+        "который управляет самой плашкой."
+    )]
+    [SerializeField]
+    private ClickInteractionHint interactionHint;
 
-    [Header("Hide Input")]
-    public KeyCode hideKey = KeyCode.Z;
-    public float holdDurationToHide = 1f;
 
-    private static bool hasBeenShown = false;
-    private bool isShowing = false;
+    [Header("Текст этой подсказки")]
 
-    void Start()
+    [TextArea(2, 5)]
+    [SerializeField]
+    private string hintText =
+        "Удерживайте Z, чтобы закрыть подсказку.";
+
+
+    [Header("Первый показ")]
+
+    [SerializeField]
+    private bool showOnlyOnce =
+        true;
+
+
+    [Header("Закрытие")]
+
+    [Tooltip(
+        "Клавиша, которую нужно удерживать."
+    )]
+    [SerializeField]
+    private KeyCode hideKey =
+        KeyCode.Z;
+
+    [Tooltip(
+        "Сколько секунд нужно удерживать клавишу."
+    )]
+    [SerializeField]
+    private float holdDurationToHide =
+        1f;
+
+
+    private bool hasBeenShown;
+    private bool isWaitingForHide;
+
+    private float holdTimer;
+
+
+    private void Update()
     {
-        if (hintCanvasGroup != null)
-            hintCanvasGroup.alpha = 0f;
+        if (!isWaitingForHide)
+            return;
+
+
+        if (interactionHint == null ||
+            !interactionHint.IsVisible)
+        {
+            isWaitingForHide = false;
+            holdTimer = 0f;
+
+            enabled = false;
+
+            return;
+        }
+
+
+        if (Input.GetKey(hideKey))
+        {
+            holdTimer +=
+                Time.deltaTime;
+
+
+            if (holdTimer >=
+                holdDurationToHide)
+            {
+                interactionHint.Hide();
+
+                isWaitingForHide =
+                    false;
+
+                holdTimer =
+                    0f;
+
+                enabled =
+                    false;
+            }
+        }
+        else
+        {
+            holdTimer =
+                0f;
+        }
     }
+
 
     public void TryShowHint()
     {
-        if (hasBeenShown) return;
-        if (isShowing) return;
-        if (hintCanvasGroup == null) return;
+        if (interactionHint == null)
+            return;
 
-        hasBeenShown = true;
-        isShowing = true;
-        StartCoroutine(ShowRoutine());
+
+        if (showOnlyOnce &&
+            hasBeenShown)
+        {
+            return;
+        }
+
+
+        hasBeenShown =
+            true;
+
+        holdTimer =
+            0f;
+
+        isWaitingForHide =
+            true;
+
+
+        /*
+         * FALSE:
+         * эта конкретная подсказка
+         * НЕ закрывается ЛКМ.
+         */
+        interactionHint.Show(
+            hintText,
+            false
+        );
+
+
+        /*
+         * Update нужен только пока
+         * ждём удержание Z.
+         */
+        enabled =
+            true;
     }
 
-    private IEnumerator ShowRoutine()
+
+    public void ResetHint()
     {
-        // Делаем плашку кликабельной (блокируем лучи)
-        hintCanvasGroup.blocksRaycasts = true;
-        hintCanvasGroup.interactable = true;
-
-        float timer = 0f;
-        while (timer < fadeDuration)
-        {
-            timer += Time.deltaTime;
-            hintCanvasGroup.alpha = Mathf.Lerp(0f, 1f, timer / fadeDuration);
-            yield return null;
-        }
-        hintCanvasGroup.alpha = 1f;
-
-        // Ждём, пока игрок удержит Z
-        float holdTimer = 0f;
-
-        while (holdTimer < holdDurationToHide)
-        {
-            if (Input.GetKey(hideKey))
-            {
-                holdTimer += Time.deltaTime;
-            }
-            else
-            {
-                holdTimer = 0f;
-            }
-            yield return null;
-        }
-        // Начинаем скрытие
-        StartCoroutine(HideRoutine());
+        hasBeenShown =
+            false;
     }
 
-    private IEnumerator HideRoutine()
+
+    private void Awake()
     {
-        float timer = 0f;
-        while (timer < fadeDuration)
-        {
-            timer += Time.deltaTime;
-            hintCanvasGroup.alpha = Mathf.Lerp(1f, 0f, timer / fadeDuration);
-            yield return null;
-        }
-        hintCanvasGroup.alpha = 0f;
-        hintCanvasGroup.blocksRaycasts = false;
-        hintCanvasGroup.interactable = false;
-        isShowing = false;
+        enabled =
+            false;
+    }
+
+
+    private void OnValidate()
+    {
+        holdDurationToHide =
+            Mathf.Max(
+                0f,
+                holdDurationToHide
+            );
     }
 }

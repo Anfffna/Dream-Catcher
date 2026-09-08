@@ -1,340 +1,747 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using System.Collections.Generic;
 
-public class MailboxStartDay : MonoBehaviour, IInteractable
+public class MailboxStartDay :
+    MonoBehaviour,
+    IInteractable
 {
-    [Header("UI Elements")]
-    public RectTransform letterImage;          // спрайт письма (RectTransform)
-    public CanvasGroup hintCanvasGroup;        // плашка с подсказкой
+    [Header("Письмо")]
+
+    [Tooltip("Изображение письма.")]
+    public RectTransform letterImage;
+
+
+    [Header("Подсказка")]
+
+    [Tooltip(
+        "Отдельный универсальный контроллер " +
+        "подсказки для этого ящика."
+    )]
+    public ClickInteractionHint
+        interactionHint;
+
+    [Tooltip(
+    "Текст подсказки, которая появляется " +
+    "после первого клика по письму."
+    )]
+    [TextArea(2, 5)]
+    public string interactionHintText =
+    "Нажмите ЛКМ, чтобы закрыть письмо.";
+
 
     [Header("Blur")]
-    public Volume blurVolume;                  // глобальный Volume с блюром
+
+    public Volume blurVolume;
+
 
     [Header("Quest")]
+
     public QuestUIManager questUIManager;
-    public string questIdToComplete = "check_the_mailbox";
+
+    public string questIdToComplete =
+        "check_the_mailbox";
+
 
     [Header("Dialogue After Letter")]
+
     public DialogueManager dialogueManager;
-    public List<DialogueManager.DialogueLine> afterLetterLines;
-    public float dialogueDelay = 1f;
+
+    public List<DialogueManager.DialogueLine>
+        afterLetterLines;
+
+    public float dialogueDelay =
+        1f;
+
 
     [Header("Animation Timings")]
-    public float slideDuration = 1f;           // время выдвижения/задвижения письма
-    public float fadeDuration = 1f;            // время появления/исчезновения плашки
+
+    [Tooltip(
+        "Время выдвижения и задвижения письма."
+    )]
+    public float slideDuration =
+        1f;
+
 
     [Header("Audio")]
-    public AudioSource letterAudioSource;   // сюда перетащите AudioSource с клипом
+
+    public AudioSource letterAudioSource;
+
 
     [Header("Player")]
+
     public PlayerController playerController;
 
+
     [Header("Auto Find")]
-    public bool autoFindReferences = true;
-    public string questUIManagerObjectName = "QuestUIManager";
-    public string dialogueManagerObjectName = "DialogueManager";
-    public string playerObjectName = "Player";
 
-    private bool isReading = false;
-    private bool isRead = false;
-    private Vector2 startPos;   // Y = -990
-    private Vector2 targetPos;  // Y = 0 (центр)
+    public bool autoFindReferences =
+        true;
+
+    public string questUIManagerObjectName =
+        "QuestUIManager";
+
+    public string dialogueManagerObjectName =
+        "DialogueManager";
+
+    public string playerObjectName =
+        "Player";
+
+
+    private bool isReading;
+    private bool isRead;
+
+    private Vector2 startPos;
+    private Vector2 targetPos;
+
     private Coroutine currentCoroutine;
-    private bool waitingForFirstClick = false;
-    private bool waitingForSecondClick = false;
 
-    void Start()
+    /*
+     * Пока true —
+     * ждём первый клик после того,
+     * как письмо полностью появилось.
+     */
+    private bool waitingForFirstClick;
+
+
+    // =====================================================
+    // UNITY
+    // =====================================================
+
+    private void Start()
     {
         FindReferences();
 
-        gameObject.layer = LayerMask.NameToLayer("Interactable");
-        startPos = new Vector2(letterImage.anchoredPosition.x, -990f);
-        targetPos = new Vector2(letterImage.anchoredPosition.x, 0f);
 
-        letterImage.gameObject.SetActive(false);
-        hintCanvasGroup.alpha = 0f;
-        hintCanvasGroup.blocksRaycasts = false;
-        hintCanvasGroup.interactable = false;
+        gameObject.layer =
+            LayerMask.NameToLayer(
+                "Interactable"
+            );
+
+
+        if (letterImage != null)
+        {
+            startPos =
+                new Vector2(
+                    letterImage
+                        .anchoredPosition.x,
+                    -990f
+                );
+
+            targetPos =
+                new Vector2(
+                    letterImage
+                        .anchoredPosition.x,
+                    0f
+                );
+
+
+            letterImage
+                .gameObject
+                .SetActive(false);
+        }
     }
 
-    void Update()
+
+    private void Update()
     {
-        if (waitingForFirstClick &&
-            Input.GetMouseButtonDown(0))
-        {
-            waitingForFirstClick = false;
+        if (!waitingForFirstClick)
+            return;
 
-            // Сразу разрешаем следующий клик.
-            waitingForSecondClick = true;
 
-            StartCoroutine(
-                ShowHintRoutine()
-            );
-        }
-        else if (waitingForSecondClick &&
-                 Input.GetMouseButtonDown(0))
-        {
-            waitingForSecondClick = false;
+        if (!Input.GetMouseButtonDown(0))
+            return;
 
-            StartCoroutine(
-                HideAllRoutine()
-            );
-        }
+
+        /*
+         * Этот клик означает:
+         * игрок закончил рассматривать письмо.
+         *
+         * Дальнейшим кликом уже будет
+         * заниматься ClickInteractionHint.
+         */
+        waitingForFirstClick =
+            false;
     }
+
+
+    // =====================================================
+    // INTERACTION
+    // =====================================================
 
     public void Interact()
     {
         FindReferences();
 
-        if (isRead || isReading)
-            return;
 
-        // Сразу выключаем коллайдер почтового ящика, чтобы InteractionController больше его не видел.
-        BoxCollider boxCollider = GetComponent<BoxCollider>();
+        if (isRead ||
+            isReading)
+        {
+            return;
+        }
+
+
+        /*
+         * Ящик больше не должен повторно
+         * ловить взаимодействие.
+         */
+        BoxCollider boxCollider =
+            GetComponent<BoxCollider>();
+
+
         if (boxCollider != null)
-            boxCollider.enabled = false;
+        {
+            boxCollider.enabled =
+                false;
+        }
+
 
         if (currentCoroutine != null)
-            StopCoroutine(currentCoroutine);
+        {
+            StopCoroutine(
+                currentCoroutine
+            );
+        }
 
-        currentCoroutine = StartCoroutine(ShowLetterRoutine());
+
+        currentCoroutine =
+            StartCoroutine(
+                ShowLetterRoutine()
+            );
     }
+
+
+    // =====================================================
+    // ПОКАЗ ПИСЬМА
+    // =====================================================
 
     private IEnumerator ShowLetterRoutine()
     {
         FindReferences();
-        isReading = true;
 
-        // Блюр
+
+        isReading =
+            true;
+
+
+        // =================================================
+        // BLUR
+        // =================================================
+
         if (blurVolume != null)
         {
-            blurVolume.weight = 1f;
-            blurVolume.enabled = true;
+            blurVolume.weight =
+                1f;
+
+            blurVolume.enabled =
+                true;
         }
 
-        // Блокируем движение на время показа письма
+
+        // =================================================
+        // PLAYER
+        // =================================================
+
         if (playerController != null)
-            playerController.canMove = false;
-
-        // Выключаем звуки шагов
-        if (playerController != null && playerController.footstepSource != null)
         {
-            playerController.footstepSource.Stop();          // остановить, если играет
-            playerController.footstepSource.enabled = false; // отключить источник
+            playerController.canMove =
+                false;
+
+
+            if (playerController
+                    .footstepSource != null)
+            {
+                playerController
+                    .footstepSource
+                    .Stop();
+
+                playerController
+                    .footstepSource
+                    .enabled =
+                    false;
+            }
         }
 
-        // Письмо выдвигается
-        letterImage.gameObject.SetActive(true);
-        letterImage.anchoredPosition = startPos;
 
-        if (letterAudioSource != null)
-            letterAudioSource.Play();
+        // =================================================
+        // ПИСЬМО ВЫЕЗЖАЕТ
+        // =================================================
 
-        float elapsed = 0f;
-        while (elapsed < slideDuration)
+        if (letterImage != null)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / slideDuration;
-            float smoothT = t * t * (3f - 2f * t);
-            letterImage.anchoredPosition = Vector2.Lerp(startPos, targetPos, smoothT);
-            yield return null;
-        }
-        letterImage.anchoredPosition = targetPos;
+            letterImage
+                .gameObject
+                .SetActive(true);
 
-        // Скрыть обводку с почтового ящика
-        InteractionOutline outline = GetComponent<InteractionOutline>();
+            letterImage.anchoredPosition =
+                startPos;
+
+
+            if (letterAudioSource != null)
+            {
+                letterAudioSource.Play();
+            }
+
+
+            float elapsed =
+                0f;
+
+
+            while (elapsed <
+                   slideDuration)
+            {
+                elapsed +=
+                    Time.deltaTime;
+
+
+                float t =
+                    slideDuration <= 0f
+                        ? 1f
+                        : Mathf.Clamp01(
+                            elapsed /
+                            slideDuration
+                        );
+
+
+                float smoothT =
+                    t * t *
+                    (3f - 2f * t);
+
+
+                letterImage
+                    .anchoredPosition =
+                    Vector2.Lerp(
+                        startPos,
+                        targetPos,
+                        smoothT
+                    );
+
+
+                yield return null;
+            }
+
+
+            letterImage.anchoredPosition =
+                targetPos;
+        }
+
+
+        // =================================================
+        // OUTLINE
+        // =================================================
+
+        InteractionOutline outline =
+            GetComponent<
+                InteractionOutline
+            >();
+
+
         if (outline != null)
         {
-            if (!string.IsNullOrEmpty(outline.outlineId))
-                InteractionOutlineRegistry.Hide(outline.outlineId);
+            if (!string.IsNullOrEmpty(
+                    outline.outlineId))
+            {
+                InteractionOutlineRegistry
+                    .Hide(
+                        outline.outlineId
+                    );
+            }
+
 
             outline.HideOutline();
         }
 
-        // Ожидание первого клика.
-        // После него начинается появление подсказки.
-        waitingForFirstClick = true;
+
+        // =================================================
+        // ПЕРВЫЙ КЛИК
+        // =================================================
+
+        /*
+         * Игрок сначала просто читает письмо.
+         *
+         * Первый ЛКМ после появления письма
+         * вызывает подсказку.
+         */
+        waitingForFirstClick =
+            true;
+
 
         yield return new WaitUntil(
-            () => !waitingForFirstClick
+            () =>
+                !waitingForFirstClick
         );
 
-        // waitingForSecondClick включается сразу в Update после первого клика. Поэтому следующий клик уже можно принимать, не дожидаясь полного Fade.
-        yield return new WaitUntil(
-            () => !waitingForSecondClick
+
+        // =================================================
+        // ПОКАЗ ПОДСКАЗКИ
+        // =================================================
+
+        if (interactionHint != null)
+        {
+            interactionHint.Show(
+                interactionHintText,
+                true
+            );
+
+
+            /*
+             * Show() сразу устанавливает
+             * IsVisible = true.
+             *
+             * Если подсказка действительно
+             * открылась — ждём следующего ЛКМ,
+             * которым игрок её закрывает.
+             */
+            if (interactionHint.IsVisible)
+            {
+                yield return new WaitUntil(
+                    () =>
+                        interactionHint
+                            .DismissRequested
+                );
+            }
+        }
+
+
+        // =================================================
+        // ЗАКРЫВАЕМ ПИСЬМО
+        // =================================================
+
+        yield return StartCoroutine(
+            HideLetterRoutine()
         );
 
-        // Всё скрыто корутиной HideAllRoutine
-        // Ждём завершения анимации (проверяем, что письмо скрыто и плашка скрыта)
-        yield return new WaitUntil(() => !letterImage.gameObject.activeSelf && hintCanvasGroup.alpha <= 0.01f);
 
-        // Разблокируем движение (перед диалогом)
+        /*
+         * Подсказка сама делает свой Fade Out.
+         *
+         * Если её Fade чуть длиннее
+         * анимации письма —
+         * дожидаемся окончания.
+         */
+        if (interactionHint != null &&
+            interactionHint.IsVisible)
+        {
+            yield return new WaitUntil(
+                () =>
+                    !interactionHint
+                        .IsVisible
+            );
+        }
+
+
+        // =================================================
+        // ВОЗВРАЩАЕМ PLAYER
+        // =================================================
+
         if (playerController != null)
-            playerController.canMove = true;
-
-        // Включаем звуки шагов обратно
-        if (playerController != null && playerController.footstepSource != null)
         {
-            playerController.footstepSource.enabled = true;
-            // Звук начнёт играть автоматически, когда игрок начнёт двигаться
+            playerController.canMove =
+                true;
+
+
+            if (playerController
+                    .footstepSource != null)
+            {
+                playerController
+                    .footstepSource
+                    .enabled =
+                    true;
+            }
         }
+
+
+        // =================================================
+        // QUEST
+        // =================================================
 
         FindReferences();
-        // Завершаем задание
-        if (questUIManager != null && !string.IsNullOrEmpty(questIdToComplete))
+
+
+        if (questUIManager != null &&
+            !string.IsNullOrEmpty(
+                questIdToComplete))
         {
-            questUIManager.CompleteQuest(questIdToComplete);
-
-            // Добавляем следующее задание
-            questUIManager.AddQuest("go_to_depart");
-        }
-
-        // Смена слоя на Default, чтобы ящик больше не был интерактивным
-        gameObject.layer = LayerMask.NameToLayer("Default");
-
-        // Задержка перед диалогом
-        if (dialogueDelay > 0f)
-            yield return new WaitForSeconds(dialogueDelay);
-
-        FindReferences();
-        // Запускаем диалог после письма
-        if (dialogueManager != null && afterLetterLines != null && afterLetterLines.Count > 0)
-        {
-            dialogueManager.StartDialogue(afterLetterLines);
-        }
-
-        isReading = false;
-        isRead = true;
-        currentCoroutine = null;
-    }
-
-    private IEnumerator ShowHintRoutine()
-    {
-        hintCanvasGroup.alpha = 0f;
-        hintCanvasGroup.blocksRaycasts = true;
-        hintCanvasGroup.interactable = true;
-        hintCanvasGroup.gameObject.SetActive(true);
-
-        float elapsed = 0f;
-
-        while (elapsed < fadeDuration &&
-               waitingForSecondClick)
-        {
-            elapsed += Time.deltaTime;
-
-            hintCanvasGroup.alpha =
-                Mathf.Lerp(
-                    0f,
-                    1f,
-                    elapsed / fadeDuration
+            questUIManager
+                .CompleteQuest(
+                    questIdToComplete
                 );
 
-            yield return null;
+
+            questUIManager
+                .AddQuest(
+                    "go_to_depart"
+                );
         }
 
-        // Если игрок уже нажал второй раз, HideAllRoutine теперь сама скрывает подсказку.
-        if (!waitingForSecondClick)
-            yield break;
 
-        hintCanvasGroup.alpha = 1f;
+        // =================================================
+        // ЯЩИК БОЛЬШЕ НЕ ИНТЕРАКТИВЕН
+        // =================================================
+
+        gameObject.layer =
+            LayerMask.NameToLayer(
+                "Default"
+            );
+
+
+        // =================================================
+        // ДИАЛОГ ПОСЛЕ ПИСЬМА
+        // =================================================
+
+        if (dialogueDelay > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    dialogueDelay
+                );
+        }
+
+
+        FindReferences();
+
+
+        if (dialogueManager != null &&
+            afterLetterLines != null &&
+            afterLetterLines.Count > 0)
+        {
+            dialogueManager
+                .StartDialogue(
+                    afterLetterLines
+                );
+        }
+
+
+        isReading =
+            false;
+
+        isRead =
+            true;
+
+        currentCoroutine =
+            null;
     }
 
-    private IEnumerator HideAllRoutine()
+
+    // =====================================================
+    // СКРЫТИЕ ПИСЬМА
+    // =====================================================
+
+    private IEnumerator HideLetterRoutine()
     {
-        // Плавно скрываем плашку
-        float elapsed = 0f;
-
-        float startHintAlpha =
-        hintCanvasGroup.alpha;
-
-        while (elapsed < fadeDuration)
+        if (letterImage != null)
         {
-            elapsed += Time.deltaTime;
-            hintCanvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
-            yield return null;
-        }
-        hintCanvasGroup.alpha = 0f;
-        hintCanvasGroup.blocksRaycasts = false;
-        hintCanvasGroup.interactable = false;
+            float elapsed =
+                0f;
 
-        // Письмо задвигается вниз
-        elapsed = 0f;
-        Vector2 currentPos = letterImage.anchoredPosition;
-        while (elapsed < slideDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / slideDuration;
-            float smoothT = t * t * (3f - 2f * t);
-            letterImage.anchoredPosition = Vector2.Lerp(targetPos, startPos, smoothT);
-            yield return null;
-        }
-        letterImage.anchoredPosition = startPos;
-        letterImage.gameObject.SetActive(false);
 
-        // Блюр выключаем
+            Vector2 currentPos =
+                letterImage
+                    .anchoredPosition;
+
+
+            while (elapsed <
+                   slideDuration)
+            {
+                elapsed +=
+                    Time.deltaTime;
+
+
+                float t =
+                    slideDuration <= 0f
+                        ? 1f
+                        : Mathf.Clamp01(
+                            elapsed /
+                            slideDuration
+                        );
+
+
+                float smoothT =
+                    t * t *
+                    (3f - 2f * t);
+
+
+                letterImage
+                    .anchoredPosition =
+                    Vector2.Lerp(
+                        currentPos,
+                        startPos,
+                        smoothT
+                    );
+
+
+                yield return null;
+            }
+
+
+            letterImage.anchoredPosition =
+                startPos;
+
+
+            letterImage
+                .gameObject
+                .SetActive(false);
+        }
+
+
+        // =================================================
+        // BLUR OFF
+        // =================================================
+
         if (blurVolume != null)
         {
-            blurVolume.weight = 0f;
-            blurVolume.enabled = false;
+            blurVolume.weight =
+                0f;
+
+            blurVolume.enabled =
+                false;
         }
     }
+
+
+    // =====================================================
+    // REFERENCES
+    // =====================================================
 
     private void FindReferences()
     {
+        /*
+         * Hint ищем только локально.
+         * Никакого поиска по сцене.
+         */
+        if (interactionHint == null)
+        {
+            interactionHint =
+                GetComponent<
+                    ClickInteractionHint
+                >();
+        }
+
+
         if (!autoFindReferences)
             return;
 
-        // QuestUIManager
-        if (questUIManager == null)
-            questUIManager = QuestUIManager.Instance;
+
+        // =================================================
+        // QUEST MANAGER
+        // =================================================
 
         if (questUIManager == null)
         {
-            GameObject obj = GameObject.Find(questUIManagerObjectName);
-
-            if (obj != null)
-                questUIManager = obj.GetComponent<QuestUIManager>();
+            questUIManager =
+                QuestUIManager.Instance;
         }
+
 
         if (questUIManager == null)
-            questUIManager = FindObjectOfType<QuestUIManager>();
-
-        // DialogueManager — строго ищем объект с именем DialogueManager
-        if (dialogueManager == null || dialogueManager.gameObject.name != dialogueManagerObjectName)
         {
-            GameObject obj = GameObject.Find(dialogueManagerObjectName);
+            GameObject obj =
+                GameObject.Find(
+                    questUIManagerObjectName
+                );
+
 
             if (obj != null)
-                dialogueManager = obj.GetComponent<DialogueManager>();
+            {
+                questUIManager =
+                    obj.GetComponent<
+                        QuestUIManager
+                    >();
+            }
         }
+
+
+        if (questUIManager == null)
+        {
+            questUIManager =
+                FindObjectOfType<
+                    QuestUIManager
+                >();
+        }
+
+
+        // =================================================
+        // DIALOGUE MANAGER
+        // =================================================
+
+        if (dialogueManager == null ||
+            dialogueManager
+                .gameObject
+                .name !=
+            dialogueManagerObjectName)
+        {
+            GameObject obj =
+                GameObject.Find(
+                    dialogueManagerObjectName
+                );
+
+
+            if (obj != null)
+            {
+                dialogueManager =
+                    obj.GetComponent<
+                        DialogueManager
+                    >();
+            }
+        }
+
 
         if (dialogueManager == null)
         {
-            DialogueManager[] managers = FindObjectsOfType<DialogueManager>();
+            DialogueManager[] managers =
+                FindObjectsOfType<
+                    DialogueManager
+                >();
 
-            foreach (DialogueManager manager in managers)
+
+            foreach (
+                DialogueManager manager
+                in managers)
             {
-                if (manager.gameObject.name == dialogueManagerObjectName)
+                if (manager
+                        .gameObject
+                        .name ==
+                    dialogueManagerObjectName)
                 {
-                    dialogueManager = manager;
+                    dialogueManager =
+                        manager;
+
                     break;
                 }
             }
         }
 
-        // PlayerController
+
+        // =================================================
+        // PLAYER
+        // =================================================
+
         if (playerController == null)
         {
-            GameObject obj = GameObject.Find(playerObjectName);
+            GameObject obj =
+                GameObject.Find(
+                    playerObjectName
+                );
+
 
             if (obj != null)
-                playerController = obj.GetComponent<PlayerController>();
+            {
+                playerController =
+                    obj.GetComponent<
+                        PlayerController
+                    >();
+            }
         }
 
+
         if (playerController == null)
-            playerController = FindObjectOfType<PlayerController>();
+        {
+            playerController =
+                FindObjectOfType<
+                    PlayerController
+                >();
+        }
     }
 }

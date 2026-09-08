@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -33,6 +34,14 @@ public class ClientSpecialDialogueEventController :
     private bool requirePersonalQuestion =
         true;
 
+    [Tooltip(
+    "Какое решение должно быть принято " +
+    "для запуска события. " +
+    "None = решение не учитывать."
+    )]
+    [SerializeField]
+    private DirectionDecision requiredDecision =
+    DirectionDecision.None;
 
     [Header("Момент запуска")]
 
@@ -66,77 +75,187 @@ public class ClientSpecialDialogueEventController :
     private bool triggered;
 
 
-    private void Awake()
-    {
-        FindClient();
-    }
-
+    private Coroutine watchCoroutine;
 
     private void OnEnable()
     {
         triggered = false;
+        Subscribe();
 
-        FindClient();
+
+        /*
+         * Защита на случай, если компонент
+         * был включён уже во время
+         * финального диалога.
+         */
+        if (clientNPC != null &&
+            clientNPC.IsFinalDialogueRunning)
+        {
+            BeginWatchingFinalDialogue();
+        }
     }
 
 
-    private void Update()
+    private void OnDisable()
+    {
+        Unsubscribe();
+
+
+        if (watchCoroutine != null)
+        {
+            StopCoroutine(
+                watchCoroutine
+            );
+
+            watchCoroutine = null;
+        }
+    }
+
+
+    // =====================================================
+    // СОБЫТИЕ ОТ ClientNPCController
+    // =====================================================
+
+    private void HandleFinalDialogueStarted(
+        ClientNPCController startedClient)
     {
         if (triggered)
             return;
 
 
-        FindClient();
-
-        if (clientNPC == null)
+        /*
+         * Каждый special-controller слушает
+         * только своего собственного NPC.
+         */
+        if (startedClient != clientNPC)
             return;
 
 
-        // =====================================================
-        // ЭТО ДОЛЖЕН БЫТЬ ИМЕННО ТЕКУЩИЙ NPC
-        // =====================================================
+        BeginWatchingFinalDialogue();
+    }
 
-        if (ClientNPCController
-                .CurrentActiveClient !=
-            clientNPC)
+
+    // =====================================================
+    // ЗАПУСК КОРОТКОГО НАБЛЮДЕНИЯ
+    // =====================================================
+
+    private void BeginWatchingFinalDialogue()
+    {
+        if (triggered ||
+            watchCoroutine != null)
         {
             return;
         }
 
 
-        // =====================================================
-        // СОБЫТИЕ ТОЛЬКО В ФИНАЛЬНОМ ДИАЛОГЕ
-        // =====================================================
-
-        if (!clientNPC
-                .IsFinalDialogueRunning)
-        {
+        if (!AreStaticConditionsMet())
             return;
-        }
 
-
-        // =====================================================
-        // БЕРЁМ МЕНЕДЖЕРЫ У САМОГО NPC
-        // =====================================================
 
         DialogueManager dialogueManager =
-            clientNPC
-                .DialogueManagerReference;
-
-
-        ClientQuestionDialogueController
-            questionDialogueController =
-                clientNPC
-                    .QuestionDialogueControllerReference;
+            clientNPC != null
+                ? clientNPC.DialogueManagerReference
+                : null;
 
 
         if (dialogueManager == null)
             return;
 
 
-        // =====================================================
-        // ВАРИАНТ ДЕЛА
-        // =====================================================
+        watchCoroutine =
+            StartCoroutine(
+                WatchFinalDialogueRoutine(
+                    dialogueManager
+                )
+            );
+    }
+
+
+    // =====================================================
+    // СЛЕДИМ ТОЛЬКО ПОКА ИДЁТ НУЖНЫЙ FINAL DIALOGUE
+    // =====================================================
+
+    private IEnumerator WatchFinalDialogueRoutine(
+        DialogueManager dialogueManager)
+    {
+        /*
+         * Эта coroutine существует только
+         * несколько секунд во время
+         * финального диалога конкретного NPC.
+         *
+         * В остальное время компонент
+         * вообще ничего не проверяет.
+         */
+        while (!triggered &&
+               clientNPC != null &&
+               clientNPC.IsFinalDialogueRunning &&
+               dialogueManager != null &&
+               dialogueManager.DialogueActive)
+        {
+            if (ClientNPCController
+                    .CurrentActiveClient !=
+                clientNPC)
+            {
+                break;
+            }
+
+
+            /*
+             * >= оставляем специально.
+             *
+             * Если игрок очень быстро
+             * переключил реплики, событие
+             * всё равно не будет пропущено.
+             */
+            if (dialogueManager.CurrentLineIndex >=
+                triggerLineIndex)
+            {
+                triggered = true;
+
+                /*
+                 * Обнуляем ссылку ДО UnityEvent.
+                 *
+                 * Так безопаснее даже если
+                 * вызванное событие вдруг
+                 * отключит этот компонент.
+                 */
+                watchCoroutine = null;
+
+                onTriggered?.Invoke();
+
+                yield break;
+            }
+
+
+            yield return null;
+        }
+
+
+        watchCoroutine = null;
+    }
+
+
+    // =====================================================
+    // УСЛОВИЯ, КОТОРЫЕ НЕ НУЖНО ПРОВЕРЯТЬ КАЖДЫЙ КАДР
+    // =====================================================
+
+    private bool AreStaticConditionsMet()
+    {
+        if (clientNPC == null)
+            return false;
+
+
+        if (ClientNPCController
+                .CurrentActiveClient !=
+            clientNPC)
+        {
+            return false;
+        }
+
+
+        if (!clientNPC.IsFinalDialogueRunning)
+            return false;
+
 
         VisitorCaseData.VisitorCaseVariant
             variant =
@@ -145,7 +264,7 @@ public class ClientSpecialDialogueEventController :
 
 
         if (variant == null)
-            return;
+            return false;
 
 
         if (!string.IsNullOrWhiteSpace(
@@ -153,67 +272,68 @@ public class ClientSpecialDialogueEventController :
             variant.VariantId !=
                 requiredVariantId)
         {
-            return;
+            return false;
         }
 
-
-        // =====================================================
-        // ДОПОЛНИТЕЛЬНЫЙ ВОПРОС
-        // =====================================================
+        if (requiredDecision !=
+                DirectionDecision.None &&
+            clientNPC.SubmittedDecision !=
+                requiredDecision)
+        {
+            return false;
+        }
 
         if (requirePersonalQuestion)
         {
-            if (questionDialogueController ==
-                    null ||
-                !questionDialogueController
+            ClientQuestionDialogueController
+                questionController =
+                    clientNPC
+                        .QuestionDialogueControllerReference;
+
+
+            if (questionController == null ||
+                !questionController
                     .PersonalQuestionAsked)
             {
-                return;
+                return false;
             }
         }
 
 
-        // =====================================================
-        // ДИАЛОГ ДОЛЖЕН РЕАЛЬНО ИДТИ
-        // =====================================================
-
-        if (!dialogueManager.DialogueActive)
-            return;
-
-
-        // =====================================================
-        // НУЖНАЯ РЕПЛИКА
-        // =====================================================
-
-        /*
-         * >= специально, чтобы быстрый скип
-         * не мог пропустить событие.
-         */
-        if (dialogueManager.CurrentLineIndex <
-            triggerLineIndex)
-        {
-            return;
-        }
-
-
-        // =====================================================
-        // ЗАПУСК
-        // =====================================================
-
-        triggered = true;
-
-        onTriggered?.Invoke();
+        return true;
     }
 
 
-    private void FindClient()
+    // =====================================================
+    // ПОДПИСКА
+    // =====================================================
+
+    private void Subscribe()
     {
-        if (clientNPC != null)
+        if (clientNPC == null)
             return;
 
 
-        clientNPC =
-            GetComponent<ClientNPCController>();
+        /*
+         * Сначала -= для защиты
+         * от случайной двойной подписки.
+         */
+        clientNPC.FinalDialogueStarted -=
+            HandleFinalDialogueStarted;
+
+        clientNPC.FinalDialogueStarted +=
+            HandleFinalDialogueStarted;
+    }
+
+
+    private void Unsubscribe()
+    {
+        if (clientNPC == null)
+            return;
+
+
+        clientNPC.FinalDialogueStarted -=
+            HandleFinalDialogueStarted;
     }
 
 

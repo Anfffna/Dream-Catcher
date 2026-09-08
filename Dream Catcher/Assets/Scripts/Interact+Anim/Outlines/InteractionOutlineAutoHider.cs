@@ -72,7 +72,10 @@ public class InteractionOutlineAutoHider : MonoBehaviour
             return;
         }
 
-        bool shouldHide = HasLargeVisibleUI();
+        bool shouldHide =
+            DeskCarryItemController.AnyItemHeld ||
+            HasLargeVisibleUI();
+
         ApplyVisibility(shouldHide);
     }
 

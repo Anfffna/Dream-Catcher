@@ -86,29 +86,6 @@ public class ClientGiveItemSequence :
     private bool finalBlockApplied;
 
 
-    private void Awake()
-    {
-        if (clientNPC == null)
-        {
-            clientNPC =
-                GetComponent<ClientNPCController>();
-        }
-
-        if (animator == null)
-        {
-            animator =
-                GetComponent<Animator>();
-
-            if (animator == null)
-            {
-                animator =
-                    GetComponentInChildren
-                        <Animator>(true);
-            }
-        }
-    }
-
-
     public void Play()
     {
         if (played ||

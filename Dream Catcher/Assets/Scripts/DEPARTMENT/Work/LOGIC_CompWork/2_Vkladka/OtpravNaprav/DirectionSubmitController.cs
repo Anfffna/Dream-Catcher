@@ -197,7 +197,10 @@ public class DirectionSubmitController :
         if (currentClient != null)
         {
             currentClient
-                .NotifyDirectionSubmitted();
+                .NotifyDirectionSubmitted(
+                    formController
+                        .GetSelectedDecision()
+                );
         }
 
         // Возврат камеры и исчезновение интерфейса начинаются в одном кадре.

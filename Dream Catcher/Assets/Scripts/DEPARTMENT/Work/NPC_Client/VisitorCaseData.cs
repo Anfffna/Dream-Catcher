@@ -403,6 +403,37 @@ public class VisitorCaseData :
         return caseVariants[safeIndex];
     }
 
+    public int GetVariantIndexById(
+    string variantId)
+    {
+        if (caseVariants == null ||
+            caseVariants.Count == 0 ||
+            string.IsNullOrWhiteSpace(
+                variantId))
+        {
+            return -1;
+        }
+
+
+        for (int i = 0;
+             i < caseVariants.Count;
+             i++)
+        {
+            VisitorCaseVariant variant =
+                caseVariants[i];
+
+            if (variant != null &&
+                variant.VariantId ==
+                    variantId)
+            {
+                return i;
+            }
+        }
+
+
+        return -1;
+    }
+
     public int GetRandomVariantIndex()
     {
         if (caseVariants == null ||

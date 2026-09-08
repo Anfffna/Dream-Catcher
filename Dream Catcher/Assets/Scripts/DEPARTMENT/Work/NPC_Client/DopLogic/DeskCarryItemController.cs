@@ -1,5 +1,6 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class DeskCarryItemController :
     MonoBehaviour,
@@ -13,46 +14,91 @@ public class DeskCarryItemController :
         carryInteractionOwner.isHeld;
 
 
-    [Header("��������������")]
+    [Header("Взаимодействие")]
 
-    [Tooltip("Collider ������ ��������.")]
+    [Tooltip("Collider самого предмета.")]
     [SerializeField]
     private Collider interactionCollider;
 
-    [Tooltip("������ ������.")]
+    [Tooltip("Камера игрока.")]
     [SerializeField]
     private Camera playerCamera;
 
     [Tooltip(
-        "Collider ����������� �����, " +
-        "�� ������� ������� ������� �� �����."
+        "Collider поверхности стола, " +
+        "по которой предмет следует за мышью."
     )]
     [SerializeField]
     private Collider placementSurface;
 
 
-    [Header("��������� ���������")]
+    [Header("Начальное состояние")]
 
     [Tooltip(
-        "�������� ������� �� �������, " +
-        "����� ������ ������� �������� ��� ��������."
+        "Скрывать предмет до момента, " +
+        "когда клиент реально начинает его отдавать."
     )]
     [SerializeField]
     private bool hideUntilClientGivesItem =
         true;
 
-
-    [Header("���������� �������� UI")]
+    [Header("Подсказка при первом взятии")]
 
     [Tooltip(
-        "���������� UI-����������� ���������� ����������. " +
-        "���������� ������ ���� ������� �����������."
+    "Контроллер UI-плашки для подсказки жетона."
+    )]
+    [SerializeField]
+    private ClickInteractionHint pickupHint;
+
+
+    [Tooltip(
+        "Первый текст. Показывается сразу " +
+        "после взятия предмета."
+    )]
+    [TextArea(2, 5)]
+    [SerializeField]
+    private string pickupHintScrollText =
+        "Покрутите колесо мыши, чтобы приблизить или отдалить предмет.";
+
+
+    [Tooltip(
+        "Второй текст. Показывается после " +
+        "использования колеса мыши."
+    )]
+    [TextArea(2, 5)]
+    [SerializeField]
+    private string pickupHintPlaceText =
+        "ЛКМ — положить предмет.";
+
+
+    [Tooltip(
+        "Через сколько секунд после использования " +
+        "колеса заменить первый текст на второй."
+    )]
+    [SerializeField]
+    private float pickupHintSecondTextDelay =
+        0.5f;
+
+
+    [Tooltip(
+        "Показывать обучение только " +
+        "при первом взятии этого предмета."
+    )]
+    [SerializeField]
+    private bool showPickupHintOnlyOnce =
+        true;
+
+    [Header("Блокировка рабочего UI")]
+
+    [Tooltip(
+        "Прозрачный UI-блокировщик интерфейса компьютера. " +
+        "Включается только пока предмет переносится."
     )]
     [SerializeField]
     private GameObject workUIInputBlocker;
 
 
-    [Header("����")]
+    [Header("Слои")]
 
     [SerializeField]
     private string defaultLayerName =
@@ -63,116 +109,217 @@ public class DeskCarryItemController :
         "Interactable";
 
 
-    [Header("������ ��� ��������")]
+    [Header("Размер при переносе")]
 
     [Tooltip(
-        "�� ������� ��� ������� ���������� �������, " +
-        "����� ����� ���� ��� ��������."
+        "Во сколько раз предмет становится крупнее, " +
+        "когда игрок берёт его курсором."
     )]
     [SerializeField]
     private float heldScaleMultiplier =
         1.25f;
 
     [Tooltip(
-        "������������ �������� ���������� " +
-        "��� ������."
+        "Длительность плавного увеличения " +
+        "при взятии."
     )]
     [SerializeField]
     private float pickupScaleDuration =
         0.2f;
 
     [Tooltip(
-        "������������ �������� ���������� " +
-        "�� �������� ������� ��� �������."
+        "Длительность плавного уменьшения " +
+        "до обычного размера при укладке."
     )]
     [SerializeField]
     private float placeScaleDuration =
         0.2f;
 
 
-    [Header("�������")]
+    [Header("Поворот")]
 
     [Tooltip(
-        "������� ��������, ���� �� ��������� " +
-        "��� ��������."
+        "Поворот предмета, пока он находится " +
+        "под курсором."
     )]
     [SerializeField]
     private Vector3 heldEulerAngles;
 
     [Tooltip(
-        "������� �������� ����� ������� �� ����."
+        "Поворот предмета после укладки на стол."
     )]
     [SerializeField]
     private Vector3 placedEulerAngles;
 
     [Tooltip(
-        "������� ��� ���� ������������ " +
-        "�������� ����������� �����."
+        "Считать эти углы относительно " +
+        "поворота поверхности стола."
     )]
     [SerializeField]
     private bool rotationRelativeToSurface =
         true;
 
 
-    [Header("����������� �����")]
+    [Header("Поверхность стола")]
 
     [Tooltip(
-        "��������� ������ �� �����������, " +
-        "����� ������ �� ������������� � ����."
+        "Небольшой отступ от поверхности, " +
+        "чтобы модель не проваливалась в стол."
     )]
     [SerializeField]
     private float surfaceOffset =
         0.005f;
 
     [Tooltip(
-        "������������ ��������� ���� " +
-        "�� ����������� �����."
+        "Максимальная дистанция луча " +
+        "до поверхности стола."
     )]
     [SerializeField]
     private float placementRayDistance =
         20f;
 
-
-    [Header("������������ � ����������")]
+    [Header("Расстояние от камеры")]
 
     [Tooltip(
-        "�� ��������� ������������ �������� " +
-        "��������� ������ ������ Collider."
+    "Расстояние от камеры, на котором " +
+    "предмет висит под курсором."
+    )]
+    [SerializeField]
+    private float heldDistanceFromCamera =
+    0.8f;
+
+    [Tooltip("Минимально допустимое расстояние.")]
+    [SerializeField]
+    private float minHeldDistance =
+        0.35f;
+
+    [Tooltip("Максимально допустимое расстояние.")]
+    [SerializeField]
+    private float maxHeldDistance =
+        1.5f;
+
+    [Tooltip(
+        "Скорость приближения и отдаления " +
+        "предмета колесом мыши."
+    )]
+    [SerializeField]
+    private float heldDistanceScrollSpeed =
+        0.1f;
+
+    [Tooltip(
+    "Скорость плавного движения предмета " +
+    "к выбранному колесом расстоянию."
+    )]
+    [SerializeField]
+    private float heldDistanceSmoothSpeed =
+    8f;
+
+    [Header("Плавный поворот")]
+
+    [Tooltip(
+        "За сколько секунд предмет плавно " +
+        "поворачивается при взятии и укладке."
+    )]
+    [SerializeField]
+    private float rotationTransitionDuration =
+        0.2f;
+
+    [Header("Коллизия во время переноса")]
+
+    [Tooltip(
+    "Не позволять предмету проходить сквозь " +
+    "стол и препятствия во время переноса."
+    )]
+    [SerializeField]
+    private bool preventHeldClipping =
+    true;
+
+    [Tooltip(
+        "Радиус предмета при проверке препятствий " +
+        "во время переноса."
+    )]
+    [SerializeField]
+    private float heldCollisionRadius =
+        0.025f;
+
+    [Tooltip(
+        "Небольшой зазор перед препятствием."
+    )]
+    [SerializeField]
+    private float heldCollisionPadding =
+        0.005f;
+
+    [Header("Покачивание при движении мыши")]
+
+    [Tooltip(
+    "Максимальный наклон предмета в плоскости экрана " +
+    "при движении мыши. " +
+    "Предмет при этом продолжает смотреть лицом к камере."
+    )]
+    [FormerlySerializedAs("heldYawSwayAngle")]
+    [SerializeField]
+    private float heldRollSwayAngle =
+    3f;
+
+    [Tooltip(
+        "Скорость плавного наклона " +
+        "и возвращения в обычное положение."
+    )]
+    [FormerlySerializedAs("heldYawSwaySpeed")]
+    [SerializeField]
+    private float heldRollSwaySpeed =
+        12f;
+
+    [Header("Столкновения с предметами")]
+
+    [Tooltip(
+        "Не позволять переносимому предмету " +
+        "проходить сквозь другие Collider."
     )]
     [SerializeField]
     private bool preventObstacleOverlap =
         true;
 
     [Tooltip(
-        "����� ���� ��������� �������������. " +
-        "����� ������� ���� ��������� �� �����."
+        "Какие слои считаются препятствиями. " +
+        "Лучше указать слои предметов на столе."
     )]
     [SerializeField]
     private LayerMask obstacleLayers =
         ~0;
 
     [Tooltip(
-        "������ �������� ������� ������ ��������. " +
-        "����������� ��� ������ ����������� ��������."
+        "Радиус защитной области вокруг предмета. " +
+        "Подбирается под размер конкретного предмета."
     )]
     [SerializeField]
     private float obstacleRadius =
         0.04f;
 
     [Tooltip(
-        "�������������� ����� ����� ����������."
+        "Дополнительный зазор между предметами."
     )]
     [SerializeField]
     private float obstaclePadding =
         0.005f;
 
-
-    [Header("������� ��������")]
+    [Header("Блокировка укладки за объектами")]
 
     [Tooltip(
-        "�� ��������� ���������� �������, " +
-        "���� ���������� ������� ������� " +
-        "�� ����� ������� �� ����."
+    "Не позволять класть предмет на участок стола, " +
+    "если между камерой и этим участком находится другой Collider."
+    )]
+    [SerializeField]
+    private bool preventPlacementBehindObjects =
+    true;
+
+
+    [Header("Очередь клиентов")]
+
+    [Tooltip(
+        "Не запускать следующего клиента, " +
+        "пока подаренный предмет впервые " +
+        "не будет положен на стол."
     )]
     [SerializeField]
     private bool blockNextVisitorUntilPlaced =
@@ -193,7 +340,19 @@ public class DeskCarryItemController :
     private bool isHeld;
     private bool placed;
 
+    private bool pickupHintShown;
+    private float currentHeldRollSway;
+    private float targetHeldDistance;
+    private float currentHeldDistance;
+
+    private bool pickupHintSequenceActive;
+    private bool pickupHintScrollDetected;
+    private bool pickupHintPlaceStage;
+
+    private float pickupHintScrollTimer;
+
     private bool queueBlocked;
+    private int pickedUpFrame = -1;
 
 
     private Vector3 normalLocalScale;
@@ -228,6 +387,23 @@ public class DeskCarryItemController :
         normalLocalScale =
             transform.localScale;
 
+        float safeMinDistance =
+            GetSafeMinHeldDistance();
+
+
+        heldDistanceFromCamera =
+            Mathf.Clamp(
+                heldDistanceFromCamera,
+                safeMinDistance,
+                maxHeldDistance
+            );
+
+
+        targetHeldDistance =
+            heldDistanceFromCamera;
+
+        currentHeldDistance =
+            heldDistanceFromCamera;
 
         revealed =
             !hideUntilClientGivesItem;
@@ -256,14 +432,42 @@ public class DeskCarryItemController :
         }
     }
 
+    private float GetSafeMinHeldDistance()
+    {
+        float safeMin =
+            minHeldDistance;
+
+
+        if (playerCamera != null)
+        {
+            /*
+             * Жетон не должен оказаться
+             * перед Near Clip Plane камеры.
+             *
+             * Добавляем радиус самого предмета,
+             * чтобы в камеру не вошёл его край.
+             */
+            float cameraSafeMin =
+                playerCamera.nearClipPlane +
+                heldCollisionRadius +
+                heldCollisionPadding;
+
+
+            safeMin =
+                Mathf.Max(
+                    safeMin,
+                    cameraSafeMin
+                );
+        }
+
+
+        return safeMin;
+    }
 
     private void Update()
     {
-        if (!isHeld ||
-            transitionInProgress)
-        {
+        if (!isHeld)
             return;
-        }
 
 
         bool pauseBlocks =
@@ -290,10 +494,112 @@ public class DeskCarryItemController :
         }
 
 
-        if (Input.GetMouseButtonDown(0) &&
-            hasValidPlacement)
+        // =====================================================
+        // КОЛЕСО МЫШИ
+        // =====================================================
+
+        float scroll =
+            Input.mouseScrollDelta.y;
+
+
+        if (Mathf.Abs(scroll) > 0.01f)
         {
-            StartPlace();
+            float safeMinDistance =
+                GetSafeMinHeldDistance();
+
+
+            targetHeldDistance =
+                Mathf.Clamp(
+                    targetHeldDistance +
+                    scroll *
+                    heldDistanceScrollSpeed,
+                    safeMinDistance,
+                    maxHeldDistance
+                );
+
+
+            /*
+             * Это поле оставляем синхронным,
+             * чтобы в Inspector было понятно,
+             * какое расстояние выбрано.
+             */
+            heldDistanceFromCamera =
+                targetHeldDistance;
+        }
+
+        // =====================================================
+        // ОБУЧЕНИЕ: КОЛЕСО → ЛКМ
+        // =====================================================
+
+        if (pickupHintSequenceActive &&
+            !pickupHintPlaceStage)
+        {
+            /*
+             * Первый реальный поворот колеса
+             * запускает таймер смены текста.
+             */
+            if (!pickupHintScrollDetected &&
+                Mathf.Abs(scroll) > 0.01f)
+            {
+                pickupHintScrollDetected = true;
+                pickupHintScrollTimer = 0f;
+            }
+
+
+            if (pickupHintScrollDetected)
+            {
+                pickupHintScrollTimer +=
+                    Time.deltaTime;
+
+
+                if (pickupHintScrollTimer >=
+                    pickupHintSecondTextDelay)
+                {
+                    pickupHintPlaceStage = true;
+
+
+                    if (pickupHint != null)
+                    {
+                        pickupHint.Show(
+                            pickupHintPlaceText,
+                            false
+                        );
+                    }
+                }
+            }
+        }
+
+
+        // =====================================================
+        // УКЛАДКА
+        // =====================================================
+
+        /*
+         * Не позволяем клику,
+         * которым предмет только что взяли,
+         * одновременно его положить.
+         */
+        if (Time.frameCount ==
+            pickedUpFrame)
+        {
+            return;
+        }
+
+        /*
+         * Пока игрок ещё не выполнил
+         * первый шаг обучения с колесом,
+         * ЛКМ предмет не кладёт.
+         */
+        if (pickupHintSequenceActive &&
+            !pickupHintPlaceStage)
+        {
+            return;
+        }
+
+        if (!transitionInProgress &&
+            Input.GetMouseButtonDown(0))
+        {
+            TryPlaceAtMousePosition();
         }
     }
 
@@ -308,14 +614,14 @@ public class DeskCarryItemController :
 
 
     // =====================================================
-    // ��������� � ���� NPC
+    // ПОЯВЛЕНИЕ В РУКЕ NPC
     // =====================================================
 
     public void ShowInHand()
     {
         /*
-         * ������������ � �������,
-         * ����� ��� GameObject ��� ��������.
+         * Поддерживаем и вариант,
+         * когда сам GameObject был выключен.
          */
         if (!gameObject.activeSelf)
         {
@@ -336,16 +642,16 @@ public class DeskCarryItemController :
         SetRenderersEnabled(true);
 
         /*
-         * ���� ������� ��������� � ���� NPC,
-         * �� �����, �� ����� ��� ���
-         * ������� �� �����.
+         * Пока предмет находится в руке NPC,
+         * он видим, но игрок его ещё
+         * забрать не может.
          */
         SetItemCollidersEnabled(false);
     }
 
 
     // =====================================================
-    // ����������� �� ��������
+    // ОТКРЕПЛЕНИЕ ОТ АНИМАЦИИ
     // =====================================================
 
     public void ReleaseFromAnimation(
@@ -357,8 +663,8 @@ public class DeskCarryItemController :
 
 
         /*
-         * ��������� ������� �������
-         * ��� ������� �� ����� ����.
+         * Сохраняем мировую позицию
+         * при отвязке от кости руки.
          */
         if (releasedItemsRoot != null)
         {
@@ -370,12 +676,12 @@ public class DeskCarryItemController :
 
 
         /*
-         * ���� ����� ������ �
-         * ��������� ������� ����.
+         * Если точка задана —
+         * переносим предмет туда.
          *
-         * ���� None �
-         * ��������� ����� � ��� �����,
-         * ��� ���������� ����.
+         * Если None —
+         * оставляем ровно в том месте,
+         * где находилась рука.
          */
         if (presentationPoint != null)
         {
@@ -385,11 +691,26 @@ public class DeskCarryItemController :
             );
         }
 
+        Quaternion surfaceRotation =
+            rotationRelativeToSurface &&
+            placementSurface != null
+                ? placementSurface.transform.rotation
+                : Quaternion.identity;
+
+        Quaternion releaseRotation =
+            surfaceRotation *
+            Quaternion.Euler(
+                placedEulerAngles
+            );
+
+        transform.rotation =
+            releaseRotation;
+
 
         /*
-         * ����� ����� Parent ����������
-         * ���������� Scale ���
-         * � ������� ������� ���������.
+         * После смены Parent запоминаем
+         * нормальный Scale уже
+         * в рабочей системе координат.
          */
         normalLocalScale =
             transform.localScale;
@@ -405,7 +726,7 @@ public class DeskCarryItemController :
 
 
     // =====================================================
-    // ������
+    // ВЗЯТИЕ
     // =====================================================
 
     public void Interact()
@@ -452,11 +773,52 @@ public class DeskCarryItemController :
 
 
         /*
-         * ����� ������� ������� �������.
-         * �� ����� ���������� �� ���
-         * ������� �� �����.
+         * Сразу передаём предмет курсору.
+         * Во время увеличения он уже
+         * следует за мышью.
          */
         isHeld = true;
+        currentHeldRollSway = 0f;
+
+        if (pickupHint != null &&
+            (!showPickupHintOnlyOnce ||
+             !pickupHintShown))
+        {
+            pickupHintShown = true;
+
+            pickupHintSequenceActive = true;
+            pickupHintScrollDetected = false;
+            pickupHintPlaceStage = false;
+            pickupHintScrollTimer = 0f;
+
+
+            pickupHint.Show(
+                 pickupHintScrollText,
+                 false
+             );
+        }
+        else
+        {
+            pickupHintSequenceActive = false;
+        }
+
+        float safeMinDistance =
+            GetSafeMinHeldDistance();
+
+
+        targetHeldDistance =
+            Mathf.Clamp(
+                heldDistanceFromCamera,
+                safeMinDistance,
+                maxHeldDistance
+            );
+
+        currentHeldDistance =
+            targetHeldDistance;
+
+
+        pickedUpFrame =
+            Time.frameCount;
 
         UpdateHeldPosition();
 
@@ -493,15 +855,297 @@ public class DeskCarryItemController :
 
 
     // =====================================================
-    // ���������� �� �����
+    // СЛЕДОВАНИЕ ЗА МЫШЬЮ
     // =====================================================
 
     private void UpdateHeldPosition()
     {
+        if (playerCamera == null)
+        {
+            playerCamera =
+                Camera.main;
+        }
+
+
+        if (playerCamera == null)
+            return;
+
+
+        Ray ray =
+            playerCamera.ScreenPointToRay(
+                Input.mousePosition
+            );
+
+
+        // =====================================================
+        // ПОЗИЦИЯ
+        // =====================================================
+
+        /*
+         * Вот здесь Held Distance реально
+         * определяет положение предмета.
+         *
+         * Поэтому колесо физически двигает
+         * предмет вдоль луча:
+         * ближе / дальше от камеры.
+         */
+        /*
+ * Сначала узнаём реальную безопасную
+ * конечную дистанцию.
+ *
+ * Если впереди стол или предмет,
+ * цель сразу ограничивается его поверхностью.
+ */
+        float safeTargetDistance =
+            ResolveHeldDistance(
+                ray,
+                targetHeldDistance
+            );
+
+
+        float distanceT =
+            1f -
+            Mathf.Exp(
+                -heldDistanceSmoothSpeed *
+                Time.deltaTime
+            );
+
+
+        float nextDistance =
+            Mathf.Lerp(
+                currentHeldDistance,
+                safeTargetDistance,
+                distanceT
+            );
+
+
+        /*
+         * Если игрок просто крутит колесо —
+         * приближение и отдаление плавные.
+         *
+         * Но если под жетоном ВНЕЗАПНО
+         * появился более близкий Collider
+         * (например курсор резко перевели
+         * на лежащий предмет), нельзя несколько
+         * кадров ехать сквозь него.
+         */
+        
+        currentHeldDistance =
+            nextDistance;
+
+
+        Vector3 heldPosition =
+            ray.GetPoint(
+                currentHeldDistance
+            );
+
+
+        transform.position =
+            heldPosition;
+
+
+        // =====================================================
+        // ПОВОРОТ В РУКЕ
+        // =====================================================
+
+        /*
+         * Основной поворот предмета всегда
+         * считается относительно камеры.
+         *
+         * Поэтому лицевая сторона предмета
+         * остаётся направленной примерно
+         * одинаково относительно игрока.
+         */
+        Quaternion baseRotation =
+            playerCamera.transform.rotation *
+            Quaternion.Euler(
+                heldEulerAngles
+            );
+
+
+        // =====================================================
+        // ЛЁГКОЕ ПОКАЧИВАНИЕ
+        // =====================================================
+
+        /*
+         * ВАЖНО:
+         *
+         * Раньше движение мыши добавляло
+         * поворот по локальной Y предмета.
+         *
+         * Для плоского жетона это означало,
+         * что он начинал показывать бок.
+         *
+         * Теперь мы вращаем его вокруг
+         * направления взгляда камеры.
+         *
+         * Получается небольшой красивый
+         * наклон в плоскости экрана,
+         * но лицевая сторона остаётся
+         * направлена на игрока.
+         */
+        float mouseX =
+            Input.GetAxisRaw(
+                "Mouse X"
+            );
+
+
+        float targetRollSway =
+            Mathf.Clamp(
+                mouseX,
+                -1f,
+                1f
+            ) *
+            heldRollSwayAngle;
+
+
+        float swayT =
+            1f -
+            Mathf.Exp(
+                -heldRollSwaySpeed *
+                Time.deltaTime
+            );
+
+
+        currentHeldRollSway =
+            Mathf.Lerp(
+                currentHeldRollSway,
+                targetRollSway,
+                swayT
+            );
+
+
+        /*
+         * Вращаем именно вокруг Forward камеры.
+         *
+         * Благодаря этому левое и правое
+         * покачивание симметричны и не зависят
+         * от локальных осей самой модели.
+         */
+        Quaternion swayRotation =
+            Quaternion.AngleAxis(
+                currentHeldRollSway,
+                playerCamera.transform.forward
+            );
+
+
+        Quaternion targetRotation =
+            swayRotation *
+            baseRotation;
+
+
+        // =====================================================
+        // ПЛАВНОСТЬ ПОВОРОТА
+        // =====================================================
+
+        if (rotationTransitionDuration <= 0f)
+        {
+            transform.rotation =
+                targetRotation;
+
+            return;
+        }
+
+
+        float rotationT =
+            1f -
+            Mathf.Exp(
+                -Time.deltaTime /
+                rotationTransitionDuration
+            );
+
+
+        transform.rotation =
+            Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationT
+            );
+    }
+
+    private bool IsPlacementPathBlocked(
+    Ray ray,
+    float tableDistance)
+    {
+        if (!preventPlacementBehindObjects)
+        {
+            return false;
+        }
+
+
+        /*
+         * Проверка выполняется только в момент
+         * попытки положить предмет.
+         *
+         * Ищем Collider между камерой
+         * и найденной точкой стола.
+         */
+        int hitCount =
+            Physics.RaycastNonAlloc(
+                ray,
+                obstacleHitBuffer,
+                tableDistance,
+                obstacleLayers,
+                QueryTriggerInteraction.Ignore
+            );
+
+
+        for (int i = 0;
+             i < hitCount;
+             i++)
+        {
+            RaycastHit obstacleHit =
+                obstacleHitBuffer[i];
+
+
+            Collider obstacle =
+                obstacleHit.collider;
+
+
+            if (obstacle == null)
+                continue;
+
+
+            /*
+             * Используем уже существующую
+             * проверку:
+             *
+             * - собственный Collider жетона игнорируется;
+             * - сам placementSurface игнорируется.
+             */
+            if (ShouldIgnoreObstacle(
+                    obstacle))
+            {
+                continue;
+            }
+
+
+            /*
+             * Нулевые попадания около
+             * начала луча не учитываем.
+             */
+            if (obstacleHit.distance <= 0.001f)
+            {
+                continue;
+            }
+
+
+            /*
+             * Нашли реальный объект
+             * перед поверхностью стола.
+             */
+            return true;
+        }
+
+
+        return false;
+    }
+
+    private void TryPlaceAtMousePosition()
+    {
         if (playerCamera == null ||
             placementSurface == null)
         {
-            hasValidPlacement = false;
             return;
         }
 
@@ -512,96 +1156,36 @@ public class DeskCarryItemController :
             );
 
 
-        // =====================================================
-        // ��������� �����
-        // =====================================================
-
-        Vector3 surfaceNormal =
-            placementSurface
-                .transform.up;
-
-
-        Bounds surfaceBounds =
-            placementSurface.bounds;
-
-
-        Vector3 absoluteNormal =
-            new Vector3(
-                Mathf.Abs(surfaceNormal.x),
-                Mathf.Abs(surfaceNormal.y),
-                Mathf.Abs(surfaceNormal.z)
-            );
-
-
-        float surfaceExtent =
-            Vector3.Dot(
-                absoluteNormal,
-                surfaceBounds.extents
-            );
-
-
-        Vector3 surfacePoint =
-            surfaceBounds.center +
-            surfaceNormal *
-            surfaceExtent;
-
-
-        Plane tablePlane =
-            new Plane(
-                surfaceNormal,
-                surfacePoint
-            );
-
-
-        if (!tablePlane.Raycast(
-                ray,
-                out float enter))
+        if (!placementSurface.Raycast(
+        ray,
+        out RaycastHit hit,
+        placementRayDistance))
         {
-            hasValidPlacement = false;
             return;
         }
 
 
-        Vector3 desiredPosition =
-            ray.GetPoint(enter) +
-            surfaceNormal *
+        /*
+         * Стол технически есть под курсором,
+         * но между камерой и ним может находиться
+         * клавиатура, монитор, папка и т.д.
+         *
+         * В таком случае класть предмет
+         * "за объект" запрещаем.
+         */
+        if (IsPlacementPathBlocked(
+                ray,
+                hit.distance))
+        {
+            return;
+        }
+
+
+        Vector3 targetPosition =
+            hit.point +
+            hit.normal *
             surfaceOffset;
 
-
-        // =====================================================
-        // ���������, ��� ���� ��� ����� ������
-        // =====================================================
-
-        Vector3 closestPoint =
-            placementSurface
-                .ClosestPoint(
-                    desiredPosition
-                );
-
-
-        float distanceFromSurface =
-            Vector3.Distance(
-                closestPoint,
-                desiredPosition
-            );
-
-
-        /*
-         * ���� ������ ������� ���������
-         * ��� Collider �����, ����������
-         * ����� ����� ���������.
-         */
-        bool pointerOverTable =
-            distanceFromSurface <=
-            Mathf.Max(
-                0.03f,
-                surfaceOffset + 0.02f
-            );
-
-
-        // =====================================================
-        // ROTATION
-        // =====================================================
 
         Quaternion surfaceRotation =
             rotationRelativeToSurface
@@ -610,14 +1194,7 @@ public class DeskCarryItemController :
                 : Quaternion.identity;
 
 
-        currentHeldRotation =
-            surfaceRotation *
-            Quaternion.Euler(
-                heldEulerAngles
-            );
-
-
-        currentPlacedRotation =
+        Quaternion targetRotation =
             surfaceRotation *
             Quaternion.Euler(
                 placedEulerAngles
@@ -625,51 +1202,171 @@ public class DeskCarryItemController :
 
 
         // =====================================================
-        // �����������
+        // НЕЛЬЗЯ ПОЛОЖИТЬ ВНУТРИ ДРУГОГО ПРЕДМЕТА
         // =====================================================
 
-        Vector3 resolvedPosition =
-            desiredPosition;
-
-
         if (preventObstacleOverlap &&
-            obstacleRadius > 0f)
+            IsPositionBlocked(
+                targetPosition))
         {
-            resolvedPosition =
-                ResolveObstacleMovement(
-                    transform.position,
-                    desiredPosition
-                );
+            return;
         }
 
 
-        currentPlacementPosition =
-            resolvedPosition;
-
-
-        transform.SetPositionAndRotation(
-            currentPlacementPosition,
-            currentHeldRotation
+        StartPlace(
+            targetPosition,
+            targetRotation
         );
+    }
+
+    private float ResolveHeldDistance(
+    Ray ray,
+    float desiredDistance)
+    {
+        float safeMinDistance =
+            GetSafeMinHeldDistance();
+
+
+        desiredDistance =
+            Mathf.Clamp(
+                desiredDistance,
+                safeMinDistance,
+                maxHeldDistance
+            );
+
+
+        if (!preventHeldClipping)
+        {
+            return desiredDistance;
+        }
+
+
+        float safeDistance =
+            desiredDistance;
+
+
+        // =====================================================
+        // СТОЛ
+        // =====================================================
+
+        /*
+         * Обычного Raycast до центра жетона
+         * недостаточно.
+         *
+         * Поэтому смотрим ЧУТЬ ДАЛЬШЕ центра:
+         * ещё на радиус жетона.
+         *
+         * Так мы видим стол ещё до того,
+         * как передний край жетона в него войдёт.
+         */
+        if (placementSurface != null)
+        {
+            float tableCheckDistance =
+                desiredDistance +
+                heldCollisionRadius +
+                heldCollisionPadding;
+
+
+            if (placementSurface.Raycast(
+                    ray,
+                    out RaycastHit surfaceHit,
+                    tableCheckDistance))
+            {
+                float tableSafeDistance =
+                    surfaceHit.distance -
+                    heldCollisionRadius -
+                    heldCollisionPadding;
+
+
+                safeDistance =
+                    Mathf.Min(
+                        safeDistance,
+                        tableSafeDistance
+                    );
+            }
+        }
+
+
+        // =====================================================
+        // ДРУГИЕ COLLIDER
+        // =====================================================
+
+        if (heldCollisionRadius > 0f)
+        {
+            /*
+             * SphereCast уже учитывает размер
+             * жетона.
+             *
+             * Поэтому hit.distance здесь —
+             * уже дистанция центра жетона
+             * в момент касания.
+             *
+             * НЕЛЬЗЯ ещё раз вычитать Radius:
+             * это как раз давало бы лишний рывок
+             * назад.
+             */
+            int hitCount =
+                Physics.SphereCastNonAlloc(
+                    ray.origin,
+                    heldCollisionRadius,
+                    ray.direction,
+                    obstacleHitBuffer,
+                    desiredDistance,
+                    obstacleLayers,
+                    QueryTriggerInteraction.Ignore
+                );
+
+
+            for (int i = 0;
+                 i < hitCount;
+                 i++)
+            {
+                RaycastHit hit =
+                    obstacleHitBuffer[i];
+
+
+                if (ShouldIgnoreObstacle(
+                        hit.collider))
+                {
+                    continue;
+                }
+
+
+                if (hit.distance <= 0.001f)
+                {
+                    continue;
+                }
+
+
+                float obstacleSafeDistance =
+                    hit.distance -
+                    heldCollisionPadding;
+
+
+                safeDistance =
+                    Mathf.Min(
+                        safeDistance,
+                        obstacleSafeDistance
+                    );
+            }
+        }
 
 
         /*
-         * ��������� �� ����� �� ����� ������,
-         * �� �������� ��������� ������:
+         * Если Collider действительно находится
+         * очень близко, столкновение важнее
+         * пользовательского Min Held Distance.
          *
-         * 1. ��� ������;
-         * 2. �� ������ ������� �������.
+         * Поэтому здесь НЕ возвращаем safeMinDistance.
          */
-        hasValidPlacement =
-            pointerOverTable &&
-            !IsPositionBlocked(
-                currentPlacementPosition
-            );
+        return Mathf.Max(
+            0.05f,
+            safeDistance
+        );
     }
 
-
     // =====================================================
-    // ������������
+    // СТОЛКНОВЕНИЯ
     // =====================================================
 
     private Vector3 ResolveObstacleMovement(
@@ -692,13 +1389,13 @@ public class DeskCarryItemController :
 
 
         /*
-         * ���� �� �����-�� ������� ������� ���
-         * �������� ������ �������� �������
-         * ������� Collider, �� ����������� ���
-         * �������.
+         * Если по какой-то причине предмет уже
+         * оказался внутри защитной области
+         * другого Collider, не цементируем его
+         * навечно.
          *
-         * ��������� ��� ��������� � ���������
-         * ������� ��� ��������.
+         * Разрешаем ему выбраться в свободную
+         * позицию под курсором.
          */
         if (IsPositionBlocked(
                 currentPosition))
@@ -758,13 +1455,13 @@ public class DeskCarryItemController :
 
 
             /*
-             * ������� ������������ ���������,
-             * ����� SphereCast ��� ��������
-             * Collider � ����� ��������� �����.
+             * Нулевые столкновения возникают,
+             * когда SphereCast уже касается
+             * Collider в своей начальной точке.
              *
-             * �� ������ ������������ ���
-             * ����������� �������� � �����
-             * ������� ��������� ��������.
+             * Их нельзя использовать как
+             * ограничение движения — иначе
+             * предмет застывает навсегда.
              */
             if (hitDistance <= 0.001f)
             {
@@ -802,10 +1499,10 @@ public class DeskCarryItemController :
 
 
         /*
-         * ���� ��������, �� �������������
-         * ����������, ��� ���� ��������
-         * ������� �� ��������� ������
-         * ������-������ ��������.
+         * Путь свободен, но дополнительно
+         * убеждаемся, что сама конечная
+         * позиция не находится внутри
+         * какого-нибудь предмета.
          */
         if (IsPositionBlocked(
                 targetPosition))
@@ -869,8 +1566,8 @@ public class DeskCarryItemController :
 
 
         /*
-         * ���� ����������� �����
-         * ������������ �� ��������.
+         * Сама поверхность стола
+         * препятствием не является.
          */
         if (obstacle ==
             placementSurface)
@@ -880,8 +1577,8 @@ public class DeskCarryItemController :
 
 
         /*
-         * ����������� Collider ��������
-         * ���� ����������.
+         * Собственные Collider предмета
+         * тоже игнорируем.
          */
         if (obstacle.transform ==
                 transform ||
@@ -897,11 +1594,24 @@ public class DeskCarryItemController :
 
 
     // =====================================================
-    // �������
+    // УКЛАДКА
     // =====================================================
 
-    private void StartPlace()
+    private void StartPlace(
+    Vector3 targetPosition,
+    Quaternion targetRotation)
     {
+        if (pickupHintSequenceActive)
+        {
+            if (pickupHint != null)
+            {
+                pickupHint.Hide();
+            }
+
+
+            pickupHintSequenceActive = false;
+        }
+
         if (scaleCoroutine != null)
         {
             StopCoroutine(
@@ -916,35 +1626,157 @@ public class DeskCarryItemController :
         isHeld = false;
 
 
-        transform.SetPositionAndRotation(
-            currentPlacementPosition,
-            currentPlacedRotation
-        );
-
-
         scaleCoroutine =
             StartCoroutine(
-                PlaceScaleRoutine()
+                PlaceRoutine(
+                    targetPosition,
+                    targetRotation
+                )
             );
     }
 
 
-    private IEnumerator PlaceScaleRoutine()
+    private IEnumerator PlaceRoutine(
+    Vector3 targetPosition,
+    Quaternion targetRotation)
     {
         Vector3 startScale =
             transform.localScale;
 
 
-        /*
-         * ������ ���������
-         * � Held Scale �� ��������.
-         */
-        yield return AnimateScale(
-            startScale,
-            normalLocalScale,
-            placeScaleDuration
-        );
+        Quaternion startRotation =
+            transform.rotation;
 
+
+        Vector3 heldPosition =
+            transform.position;
+
+
+        float totalDuration =
+            Mathf.Max(
+                placeScaleDuration,
+                rotationTransitionDuration
+            );
+
+
+        if (totalDuration <= 0f)
+        {
+            transform.position =
+                targetPosition;
+
+            transform.rotation =
+                targetRotation;
+
+            transform.localScale =
+                normalLocalScale;
+        }
+        else
+        {
+            float elapsed = 0f;
+
+
+            while (elapsed <
+                   totalDuration)
+            {
+                elapsed +=
+                    Time.deltaTime;
+
+
+                // -------------------------
+                // POSITION
+                // -------------------------
+
+                float positionT =
+                    Mathf.Clamp01(
+                        elapsed /
+                        totalDuration
+                    );
+
+
+                float smoothPositionT =
+                    Mathf.SmoothStep(
+                        0f,
+                        1f,
+                        positionT
+                    );
+
+
+                transform.position =
+                    Vector3.Lerp(
+                        heldPosition,
+                        targetPosition,
+                        smoothPositionT
+                    );
+
+
+                // -------------------------
+                // SCALE
+                // -------------------------
+
+                float scaleT =
+                    placeScaleDuration <= 0f
+                        ? 1f
+                        : Mathf.Clamp01(
+                            elapsed /
+                            placeScaleDuration
+                        );
+
+
+                scaleT =
+                    Mathf.SmoothStep(
+                        0f,
+                        1f,
+                        scaleT
+                    );
+
+
+                transform.localScale =
+                    Vector3.Lerp(
+                        startScale,
+                        normalLocalScale,
+                        scaleT
+                    );
+
+
+                // -------------------------
+                // ROTATION
+                // -------------------------
+
+                float rotationT =
+                    rotationTransitionDuration <= 0f
+                        ? 1f
+                        : Mathf.Clamp01(
+                            elapsed /
+                            rotationTransitionDuration
+                        );
+
+
+                rotationT =
+                    Mathf.SmoothStep(
+                        0f,
+                        1f,
+                        rotationT
+                    );
+
+
+                transform.rotation =
+                    Quaternion.Slerp(
+                        startRotation,
+                        targetRotation,
+                        rotationT
+                    );
+
+
+                yield return null;
+            }
+        }
+
+
+        transform.position =
+            targetPosition;
+
+        transform.rotation =
+            targetRotation;
 
         transform.localScale =
             normalLocalScale;
@@ -958,27 +1790,25 @@ public class DeskCarryItemController :
 
 
         /*
-         * �����:
-         * ����� ������� ������� �����
-         * ���������� Interactable,
-         * ������� ��� ����� ����������
-         * ���� ������ ���.
+         * После укладки жетон снова
+         * можно взять сколько угодно раз.
          */
         SetInteractionAvailable(true);
 
 
         ReleaseCarryLock();
 
+
         /*
-         * ������� ��� ������
-         * ������ �������� �������.
+         * Очередь разблокируем только
+         * после первой настоящей укладки.
          */
         ReleaseQueueBlock();
     }
 
 
     // =====================================================
-    // ���������� ������ ��������������
+    // БЛОКИРОВКА ДРУГИХ ВЗАИМОДЕЙСТВИЙ
     // =====================================================
 
     private bool AcquireCarryLock()
@@ -1023,7 +1853,7 @@ public class DeskCarryItemController :
 
 
     // =====================================================
-    // �������
+    // ОЧЕРЕДЬ
     // =====================================================
 
     private void BlockQueueIfNeeded()
@@ -1198,8 +2028,8 @@ public class DeskCarryItemController :
 
 
         /*
-         * ���� ������� �� ������������,
-         * ��� Collider ������ �� �����.
+         * Пока предмет не интерактивен,
+         * его Collider вообще не нужен.
          */
         SetItemCollidersEnabled(
             available
@@ -1318,6 +2148,26 @@ public class DeskCarryItemController :
             Mathf.Max(
                 0f,
                 obstaclePadding
+            );
+
+        heldDistanceSmoothSpeed =
+            Mathf.Max(
+                0.01f,
+                heldDistanceSmoothSpeed
+            );
+
+
+        heldCollisionRadius =
+            Mathf.Max(
+                0f,
+                heldCollisionRadius
+            );
+
+
+        heldCollisionPadding =
+            Mathf.Max(
+                0f,
+                heldCollisionPadding
             );
     }
 }

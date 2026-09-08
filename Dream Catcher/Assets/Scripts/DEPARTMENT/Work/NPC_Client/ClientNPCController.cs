@@ -173,6 +173,8 @@ public class ClientNPCController :
 
     private bool directionSubmitted;
     private bool waitingForSon3Return;
+    private DirectionDecision submittedDecision =
+    DirectionDecision.None;
 
     private VisitorCaseData.VisitorCaseVariant
         activeVariant;
@@ -201,6 +203,12 @@ public class ClientNPCController :
     public bool IsFinalDialogueRunning =>
         dialogueStage ==
             ClientDialogueStage.FinalDialogueRunning;
+
+    public DirectionDecision SubmittedDecision =>
+        submittedDecision;
+
+    public event Action<ClientNPCController>
+    FinalDialogueStarted;
 
     public event Action<ClientNPCController>
         ClientFinished;
@@ -976,10 +984,13 @@ public class ClientNPCController :
         SetInteractionAvailable(true);
     }
 
-    public void NotifyDirectionSubmitted()
+    public void NotifyDirectionSubmitted(
+        DirectionDecision decision)
     {
         if (directionSubmitted)
             return;
+        submittedDecision =
+            decision;
 
         directionSubmitted = true;
         waitingForSon3Return = false;
@@ -1174,7 +1185,7 @@ public class ClientNPCController :
             resolvedFinalDialogue =
                 activeVariant.ResolveFinalDialogue(
                     personalQuestionAsked,
-                    DirectionDecision.None
+                    submittedDecision
                 );
 
 
@@ -1201,6 +1212,7 @@ public class ClientNPCController :
             false
         );
 
+
         if (!dialogueManager.DialogueActive)
         {
             dialogueInteractionLocked =
@@ -1210,6 +1222,15 @@ public class ClientNPCController :
 
             return;
         }
+
+
+        // =====================================================
+        // —Œ¡€“»≈: ‘»Õ¿À‹Õ€… ƒ»¿ÀŒ√ –≈¿À‹ÕŒ Õ¿◊¿À—ﬂ
+        // =====================================================
+
+        FinalDialogueStarted?.Invoke(
+            this
+        );
 
         if (dialogueCoroutine != null)
         {
@@ -1494,6 +1515,10 @@ public class ClientNPCController :
         dialogueInteractionLocked = false;
         directionTabOpened = false;
         directionSubmitted = false;
+
+        submittedDecision =
+            DirectionDecision.None;
+
         waitingForSon3Return = false;
 
         finalCompletionBlockers.Clear();

@@ -430,6 +430,31 @@ public class VisitorQueueManager :
                 .GetRandomVariantIndex();
 
 
+        VisitorVariantDebugOverride
+            debugOverride =
+                source.NPC.GetComponent
+                    <VisitorVariantDebugOverride>();
+
+
+        if (debugOverride != null &&
+            debugOverride.ForceVariant)
+        {
+            int forcedIndex =
+                source.VisitorData
+                    .GetVariantIndexById(
+                        debugOverride
+                            .ForcedVariantId
+                    );
+
+
+            if (forcedIndex >= 0)
+            {
+                variantIndex =
+                    forcedIndex;
+            }
+        }
+
+
         RuntimeVisitorEntry runtimeEntry =
             new RuntimeVisitorEntry
             {
