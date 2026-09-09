@@ -45,7 +45,17 @@ public class LoadingSpinnerController : MonoBehaviour
     public void Show()
     {
         StopAllCoroutines();
-        StartCoroutine(Fade(0f, 1f, fadeDuration));
+
+        if (canvasGroup == null)
+            return;
+
+        StartCoroutine(
+            Fade(
+                canvasGroup.alpha,
+                1f,
+                fadeDuration
+            )
+        );
     }
 
     public void Hide()
@@ -59,32 +69,84 @@ public class LoadingSpinnerController : MonoBehaviour
     public void HideSmooth()
     {
         StopAllCoroutines();
-        StartCoroutine(Fade(1f, 0f, fadeDuration));
+
+        if (canvasGroup == null)
+            return;
+
+        StartCoroutine(
+            Fade(
+                canvasGroup.alpha,
+                0f,
+                fadeDuration
+            )
+        );
     }
 
-    private IEnumerator Fade(float from, float to, float duration)
+    private IEnumerator Fade(
+    float from,
+    float to,
+    float duration)
     {
-        if (canvasGroup == null) yield break;
+        if (canvasGroup == null)
+            yield break;
+
+        if (duration <= 0f)
+        {
+            canvasGroup.alpha = to;
+            yield break;
+        }
+
         float t = 0f;
+
         while (t < duration)
         {
-            t += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(from, to, t / duration);
+            t += Time.unscaledDeltaTime;
+
+            canvasGroup.alpha =
+                Mathf.Lerp(
+                    from,
+                    to,
+                    Mathf.Clamp01(t / duration)
+                );
+
             yield return null;
         }
+
         canvasGroup.alpha = to;
     }
 
-    void Update()
+    private void Update()
     {
-        if (canvasGroup == null || canvasGroup.alpha <= 0.01f) return;
-        if (innerDot == null) return;
+        if (canvasGroup == null ||
+            canvasGroup.alpha <= 0.01f)
+        {
+            return;
+        }
 
-        currentAngle += speed * Time.deltaTime;
-        if (currentAngle > 360f) currentAngle -= 360f;
-        float rad = currentAngle * Mathf.Deg2Rad;
-        float x = centerPosition.x + orbitRadius * Mathf.Cos(rad);
-        float y = centerPosition.y + orbitRadius * Mathf.Sin(rad);
-        innerDot.anchoredPosition = new Vector2(x, y);
+        if (innerDot == null)
+            return;
+
+        currentAngle -=
+            speed * Time.unscaledDeltaTime;
+
+        currentAngle =
+            Mathf.Repeat(
+                currentAngle,
+                360f
+            );
+
+        float rad =
+            currentAngle * Mathf.Deg2Rad;
+
+        float x =
+            centerPosition.x +
+            orbitRadius * Mathf.Cos(rad);
+
+        float y =
+            centerPosition.y +
+            orbitRadius * Mathf.Sin(rad);
+
+        innerDot.anchoredPosition =
+            new Vector2(x, y);
     }
 }

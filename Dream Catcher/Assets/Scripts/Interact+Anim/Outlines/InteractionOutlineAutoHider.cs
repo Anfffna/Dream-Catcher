@@ -38,9 +38,20 @@ public class InteractionOutlineAutoHider : MonoBehaviour
     private RectTransform ownRect;
     private CanvasGroup ownCanvasGroup;
     private bool isHidden = false;
+    private Canvas[] cachedCanvases;
+
+    [SerializeField]
+    private float checkInterval = 0.3f;
+
+    private float nextCheckTime;
+    private bool lastShouldHide;
+    private float canvasRefreshTimer;
 
     private void Awake()
     {
+        cachedCanvases =
+        FindObjectsOfType<Canvas>();
+
         Instance = this;
 
         ownRect = GetComponent<RectTransform>();
@@ -72,11 +83,36 @@ public class InteractionOutlineAutoHider : MonoBehaviour
             return;
         }
 
+
+        canvasRefreshTimer -= Time.deltaTime;
+
+        if (canvasRefreshTimer <= 0f)
+        {
+            canvasRefreshTimer = 2f;
+
+            cachedCanvases =
+                FindObjectsOfType<Canvas>();
+        }
+
+
+        if (Time.time < nextCheckTime)
+            return;
+
+
+        nextCheckTime =
+            Time.time + checkInterval;
+
+
         bool shouldHide =
             DeskCarryItemController.AnyItemHeld ||
             HasLargeVisibleUI();
 
-        ApplyVisibility(shouldHide);
+
+        if (shouldHide != lastShouldHide)
+        {
+            lastShouldHide = shouldHide;
+            ApplyVisibility(shouldHide);
+        }
     }
 
     private void EnsureCanvasGroup()
@@ -112,7 +148,8 @@ public class InteractionOutlineAutoHider : MonoBehaviour
 
         if (scanAllActiveCanvases)
         {
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
+            Canvas[] canvases =
+                cachedCanvases;
 
             for (int i = 0; i < canvases.Length; i++)
             {

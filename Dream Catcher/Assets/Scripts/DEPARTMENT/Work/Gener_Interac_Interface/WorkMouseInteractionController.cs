@@ -12,6 +12,11 @@ public class WorkMouseInteractionController :
     public string interactableLayerName =
         "Interactable";
 
+    [Header("Blocking")]
+    [Tooltip("Слой, который полностью блокирует взаимодействие мышью.")]
+    public string blockInteractableLayerName =
+    "BlockInteractable";
+
     [Tooltip("Максимальное расстояние курсорного взаимодействия.")]
     public float interactionDistance =
         10f;
@@ -31,6 +36,8 @@ public class WorkMouseInteractionController :
         new List<MonoBehaviour>(8);
 
     private int interactableLayerMask;
+    private int blockInteractableLayerMask;
+    private int interactionRayMask;
 
     private void Awake()
     {
@@ -139,9 +146,21 @@ public class WorkMouseInteractionController :
             ray,
             out RaycastHit hit,
             interactionDistance,
-            interactableLayerMask,
+            interactionRayMask,
             QueryTriggerInteraction.Collide))
         {
+            int hitLayerMask =
+                1 << hit.collider.gameObject.layer;
+
+            // Самый ближний объект оказался блокировщиком.
+            // Значит дальше луч не проходит.
+            if ((hitLayerMask &
+                 blockInteractableLayerMask) != 0)
+            {
+                SetHoveredInteractable(null);
+                return;
+            }
+
             IInteractable interactable =
                 FindInteractable(
                     hit.collider
@@ -157,8 +176,7 @@ public class WorkMouseInteractionController :
                 {
                     Debug.Log(
                         "Рабочий курсор наведён на: " +
-                        hit.collider
-                            .gameObject.name
+                        hit.collider.gameObject.name
                     );
                 }
 
@@ -168,8 +186,7 @@ public class WorkMouseInteractionController :
                     {
                         Debug.Log(
                             "Рабочий клик по: " +
-                            hit.collider
-                                .gameObject.name
+                            hit.collider.gameObject.name
                         );
                     }
 
@@ -247,12 +264,17 @@ public class WorkMouseInteractionController :
 
     private void BuildLayerMask()
     {
-        int layer =
+        int interactableLayer =
             LayerMask.NameToLayer(
                 interactableLayerName
             );
 
-        if (layer < 0)
+        int blockLayer =
+            LayerMask.NameToLayer(
+                blockInteractableLayerName
+            );
+
+        if (interactableLayer < 0)
         {
             interactableLayerMask = 0;
 
@@ -265,8 +287,28 @@ public class WorkMouseInteractionController :
             return;
         }
 
+        if (blockLayer < 0)
+        {
+            blockInteractableLayerMask = 0;
+
+            Debug.LogError(
+                "WorkMouseInteractionController: " +
+                "слой не найден: " +
+                blockInteractableLayerName
+            );
+
+            return;
+        }
+
         interactableLayerMask =
-            1 << layer;
+            1 << interactableLayer;
+
+        blockInteractableLayerMask =
+            1 << blockLayer;
+
+        interactionRayMask =
+            interactableLayerMask |
+            blockInteractableLayerMask;
     }
 
     private void FindReferences()

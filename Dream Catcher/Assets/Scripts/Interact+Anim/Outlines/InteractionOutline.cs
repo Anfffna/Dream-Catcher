@@ -44,7 +44,6 @@ public class InteractionOutline : MonoBehaviour
     [Header("Settings")]
     public bool includeChildren = false;
     public bool hideOnStart = true;
-    public bool updateEveryFrame = true;
 
     private MeshFilter[] meshFilters;
     private Renderer[] renderers;
@@ -53,6 +52,23 @@ public class InteractionOutline : MonoBehaviour
     private Canvas parentCanvas;
     private bool isVisible = false;
     private RectTransform currentLineParent;
+
+    private Vector3 lastCameraPosition;
+    private Quaternion lastCameraRotation;
+    private bool initializedView;
+    private bool cachedOccluded;
+    private float lastOcclusionCheck;
+    private const float occlusionInterval = 0.15f;
+    private Vector3[][] cachedVertices;
+
+    private readonly List<ScreenPoint> cachedScreenPoints =
+        new List<ScreenPoint>(256);
+
+    private readonly List<Vector2> cachedPaddedHull =
+        new List<Vector2>(64);
+
+    private readonly List<ScreenPoint> cachedHull =
+        new List<ScreenPoint>(128);
 
     private struct ScreenPoint
     {
@@ -71,6 +87,19 @@ public class InteractionOutline : MonoBehaviour
         meshFilters = includeChildren
             ? GetComponentsInChildren<MeshFilter>(true)
             : GetComponents<MeshFilter>();
+
+        cachedVertices =
+            new Vector3[meshFilters.Length][];
+
+        for (int i = 0; i < meshFilters.Length; i++)
+        {
+            if (meshFilters[i] != null &&
+               meshFilters[i].sharedMesh != null)
+            {
+                cachedVertices[i] =
+                    meshFilters[i].sharedMesh.vertices;
+            }
+        }
 
         renderers = includeChildren
             ? GetComponentsInChildren<Renderer>(true)
@@ -95,10 +124,27 @@ public class InteractionOutline : MonoBehaviour
 
     void LateUpdate()
     {
-        if (!isVisible) return;
-        if (!updateEveryFrame) return;
+        if (!isVisible)
+            return;
 
-        DrawOutline();
+        if (playerCamera == null)
+            return;
+
+
+        if (!initializedView ||
+            playerCamera.transform.position != lastCameraPosition ||
+            playerCamera.transform.rotation != lastCameraRotation)
+        {
+            initializedView = true;
+
+            lastCameraPosition =
+                playerCamera.transform.position;
+
+            lastCameraRotation =
+                playerCamera.transform.rotation;
+
+            DrawOutline();
+        }
     }
 
     public void ShowOutline()
@@ -112,7 +158,7 @@ public class InteractionOutline : MonoBehaviour
     public void HideOutline()
     {
         isVisible = false;
-        ClearLineImages();
+        HideAllLines();
     }
 
     private void OnEnable()
@@ -129,8 +175,10 @@ public class InteractionOutline : MonoBehaviour
 
     public void ForceRedrawOutline()
     {
-        ClearLineImages();
-        ShowOutline();
+        isVisible = true;
+        initializedView = false;
+
+        DrawOutline();
     }
 
     private void OnDestroy()
@@ -146,7 +194,10 @@ public class InteractionOutline : MonoBehaviour
         if (playerCamera == null) return;
         if (outlineCanvasParent == null) return;
 
-        List<ScreenPoint> screenPoints = new List<ScreenPoint>();
+        cachedScreenPoints.Clear();
+
+        List<ScreenPoint> screenPoints =
+            cachedScreenPoints;
 
         CollectMeshScreenPoints(screenPoints);
 
@@ -174,7 +225,10 @@ public class InteractionOutline : MonoBehaviour
 
         center /= hull.Count;
 
-        List<Vector2> paddedHull = new List<Vector2>();
+        cachedPaddedHull.Clear();
+
+        List<Vector2> paddedHull =
+            cachedPaddedHull;
 
         for (int i = 0; i < hull.Count; i++)
         {
@@ -359,17 +413,11 @@ public class InteractionOutline : MonoBehaviour
             if (meshFilter == null) continue;
             if (meshFilter.sharedMesh == null) continue;
 
-            Mesh mesh = meshFilter.sharedMesh;
-            Vector3[] vertices;
+            Vector3[] vertices =
+                cachedVertices[i];
 
-            try
-            {
-                vertices = mesh.vertices;
-            }
-            catch
-            {
+            if (vertices == null)
                 continue;
-            }
 
             Transform meshTransform = meshFilter.transform;
 
@@ -522,7 +570,10 @@ public class InteractionOutline : MonoBehaviour
             return compareX;
         });
 
-        List<ScreenPoint> hull = new List<ScreenPoint>();
+        cachedHull.Clear();
+
+        List<ScreenPoint> hull =
+            cachedHull;
 
         for (int i = 0; i < points.Count; i++)
         {
@@ -555,18 +606,40 @@ public class InteractionOutline : MonoBehaviour
 
     private bool IsObjectOccluded()
     {
-        if (playerCamera == null) return false;
+        if (Time.time - lastOcclusionCheck <
+            occlusionInterval)
+        {
+            return cachedOccluded;
+        }
 
-        // Вычисляем общий bounds объекта (учитываем все рендереры)
-        Bounds bounds = new Bounds(transform.position, Vector3.zero);
+        lastOcclusionCheck = Time.time;
+
+        if (playerCamera == null)
+        {
+            cachedOccluded = false;
+            return false;
+        }
+
+        Bounds bounds =
+            new Bounds(
+                transform.position,
+                Vector3.zero
+            );
+
         bool hasBounds = false;
 
         if (renderers != null)
         {
-            for (int i = 0; i < renderers.Length; i++)
+            for (int i = 0;
+                 i < renderers.Length;
+                 i++)
             {
-                Renderer renderer = renderers[i];
-                if (renderer == null) continue;
+                Renderer renderer =
+                    renderers[i];
+
+                if (renderer == null)
+                    continue;
+
                 if (!hasBounds)
                 {
                     bounds = renderer.bounds;
@@ -574,48 +647,110 @@ public class InteractionOutline : MonoBehaviour
                 }
                 else
                 {
-                    bounds.Encapsulate(renderer.bounds);
+                    bounds.Encapsulate(
+                        renderer.bounds
+                    );
                 }
             }
         }
 
         if (!hasBounds)
+        {
+            cachedOccluded = false;
             return false;
+        }
 
-        // Точки для проверки: центр и 8 углов ограничивающего параллелепипеда
-        Vector3[] points = new Vector3[]
-        {
-        bounds.center,
-        bounds.min,
-        bounds.max,
-        new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
-        new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
-        new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
-        new Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
-        new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
-        new Vector3(bounds.max.x, bounds.min.y, bounds.max.z)
-        };
-
-        Vector3 cameraPosition = playerCamera.transform.position;
-
-        foreach (Vector3 point in points)
-        {
-            Vector3 direction = point - cameraPosition;
-            float distance = direction.magnitude;
-            if (distance <= 0.01f) continue;
-
-            Ray ray = new Ray(cameraPosition, direction.normalized);
-            if (Physics.Raycast(ray, out RaycastHit hit, distance, occlusionMask, QueryTriggerInteraction.Ignore))
+        Vector3[] points =
+            new Vector3[]
             {
-                // Если луч попал в сам объект или его дочернюю часть – не считаем перекрытием
-                if (hit.collider.transform == transform) continue;
-                if (hit.collider.transform.IsChildOf(transform)) continue;
+            bounds.center,
+            bounds.min,
+            bounds.max,
 
-                // Любое другое препятствие – объект перекрыт
+            new Vector3(
+                bounds.min.x,
+                bounds.min.y,
+                bounds.max.z
+            ),
+
+            new Vector3(
+                bounds.min.x,
+                bounds.max.y,
+                bounds.min.z
+            ),
+
+            new Vector3(
+                bounds.max.x,
+                bounds.min.y,
+                bounds.min.z
+            ),
+
+            new Vector3(
+                bounds.max.x,
+                bounds.max.y,
+                bounds.max.z
+            ),
+
+            new Vector3(
+                bounds.min.x,
+                bounds.max.y,
+                bounds.max.z
+            ),
+
+            new Vector3(
+                bounds.max.x,
+                bounds.min.y,
+                bounds.max.z
+            )
+            };
+
+        Vector3 cameraPosition =
+            playerCamera.transform.position;
+
+        for (int i = 0;
+             i < points.Length;
+             i++)
+        {
+            Vector3 direction =
+                points[i] - cameraPosition;
+
+            float distance =
+                direction.magnitude;
+
+            if (distance <= 0.01f)
+                continue;
+
+            Ray ray =
+                new Ray(
+                    cameraPosition,
+                    direction.normalized
+                );
+
+            if (Physics.Raycast(
+                ray,
+                out RaycastHit hit,
+                distance,
+                occlusionMask,
+                QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider == null)
+                    continue;
+
+                Transform hitTransform =
+                    hit.collider.transform;
+
+                if (hitTransform == transform)
+                    continue;
+
+                if (hitTransform.IsChildOf(transform))
+                    continue;
+
+                cachedOccluded = true;
                 return true;
             }
         }
 
+        cachedOccluded = false;
         return false;
     }
 }

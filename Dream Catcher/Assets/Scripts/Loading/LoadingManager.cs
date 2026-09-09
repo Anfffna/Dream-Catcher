@@ -193,13 +193,35 @@ public class LoadingManager : MonoBehaviour
         SelectRandomLoadingVisuals();
         PrepareLoadingVisuals();
 
+
+        // Спиннер запускаем сразу,
+        // ещё до начала загрузки сцены.
+        if (loadingSpinner != null)
+            loadingSpinner.Show();
+
+
         // Фон и верхняя картинка
         // проявляются практически одновременно.
         yield return StartCoroutine(
             FadeInLoadingVisualsTogether()
         );
 
+
+        // Гарантируем хотя бы один полностью
+        // отрисованный кадр загрузочного экрана
+        // перед началом загрузки сцены.
+        yield return null;
+
         DisablePlayerFootsteps();
+
+        // Во время загрузочного экрана
+        // приоритет отдаём плавности кадра,
+        // чтобы UI и спиннер продолжали обновляться.
+        ThreadPriority previousLoadingPriority =
+            Application.backgroundLoadingPriority;
+
+        Application.backgroundLoadingPriority =
+            ThreadPriority.Low;
 
         AsyncOperation asyncLoad =
             SceneManager.LoadSceneAsync(
@@ -240,9 +262,6 @@ public class LoadingManager : MonoBehaviour
             );
         }
 
-        if (loadingSpinner != null)
-            loadingSpinner.Show();
-
         while (asyncLoad.progress < 0.9f)
             yield return null;
 
@@ -250,6 +269,9 @@ public class LoadingManager : MonoBehaviour
 
         while (!asyncLoad.isDone)
             yield return null;
+
+        Application.backgroundLoadingPriority =
+            previousLoadingPriority;
 
         // Если это загрузка сохранения — ждём полного восстановления.
         while (SaveManager.Instance != null &&
