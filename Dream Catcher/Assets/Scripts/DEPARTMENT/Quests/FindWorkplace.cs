@@ -80,16 +80,35 @@ public class FindWorkplace : MonoBehaviour, IInteractable
 
     void Update()
     {
-        if (questUIManager == null || workplaceTurnstile == null || dialogueManager == null)
+        if (questUIManager == null ||
+            workplaceTurnstile == null ||
+            dialogueManager == null)
+        {
             FindReferences();
+        }
 
         if (isPickedUp)
             return;
 
-        if (!isAvailable &&
-            questUIManager != null &&
-            questUIManager.IsQuestActive(questId))
+        if (questUIManager == null)
+            return;
+
+        if (!questUIManager.IsQuestActive(questId))
+            return;
+
+        // Если загрузили сейв уже ПОСЛЕ взятия ключей,
+        // ключи не должны появляться снова.
+        if (AreKeysTaken())
         {
+            ApplyLoadedKeysTakenState();
+            return;
+        }
+
+        // find_workplace активен, а ключи ещё не взяты.
+        // Значит world keys обязаны лежать на стойке.
+        if (!isAvailable)
+        {
+            RestoreWorldKeysForActiveQuest();
             EnableKeysInteraction();
         }
     }
@@ -210,6 +229,40 @@ public class FindWorkplace : MonoBehaviour, IInteractable
         KeepCompletionTriggerNonInteractive();
 
         Debug.Log($"Ключи активированы для задания: {questId}");
+    }
+
+    private void RestoreWorldKeysForActiveQuest()
+    {
+        GameObject target =
+            GetKeysTargetObject();
+
+        if (target == null)
+            return;
+
+        if (!target.activeSelf)
+            target.SetActive(true);
+
+        RestoreKeysScale();
+    }
+
+
+    private void ApplyLoadedKeysTakenState()
+    {
+        isPickedUp = true;
+        isAvailable = false;
+        pickupRoutineStarted = false;
+
+        GameObject target =
+            GetKeysTargetObject();
+
+        if (target != null &&
+            target.activeSelf)
+        {
+            target.SetActive(false);
+        }
+
+        if (workplaceTurnstile != null)
+            workplaceTurnstile.UnlockTurnstile();
     }
 
     private void DisableInteractionOnly()

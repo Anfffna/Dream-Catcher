@@ -34,6 +34,7 @@ public class InteractionOutlineAutoHider : MonoBehaviour
     public static InteractionOutlineAutoHider Instance { get; private set; }
 
     private bool forceVisible = false;
+    private bool uiBlocked = false;
 
     private RectTransform ownRect;
     private CanvasGroup ownCanvasGroup;
@@ -77,14 +78,20 @@ public class InteractionOutlineAutoHider : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (uiBlocked)
+        {
+            ApplyVisibility(true);
+            return;
+        }
+
         if (forceVisible)
         {
             ApplyVisibility(false);
             return;
         }
 
-
-        canvasRefreshTimer -= Time.deltaTime;
+        canvasRefreshTimer -=
+            Time.unscaledDeltaTime;
 
         if (canvasRefreshTimer <= 0f)
         {
@@ -95,12 +102,15 @@ public class InteractionOutlineAutoHider : MonoBehaviour
         }
 
 
-        if (Time.time < nextCheckTime)
+        if (Time.unscaledTime <
+            nextCheckTime)
+        {
             return;
-
+        }
 
         nextCheckTime =
-            Time.time + checkInterval;
+            Time.unscaledTime +
+            checkInterval;
 
 
         bool shouldHide =
@@ -125,6 +135,30 @@ public class InteractionOutlineAutoHider : MonoBehaviour
 
         ownCanvasGroup.interactable = false;
         ownCanvasGroup.blocksRaycasts = false;
+    }
+
+    public static void SetUIBlocked(bool blocked)
+    {
+        if (Instance == null)
+            return;
+
+        Instance.uiBlocked = blocked;
+
+        if (blocked)
+        {
+            Instance.forceVisible = false;
+            Instance.ApplyVisibility(true);
+        }
+        else
+        {
+            Instance.lastShouldHide =
+                DeskCarryItemController.AnyItemHeld ||
+                Instance.HasLargeVisibleUI();
+
+            Instance.ApplyVisibility(
+                Instance.lastShouldHide
+            );
+        }
     }
 
     public static void SetForceVisible(bool value)

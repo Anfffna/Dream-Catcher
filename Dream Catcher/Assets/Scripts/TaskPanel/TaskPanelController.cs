@@ -190,7 +190,7 @@ public class TaskPanelController : MonoBehaviour
         if (workHUDManager != null)
             workHUDManager.SetTaskPanelBlocked(true);
 
-        InteractionOutlineAutoHider.SetForceVisible(false);
+        InteractionOutlineAutoHider.SetUIBlocked(true);
 
         if (taskPanel != null)
             taskPanel.SetActive(true);
@@ -227,8 +227,6 @@ public class TaskPanelController : MonoBehaviour
 
         if (workHUDManager != null)
             workHUDManager.SetTaskPanelBlocked(false);
-
-        InteractionOutlineAutoHider.SetForceVisible(true);
 
         if (taskPanelCanvasGroup != null)
         {
@@ -364,7 +362,7 @@ public class TaskPanelController : MonoBehaviour
         if (targetPanelAlpha <= 0.001f)
         {
             InteractionOutlineAutoHider
-                .SetForceVisible(false);
+                .SetUIBlocked(false);
 
             RestoreCursorAfterTaskPanelClosed();
         }

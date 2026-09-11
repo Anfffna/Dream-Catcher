@@ -706,6 +706,25 @@ public class DialogueManager :
         }
     }
 
+    public void ResetVoiceAudioSource(
+    AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        source.Stop();
+
+        pausedByDialogueSources.Remove(
+            source
+        );
+
+        if (currentVoiceAudioSource ==
+            source)
+        {
+            currentVoiceAudioSource = null;
+        }
+    }
+
     private void RegisterActiveDialogue()
     {
         if (registeredAsActiveDialogue)

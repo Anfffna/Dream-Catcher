@@ -50,6 +50,16 @@ public class QuestWorldStateApplier : MonoBehaviour
         if (!applyOnStart)
             return;
 
+        // При загрузке сейва состояние квестов
+        // ещё не восстановлено.
+        // SaveManager сам вызовет ApplyAllInScene()
+        // после RestoreQuests.
+        if (SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            return;
+        }
+
         if (applyOneFrameLater)
             StartCoroutine(ApplyNextFrame());
         else
@@ -59,6 +69,14 @@ public class QuestWorldStateApplier : MonoBehaviour
     private IEnumerator ApplyNextFrame()
     {
         yield return null;
+
+        // За этот кадр могла начаться загрузка сейва.
+        if (SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            yield break;
+        }
+
         Apply();
     }
 

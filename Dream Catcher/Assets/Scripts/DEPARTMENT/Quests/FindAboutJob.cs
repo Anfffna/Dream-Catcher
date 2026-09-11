@@ -467,6 +467,14 @@ public class FindAboutJob : MonoBehaviour, IInteractable
         if (!hideWorldKeysOnStart)
             return;
 
+        // Во время загрузки сейва не решаем
+        // судьбу world keys раньше SaveManager.
+        if (SaveManager.Instance != null &&
+            SaveManager.Instance.IsLoadingSave)
+        {
+            return;
+        }
+
         if (worldKeysObject == null)
             return;
 

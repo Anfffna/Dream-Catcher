@@ -2235,9 +2235,9 @@ MonoBehaviour:
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 1
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!82 &218814376
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3077,8 +3077,8 @@ Transform:
   m_GameObject: {fileID: 319874724}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6978295, y: 0.114166796, z: -0.114166796, w: 0.6978295}
-  m_LocalPosition: {x: -0.0135, y: 0.00943, z: 0.03108}
-  m_LocalScale: {x: 0.0027980853, y: 0.0023231932, z: 0.002246745}
+  m_LocalPosition: {x: -0.013327, y: 0.00944, z: 0.031252}
+  m_LocalScale: {x: 0.0033915592, y: 0.0028159425, z: 0.0027232796}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1451793153}
@@ -3607,8 +3607,8 @@ Transform:
   m_GameObject: {fileID: 358505837}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7052834, y: -0.05074825, z: 0.05074825, w: 0.7052834}
-  m_LocalPosition: {x: -0.015239998, y: 0.00946, z: 0.03047}
-  m_LocalScale: {x: 0.0028776308, y: 0.002246745, z: 0.002246745}
+  m_LocalPosition: {x: -0.015436, y: 0.0094453, z: 0.030513}
+  m_LocalScale: {x: 0.0034879763, y: 0.0027232796, z: 0.0027232796}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1451793153}
@@ -4427,16 +4427,16 @@ MonoBehaviour:
   screenPaddingPixels: 0
   simplifySmallOutlines: 1
   smallOutlineMaxSizePixels: 120
-  smallOutlinePoints: 8
+  smallOutlinePoints: 4
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.6
   includeChildren: 0
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!65 &404369624
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5982,19 +5982,19 @@ MonoBehaviour:
   outlineId: obj_mineta
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
-  screenPaddingPixels: 6
+  screenPaddingPixels: 8
   simplifySmallOutlines: 1
   smallOutlineMaxSizePixels: 120
-  smallOutlinePoints: 12
+  smallOutlinePoints: 10
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 1
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!1 &631662892
 GameObject:
   m_ObjectHideFlags: 0
@@ -8034,9 +8034,9 @@ MonoBehaviour:
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 0
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!1 &827256531
 GameObject:
   m_ObjectHideFlags: 0
@@ -10827,16 +10827,16 @@ MonoBehaviour:
   screenPaddingPixels: 0
   simplifySmallOutlines: 1
   smallOutlineMaxSizePixels: 120
-  smallOutlinePoints: 8
+  smallOutlinePoints: 4
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 0
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!65 &1283835382
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -17161,9 +17161,9 @@ MonoBehaviour:
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 0
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!82 &1869449992
 AudioSource:
   m_ObjectHideFlags: 0
@@ -18298,8 +18298,8 @@ Transform:
   m_GameObject: {fileID: 2015623538}
   serializedVersion: 2
   m_LocalRotation: {x: 0.68804115, y: 0.11238567, z: -0.11584043, w: 0.70749545}
-  m_LocalPosition: {x: -0.013749003, y: 0.009499003, z: 0.029295}
-  m_LocalScale: {x: 0.0027980853, y: 0.0019755275, z: 0.002246745}
+  m_LocalPosition: {x: -0.013629, y: 0.0094926, z: 0.029088}
+  m_LocalScale: {x: 0.0033915592, y: 0.002394537, z: 0.0027232796}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1451793153}
@@ -18378,19 +18378,19 @@ MonoBehaviour:
   outlineId: obj_check3
   outlineColor: {r: 0.745, g: 0.831, b: 0.663, a: 1}
   lineThicknessPixels: 9
-  screenPaddingPixels: -2
+  screenPaddingPixels: -8
   simplifySmallOutlines: 1
   smallOutlineMaxSizePixels: 120
-  smallOutlinePoints: 8
+  smallOutlinePoints: 4
   lineSprite: {fileID: 21300000, guid: 43483ed938bd94249922e6bd5f2c55a9, type: 3}
   lineImageType: 2
   hideWhenOccluded: 1
   occlusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  minimumVisibleRatio: 0.2
   includeChildren: 0
   hideOnStart: 1
-  updateEveryFrame: 1
 --- !u!23 &2015623543
 MeshRenderer:
   m_ObjectHideFlags: 0

@@ -55,6 +55,14 @@ public class WorkPhonePenaltyController :
     [SerializeField]
     private AudioSource ringingAudioSource;
 
+    [Header("Ручное использование")]
+
+    [Tooltip(
+    "Контроллер ручного использования телефона."
+    )]
+    [SerializeField]
+    private WorkPhoneManualController
+    manualPhoneController;
 
     [Header("Вибрация")]
 
@@ -92,18 +100,25 @@ public class WorkPhonePenaltyController :
     private const string InteractableLayerName =
         "Interactable";
 
-    private const string TakePhoneTrigger =
-        "TakePhone";
-
-    private const string PutPhoneTrigger =
-        "PutPhone";
-
+    private const string CallBossTrigger =
+        "CallBoss";
+    private const string NoCallBossTrigger =
+        "NoCallBoss";
     private const string PhoneHoldAnchorName =
         "PhoneHoldAnchor";
+
+    private const string TakePhoneTrigger =
+    "TakePhone";
+    private const string PutPhoneTrigger =
+        "PutPhone";
 
     private const float AnimationTimeout =
         10f;
 
+    public bool PenaltyCallPendingOrActive =>
+    dangerousCallPending ||
+    waitingForPhoneClick ||
+    phoneSequenceActive;
 
     // =====================================================
     // RUNTIME
@@ -128,22 +143,16 @@ public class WorkPhonePenaltyController :
     private bool animatorWasEnabledBeforeVibration;
     private bool animatorDisabledForCameraHold;
 
+    private bool lastPhoneInteractableState;
+
 
     // =====================================================
     // СОСТОЯНИЕ ТЕЛЕФОНА
     // =====================================================
 
     private bool dangerousCallPending;
-
     private bool waitingForPhoneClick;
-
     private bool phoneSequenceActive;
-
-
-    // =====================================================
-    // LAYER
-    // =====================================================
-
     private int originalPhoneLayer;
 
 
@@ -152,13 +161,9 @@ public class WorkPhonePenaltyController :
     // =====================================================
 
     private Transform phoneHoldAnchor;
-
     private Transform originalPhoneParent;
-
     private Scene originalPhoneScene;
-
     private int originalSiblingIndex;
-
     private bool attachedToCamera;
 
 
@@ -202,6 +207,37 @@ public class WorkPhonePenaltyController :
         MakePhoneNotInteractable();
     }
 
+    private void Update()
+    {
+        bool manualInteractionAvailable =
+            manualPhoneController != null &&
+            manualPhoneController
+                .WantsPhoneColliderInteractable &&
+            !dangerousCallPending &&
+            !phoneSequenceActive;
+
+        bool shouldBeInteractable =
+            waitingForPhoneClick ||
+            manualInteractionAvailable;
+
+        if (shouldBeInteractable ==
+            lastPhoneInteractableState)
+        {
+            return;
+        }
+
+        lastPhoneInteractableState =
+            shouldBeInteractable;
+
+        if (shouldBeInteractable)
+        {
+            MakePhoneInteractable();
+        }
+        else
+        {
+            MakePhoneNotInteractable();
+        }
+    }
 
     private void OnEnable()
     {
@@ -236,7 +272,8 @@ public class WorkPhonePenaltyController :
         // выключился прямо во время разговора,
         // стараемся не оставлять телефон
         // дочерним объектом камеры.
-        if (attachedToCamera)
+        if (attachedToCamera &&
+            gameObject.activeInHierarchy)
         {
             DetachPhoneFromCamera();
         }
@@ -445,34 +482,54 @@ public class WorkPhonePenaltyController :
 
     public void Interact()
     {
-        if (!waitingForPhoneClick)
+        // =====================================================
+        // СТАРЫЙ ВХОДЯЩИЙ ЗВОНОК БОССА
+        // ИМЕЕТ МАКСИМАЛЬНЫЙ ПРИОРИТЕТ.
+        // =====================================================
+
+        if (waitingForPhoneClick)
+        {
+            if (phoneCoroutine != null)
+                return;
+
+            waitingForPhoneClick = false;
+
+            MakePhoneNotInteractable();
+
+            StopRinging();
+            StopPhoneVibration();
+
+            phoneCoroutine =
+                StartCoroutine(
+                    AnswerPhoneRoutine()
+                );
+
             return;
+        }
 
 
-        if (phoneCoroutine != null)
+        // =====================================================
+        // ЕСЛИ ШТРАФНОЙ ЗВОНОК УЖЕ ГОТОВИТСЯ
+        // ИЛИ ИДЁТ — РУЧНОЙ ТЕЛЕФОН НЕ ТРОГАЕМ.
+        // =====================================================
+
+        if (dangerousCallPending ||
+            phoneSequenceActive ||
+            phoneCoroutine != null)
+        {
             return;
+        }
 
 
-        waitingForPhoneClick = false;
+        // =====================================================
+        // ОБЫЧНОЕ РУЧНОЕ ИСПОЛЬЗОВАНИЕ
+        // =====================================================
 
-
-        // Сразу запрещаем
-        // повторный клик.
-        MakePhoneNotInteractable();
-
-
-        // Игрок взял трубку:
-        // звонок и вибрация
-        // останавливаются одновременно.
-        StopRinging();
-
-        StopPhoneVibration();
-
-
-        phoneCoroutine =
-            StartCoroutine(
-                AnswerPhoneRoutine()
-            );
+        if (manualPhoneController != null)
+        {
+            manualPhoneController
+                .TryOpenPhone();
+        }
     }
 
 
@@ -507,7 +564,7 @@ public class WorkPhonePenaltyController :
         // не меняет пространство координат.
         yield return StartCoroutine(
             PlayTriggeredAnimation(
-                TakePhoneTrigger
+                CallBossTrigger
             )
         );
 
@@ -578,7 +635,7 @@ public class WorkPhonePenaltyController :
         // и может положить телефон обратно.
         yield return StartCoroutine(
             PlayTriggeredAnimation(
-                PutPhoneTrigger
+                NoCallBossTrigger
             )
         );
 
@@ -813,6 +870,35 @@ public class WorkPhonePenaltyController :
     // Никаких названий Animator State
     // в Inspector не требуется.
     // =====================================================
+
+    public IEnumerator PlayManualTakeAnimation()
+    {
+        yield return
+            PlayTriggeredAnimation(
+                TakePhoneTrigger
+            );
+    }
+
+
+    public IEnumerator PlayManualPutAnimation()
+    {
+        yield return
+            PlayTriggeredAnimation(
+                PutPhoneTrigger
+            );
+    }
+
+
+    public void AttachPhoneForManualUse()
+    {
+        AttachPhoneToCamera();
+    }
+
+
+    public void DetachPhoneForManualUse()
+    {
+        DetachPhoneFromCamera();
+    }
 
     private IEnumerator PlayTriggeredAnimation(
         string triggerName)
@@ -1241,6 +1327,12 @@ public class WorkPhonePenaltyController :
             }
         }
 
+        if (manualPhoneController == null)
+        {
+            manualPhoneController =
+                GetComponent<
+                    WorkPhoneManualController>();
+        }
 
         FindDialogueManager();
 

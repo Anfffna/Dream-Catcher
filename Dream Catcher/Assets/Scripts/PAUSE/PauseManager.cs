@@ -163,7 +163,7 @@ public class PauseManager : MonoBehaviour
         FindLeftPanelCanvasGroup();
 
         if (isPaused) return;
-        InteractionOutlineAutoHider.SetForceVisible(false);
+        InteractionOutlineAutoHider.SetUIBlocked(true);
 
         isPaused = true;
         isTransitioning = true;
@@ -216,8 +216,6 @@ public class PauseManager : MonoBehaviour
 
         if (workHUDManager != null)
             workHUDManager.SetPauseBlocked(false);
-
-        InteractionOutlineAutoHider.SetForceVisible(true);
 
         if (pausePanelFadeCoroutine != null)
             StopCoroutine(pausePanelFadeCoroutine);
@@ -315,6 +313,9 @@ public class PauseManager : MonoBehaviour
         Cursor.SetCursor(defaultCursor, defaultCursorHotspot, CursorMode.ForceSoftware);
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+
+        InteractionOutlineAutoHider
+            .SetUIBlocked(false);
     }
 
     // ----- Открытие правых панелей (из кнопок) -----
@@ -591,7 +592,7 @@ public class PauseManager : MonoBehaviour
         pausePanelFadeCoroutine = null;
 
         InteractionOutlineAutoHider
-            .SetForceVisible(false);
+            .SetUIBlocked(false);
     }
 
     private void FindLeftPanelCanvasGroup()
