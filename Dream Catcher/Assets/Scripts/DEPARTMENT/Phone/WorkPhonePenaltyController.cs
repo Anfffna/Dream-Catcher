@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class WorkPhonePenaltyController :
     MonoBehaviour,
@@ -104,9 +103,6 @@ public class WorkPhonePenaltyController :
         "CallBoss";
     private const string NoCallBossTrigger =
         "NoCallBoss";
-    private const string PhoneHoldAnchorName =
-        "PhoneHoldAnchor";
-
     private const string TakePhoneTrigger =
     "TakePhone";
     private const string PutPhoneTrigger =
@@ -141,7 +137,6 @@ public class WorkPhonePenaltyController :
     private bool vibrationPositionStored;
 
     private bool animatorWasEnabledBeforeVibration;
-    private bool animatorDisabledForCameraHold;
 
     private bool lastPhoneInteractableState;
 
@@ -160,12 +155,10 @@ public class WorkPhonePenaltyController :
     // ПРИКРЕПЛЕНИЕ К КАМЕРЕ
     // =====================================================
 
-    private Transform phoneHoldAnchor;
-    private Transform originalPhoneParent;
-    private Scene originalPhoneScene;
-    private int originalSiblingIndex;
-    private bool attachedToCamera;
+    [Header("Следование за камерой")]
+    [SerializeField] private PhoneCameraFollow cameraFollow;
 
+    public bool LastAnimationSucceeded { get; private set; }
 
     // =====================================================
     // UNITY
@@ -174,18 +167,6 @@ public class WorkPhonePenaltyController :
     private void Awake()
     {
         FindReferences();
-
-
-        // Запоминаем настоящую исходную
-        // иерархию телефона.
-        originalPhoneParent =
-            transform.parent;
-
-        originalPhoneScene =
-            gameObject.scene;
-
-        originalSiblingIndex =
-            transform.GetSiblingIndex();
 
 
         // Запоминаем настоящий исходный Layer
@@ -268,16 +249,9 @@ public class WorkPhonePenaltyController :
         StopPhoneVibration();
 
 
-        // Если объект каким-то образом
-        // выключился прямо во время разговора,
-        // стараемся не оставлять телефон
-        // дочерним объектом камеры.
-        if (attachedToCamera &&
-            gameObject.activeInHierarchy)
-        {
-            DetachPhoneFromCamera();
-        }
-
+        // При выключении объекта не оставляем незавершённую позу.
+        if (cameraFollow != null)
+            cameraFollow.ResetToDesk();
 
         MakePhoneNotInteractable();
 
@@ -492,6 +466,9 @@ public class WorkPhonePenaltyController :
             if (phoneCoroutine != null)
                 return;
 
+            if (!CanUseCameraMotion())
+                return;
+
             waitingForPhoneClick = false;
 
             MakePhoneNotInteractable();
@@ -556,12 +533,7 @@ public class WorkPhonePenaltyController :
         // TAKE PHONE
         // -------------------------------------------------
 
-        // Пока TakePhone проигрывается,
-        // телефон остаётся в своей
-        // обычной сценовой иерархии.
-        //
-        // Поэтому существующая анимация
-        // не меняет пространство координат.
+        // Локальная анимация + плавная коррекция родителя относительно камеры.
         yield return StartCoroutine(
             PlayTriggeredAnimation(
                 CallBossTrigger
@@ -573,12 +545,19 @@ public class WorkPhonePenaltyController :
         // ПРИКРЕПЛЯЕМ К КАМЕРЕ
         // -------------------------------------------------
 
-        // TakePhone уже физически
-        // довёл телефон до уха.
-        //
-        // Теперь телефон начинает
-        // следовать за камерой игрока.
-        AttachPhoneToCamera();
+        if (!LastAnimationSucceeded)
+        {
+            AbortPhoneMotion();
+            // Ошибка настройки не запускает диалог/штраф. Можно исправить и ответить снова.
+            StartRinging();
+            StartPhoneVibration();
+            waitingForPhoneClick = true;
+            MakePhoneInteractable();
+            phoneCoroutine = null;
+            yield break;
+        }
+
+        AttachPhoneToEar();
 
 
         // -------------------------------------------------
@@ -620,9 +599,8 @@ public class WorkPhonePenaltyController :
         // ОТКРЕПЛЯЕМ ОТ КАМЕРЫ
         // -------------------------------------------------
 
-        // Телефон остаётся в той же
-        // МИРОВОЙ позиции около головы,
-        // но перестаёт следовать за камерой.
+        // Совместимый вызов. Коррекция не выключается резко:
+        // она плавно уменьшается внутри NoCallBoss.
         DetachPhoneFromCamera();
 
 
@@ -630,14 +608,14 @@ public class WorkPhonePenaltyController :
         // PUT PHONE
         // -------------------------------------------------
 
-        // Теперь Animator снова работает
-        // в исходной сценовой иерархии
-        // и может положить телефон обратно.
+        // Animator всё время работает в неизменном локальном пространстве.
         yield return StartCoroutine(
             PlayTriggeredAnimation(
                 NoCallBossTrigger
             )
         );
+        if (!LastAnimationSucceeded)
+            AbortPhoneMotion();
 
 
         // -------------------------------------------------
@@ -667,208 +645,38 @@ public class WorkPhonePenaltyController :
     // ПРИКРЕПЛЕНИЕ К КАМЕРЕ
     // =====================================================
 
-    private void AttachPhoneToCamera()
+    // Эти методы сохранены для совместимости со старой телефонной логикой.
+    // Реальная привязка теперь определяется состоянием Animator в PhoneCameraFollow.
+    // Переподчинять Phone камере и выключать Animator больше нельзя.
+    private void AttachPhoneToEar() { }
+    private void AttachPhoneToFace() { }
+    public void PreparePhoneForCameraHold() { }
+    private void DetachPhoneFromCamera() { }
+
+    public bool CanUseCameraMotion()
     {
-        if (attachedToCamera)
-            return;
-
-        FindPhoneHoldAnchor();
-
-        if (phoneHoldAnchor == null)
-            return;
-
-
-        // Запоминаем ТОЧНУЮ мировую позу,
-        // в которой закончилась TakePhone.
-        Vector3 worldPosition =
-            transform.position;
-
-        Quaternion worldRotation =
-            transform.rotation;
-
-
-        // Пока телефон находится у уха,
-        // Animator вообще не должен
-        // переписывать его Transform.
-        if (phoneAnimator != null &&
-            phoneAnimator.enabled)
+        if (cameraFollow == null)
+            cameraFollow = GetComponent<PhoneCameraFollow>();
+        if (cameraFollow == null)
         {
-            phoneAnimator.enabled =
-                false;
-
-            animatorDisabledForCameraHold =
-                true;
+            Debug.LogError("[Phone] Добавь PhoneCameraFollow на тот же объект Phone.", this);
+            return false;
         }
-
-
-        // Делаем ребёнком камеры.
-        transform.SetParent(
-            phoneHoldAnchor,
-            true
-        );
-
-
-        // Дополнительно принудительно
-        // возвращаем ТОЧНУЮ мировую позу,
-        // которую дал конец TakePhone.
-        transform.position =
-            worldPosition;
-
-        transform.rotation =
-            worldRotation;
-
-
-        attachedToCamera =
-            true;
+        return cameraFollow.TryPrepare();
     }
 
-
-    private void DetachPhoneFromCamera()
+    public void AbortPhoneMotion()
     {
-        if (!attachedToCamera)
-            return;
-
-
-        // Запоминаем положение телефона
-        // около головы В МОМЕНТ окончания диалога.
-        Vector3 worldPosition =
-            transform.position;
-
-        Quaternion worldRotation =
-            transform.rotation;
-
-
-        // Сначала отсоединяем от камеры,
-        // сохраняя мировую позицию.
-        transform.SetParent(
-            null,
-            true
-        );
-
-
-        // Возвращаем телефон
-        // в исходную рабочую сцену.
-        if (originalPhoneScene.IsValid() &&
-            originalPhoneScene.isLoaded &&
-            gameObject.scene !=
-                originalPhoneScene)
-        {
-            SceneManager.MoveGameObjectToScene(
-                gameObject,
-                originalPhoneScene
-            );
-        }
-
-
-        // Возвращаем исходного родителя,
-        // если он был.
-        if (originalPhoneParent != null)
-        {
-            transform.SetParent(
-                originalPhoneParent,
-                true
-            );
-
-            int maxSiblingIndex =
-                Mathf.Max(
-                    0,
-                    originalPhoneParent
-                        .childCount - 1
-                );
-
-            transform.SetSiblingIndex(
-                Mathf.Clamp(
-                    originalSiblingIndex,
-                    0,
-                    maxSiblingIndex
-                )
-            );
-        }
-
-
-        // После всех переподчинений
-        // снова выставляем ту самую
-        // мировую позу у головы.
-        transform.position =
-            worldPosition;
-
-        transform.rotation =
-            worldRotation;
-
-
-        // Animator включаем только ПОСЛЕ
-        // возвращения телефона
-        // в его нормальную иерархию.
-        if (phoneAnimator != null &&
-            animatorDisabledForCameraHold)
-        {
-            phoneAnimator.enabled =
-                true;
-        }
-
-        animatorDisabledForCameraHold =
-            false;
-
-        attachedToCamera =
-            false;
+        if (cameraFollow != null)
+            cameraFollow.ResetToDesk();
     }
-
-
-    // =====================================================
-    // ПОИСК PHONE HOLD ANCHOR
-    // =====================================================
-
-    private void FindPhoneHoldAnchor()
-    {
-        if (phoneHoldAnchor != null)
-            return;
-
-
-        Camera playerCamera =
-            Camera.main;
-
-
-        if (playerCamera == null)
-            return;
-
-
-        Transform[] cameraHierarchy =
-            playerCamera
-                .GetComponentsInChildren
-                    <Transform>(true);
-
-
-        for (int i = 0;
-             i < cameraHierarchy.Length;
-             i++)
-        {
-            Transform current =
-                cameraHierarchy[i];
-
-
-            if (current == null)
-                continue;
-
-
-            if (current.name ==
-                PhoneHoldAnchorName)
-            {
-                phoneHoldAnchor =
-                    current;
-
-                return;
-            }
-        }
-    }
-
 
     // =====================================================
     // ANIMATOR
     //
     // Используем только Trigger.
     //
-    // Никаких названий Animator State
-    // в Inspector не требуется.
+    // Имена конечных состояний берём из PhoneCameraFollow.
     // =====================================================
 
     public IEnumerator PlayManualTakeAnimation()
@@ -891,7 +699,7 @@ public class WorkPhonePenaltyController :
 
     public void AttachPhoneForManualUse()
     {
-        AttachPhoneToCamera();
+        AttachPhoneToFace();
     }
 
 
@@ -900,170 +708,59 @@ public class WorkPhonePenaltyController :
         DetachPhoneFromCamera();
     }
 
-    private IEnumerator PlayTriggeredAnimation(
-        string triggerName)
+    private IEnumerator PlayTriggeredAnimation(string triggerName)
     {
-        if (phoneAnimator == null)
+        LastAnimationSucceeded = false;
+        FindReferences();
+        if (!CanUseCameraMotion() || phoneAnimator == null)
             yield break;
 
+        string targetState;
+        if (triggerName == TakePhoneTrigger)
+            targetState = cameraFollow.HoldFaceState;
+        else if (triggerName == CallBossTrigger)
+            targetState = cameraFollow.HoldEarState;
+        else
+            targetState = cameraFollow.IdleState;
 
-        const int layer = 0;
-
-
-        AnimatorStateInfo startState =
-            phoneAnimator
-                .GetCurrentAnimatorStateInfo(
-                    layer
-                );
-
-
-        int startStateHash =
-            startState.fullPathHash;
-
-
-        // Чистим этот Trigger
-        // перед новым запуском.
-        phoneAnimator.ResetTrigger(
-            triggerName
-        );
-
-
-        phoneAnimator.SetTrigger(
-            triggerName
-        );
-
-
-        bool enteredNewState =
-            false;
-
-
-        int animationStateHash =
-            0;
-
-
-        float elapsed =
-            0f;
-
-
-        // -------------------------------------------------
-        // ЖДЁМ ВХОД В НОВОЕ СОСТОЯНИЕ
-        // -------------------------------------------------
-
-        while (elapsed <
-               AnimationTimeout)
+        bool hasTrigger = false;
+        foreach (AnimatorControllerParameter parameter in phoneAnimator.parameters)
         {
-            AnimatorStateInfo current =
-                phoneAnimator
-                    .GetCurrentAnimatorStateInfo(
-                        layer
-                    );
-
-
-            if (phoneAnimator
-                .IsInTransition(layer))
+            if (parameter.name == triggerName && parameter.type == AnimatorControllerParameterType.Trigger)
             {
-                AnimatorStateInfo next =
-                    phoneAnimator
-                        .GetNextAnimatorStateInfo(
-                            layer
-                        );
-
-
-                if (next.fullPathHash != 0 &&
-                    next.fullPathHash !=
-                        startStateHash)
-                {
-                    animationStateHash =
-                        next.fullPathHash;
-
-
-                    enteredNewState =
-                        true;
-
-
-                    break;
-                }
-            }
-
-
-            if (current.fullPathHash !=
-                startStateHash)
-            {
-                animationStateHash =
-                    current.fullPathHash;
-
-
-                enteredNewState =
-                    true;
-
-
+                hasTrigger = true;
                 break;
             }
-
-
-            elapsed +=
-                Time.unscaledDeltaTime;
-
-
-            yield return null;
+        }
+        if (!hasTrigger)
+        {
+            Debug.LogError("[Phone] Нет Trigger: " + triggerName, this);
+            yield break;
         }
 
+        phoneAnimator.enabled = true;
+        phoneAnimator.ResetTrigger(triggerName);
+        phoneAnimator.SetTrigger(triggerName);
 
-        // Не зависаем навечно,
-        // если Animator настроен неправильно.
-        if (!enteredNewState)
-            yield break;
-
-
-        elapsed = 0f;
-
-
-        // -------------------------------------------------
-        // ЖДЁМ ОКОНЧАНИЕ ЗАПУЩЕННОЙ АНИМАЦИИ
-        // -------------------------------------------------
-
-        while (elapsed <
-               AnimationTimeout)
+        // Ждём конкретную конечную позу, включая окончание перехода.
+        // Не считаем любое постороннее состояние успешным завершением.
+        float elapsed = 0f;
+        do
         {
-            AnimatorStateInfo current =
-                phoneAnimator
-                    .GetCurrentAnimatorStateInfo(
-                        layer
-                    );
-
-
-            bool transition =
-                phoneAnimator
-                    .IsInTransition(
-                        layer
-                    );
-
-
-            if (current.fullPathHash ==
-                animationStateHash)
+            yield return null;
+            if (cameraFollow.IsStableState(targetState))
             {
-                if (current.normalizedTime >=
-                        1f &&
-                    !transition)
-                {
-                    yield break;
-                }
-            }
-            else if (!transition)
-            {
-                // Animator уже вышел
-                // из этой анимации
-                // через Has Exit Time.
+                LastAnimationSucceeded = true;
                 yield break;
             }
-
-
-            elapsed +=
-                Time.unscaledDeltaTime;
-
-
-            yield return null;
+            elapsed += phoneAnimator.updateMode == AnimatorUpdateMode.UnscaledTime
+                ? Time.unscaledDeltaTime : Time.deltaTime;
         }
+        while (elapsed < AnimationTimeout);
+
+        Debug.LogError("[Phone] После " + triggerName + " не достигнуто " + targetState +
+            ". Проверь Conditions, Has Exit Time и имена состояний. UI/диалог не откроется поверх незавершённого подъёма.", this);
+        AbortPhoneMotion();
     }
 
 
@@ -1336,7 +1033,8 @@ public class WorkPhonePenaltyController :
 
         FindDialogueManager();
 
-        FindPhoneHoldAnchor();
+        if (cameraFollow == null)
+            cameraFollow = GetComponent<PhoneCameraFollow>();
     }
 
 

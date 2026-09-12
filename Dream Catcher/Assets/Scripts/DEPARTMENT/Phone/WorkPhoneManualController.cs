@@ -690,6 +690,9 @@ public class WorkPhoneManualController :
 
         RestoreDialogueVoice();
 
+        if (phoneOpen && phoneController != null)
+            phoneController.AbortPhoneMotion();
+
         phoneOpen = false;
 
         sequenceBusy = false;
@@ -731,7 +734,7 @@ public class WorkPhoneManualController :
             return false;
 
 
-        if (phoneController == null)
+        if (phoneController == null || !phoneController.CanUseCameraMotion())
             return false;
 
 
@@ -806,22 +809,20 @@ public class WorkPhoneManualController :
         // -------------------------------------------------
 
         yield return
-            phoneController
-                .PlayManualTakeAnimation();
+        phoneController
+            .PlayManualTakeAnimation();
 
+        if (!phoneController.LastAnimationSucceeded)
+        {
+            FinishForcedClose();
+            yield break;
+        }
 
-        // -------------------------------------------------
-        // CAMERA HOLD
-        // -------------------------------------------------
+        yield return null;
 
-        /*
-         * Используется тот же
-         * PhoneHoldAnchor, что и
-         * у входящего звонка босса.
-         *
-         * Конечная мировая поза
-         * TakePhone сохраняется.
-         */
+        phoneController
+            .PreparePhoneForCameraHold();
+
         phoneController
             .AttachPhoneForManualUse();
 
@@ -1301,12 +1302,15 @@ public class WorkPhoneManualController :
                 PlayOpeningDialogueRoutine()
             );
 
-
-            while (dialogueManager != null &&
-                   dialogueManager
-                       .DialogueActive)
+            // Если это ChoicePrompt — НЕ ждём закрытия.
+            // Он должен жить до выбора игрока.
+            if (!dialogueManager.ChoicePromptReady)
             {
-                yield return null;
+                while (dialogueManager != null &&
+                       dialogueManager.DialogueActive)
+                {
+                    yield return null;
+                }
             }
         }
 
@@ -1631,9 +1635,7 @@ public class WorkPhoneManualController :
 
         if (phoneController != null)
         {
-            // Сначала возвращаем телефон
-            // из Camera Hold
-            // в исходную иерархию.
+            // Метод сохранён. Плавный выход из привязки задаётся PutPhone.
             phoneController
                 .DetachPhoneForManualUse();
 
@@ -1642,6 +1644,8 @@ public class WorkPhoneManualController :
             yield return
                 phoneController
                     .PlayManualPutAnimation();
+            if (!phoneController.LastAnimationSucceeded)
+                phoneController.AbortPhoneMotion();
         }
 
 
@@ -1699,7 +1703,7 @@ public class WorkPhoneManualController :
         if (phoneController != null)
         {
             phoneController
-                .DetachPhoneForManualUse();
+                .AbortPhoneMotion();
         }
 
 

@@ -80,6 +80,16 @@ public class InteractionController : MonoBehaviour
         if (DialogueManager.AnyDialogueActive)
             return true;
 
+        // Глобальные вариативные плашки
+        if (DialogueChoiceController.AnyChoiceOpen)
+            return true;
+
+        if (WorkPhoneManualController.AnyManualPhoneOpen)
+            return true;
+
+        if (ClientQuestionDialogueController.AnyQuestionDialogueOpen)
+            return true;
+
         // Loading screen
         if (LoadingManager.IsLoadingScreenBlockingPause())
             return true;

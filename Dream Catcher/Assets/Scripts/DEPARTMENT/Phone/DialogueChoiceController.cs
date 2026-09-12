@@ -41,10 +41,11 @@ public class DialogueChoiceController : MonoBehaviour
         private set;
     }
 
+    public static bool BlockWorldInteraction =>
+    AnyChoiceOpen;
 
     public bool IsOpen =>
         isOpen;
-
 
 
     private UnityEngine.Object currentOwner;

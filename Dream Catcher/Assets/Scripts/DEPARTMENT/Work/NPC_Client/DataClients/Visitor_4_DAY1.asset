@@ -62,7 +62,7 @@ MonoBehaviour:
       useAudio: 1
       voiceAudioSource: {fileID: 0}
       clickPauseDelay: 0
-    giveSon3DuringFirstDialogue: 0
+    giveSon3DuringFirstDialogue: 1
     giveSon3DialogueIndex: 1
     questionMenuOpeningLine:
       text: "\u0427\u0442\u043E \u0445\u043E\u0442\u0438\u0442\u0435 \u0443\u0437\u043D\u0430\u0442\u044C?"

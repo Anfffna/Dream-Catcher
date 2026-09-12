@@ -258,18 +258,7 @@ public class SessionStatsManager : MonoBehaviour
                 currentExperience
             );
 
-        // Деньги.
-        startingMoney =
-            Mathf.Max(
-                0,
-                startingMoney
-            );
-
-        currentMoney =
-            Mathf.Max(
-                0,
-                currentMoney
-            );
+        // Деньги могут быть отрицательными: не ограничиваем баланс нулём.
 
         workStartExperience =
             currentExperience;
@@ -356,11 +345,7 @@ public class SessionStatsManager : MonoBehaviour
             currentExperience;
 
         // Деньги.
-        currentMoney =
-            Mathf.Max(
-                0,
-                workStartMoney
-            );
+        currentMoney = workStartMoney;
 
         workStartMoney =
             currentMoney;
@@ -615,11 +600,8 @@ public class SessionStatsManager : MonoBehaviour
     public void SetMoney(
         int value)
     {
-        int newValue =
-            Mathf.Max(
-                0,
-                value
-            );
+        // Отрицательный баланс — долг; события обновления остаются прежними.
+        int newValue = value;
 
         if (newValue ==
             currentMoney)
@@ -679,11 +661,7 @@ public class SessionStatsManager : MonoBehaviour
             );
 
         // Деньги.
-        currentMoney =
-            Mathf.Max(
-                0,
-                savedMoney
-            );
+        currentMoney = savedMoney;
 
         // После загрузки незавершённая
         // рабочая смена больше не активна.
@@ -872,24 +850,8 @@ public class SessionStatsManager : MonoBehaviour
                 workStartExperience
             );
 
-        // Деньги.
-        startingMoney =
-            Mathf.Max(
-                0,
-                startingMoney
-            );
+        // Деньги могут быть отрицательными: не ограничиваем баланс нулём.
 
-        currentMoney =
-            Mathf.Max(
-                0,
-                currentMoney
-            );
-
-        workStartMoney =
-            Mathf.Max(
-                0,
-                workStartMoney
-            );
 
         // Время.
         shiftDurationMinutes =

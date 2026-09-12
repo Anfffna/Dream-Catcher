@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dade518668e93154e9bf311eca75bfff, type: 3}
+  m_Name: PhoneCameraReference
+  m_EditorClassIdentifier: Assembly-CSharp::PhoneCameraReference
+  calibrated: 1
+  cameraPosition: {x: 0, y: 0.015378482, z: -0.029009992}
+  cameraRotation: {x: 0.086721316, y: 0.099340625, z: -0.008691178, w: 0.99122924}
