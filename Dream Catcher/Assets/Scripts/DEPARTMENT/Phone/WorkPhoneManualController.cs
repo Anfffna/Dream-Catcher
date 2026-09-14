@@ -306,7 +306,7 @@ public class WorkPhoneManualController : MonoBehaviour
     private AudioSource phoneButtonAudioSource;
 
     [SerializeField]
-    private AudioClip phoneButtonClickClip;
+    private AudioClip[] phoneButtonClickClips;
 
     [Header("Голос контактов")]
 
@@ -498,10 +498,20 @@ public class WorkPhoneManualController : MonoBehaviour
 
     private void PlayPhoneButtonClick()
     {
-        if (phoneButtonAudioSource == null || phoneButtonClickClip == null)
+        if (phoneButtonAudioSource == null ||
+            phoneButtonClickClips == null ||
+            phoneButtonClickClips.Length == 0)
+        {
             return;
+        }
 
-        phoneButtonAudioSource.PlayOneShot(phoneButtonClickClip);
+        AudioClip randomClip =
+            phoneButtonClickClips[
+                UnityEngine.Random.Range(0, phoneButtonClickClips.Length)
+            ];
+
+        if (randomClip != null)
+            phoneButtonAudioSource.PlayOneShot(randomClip);
     }
 
     private IEnumerator OpenPhoneRoutine()

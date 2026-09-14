@@ -9,6 +9,21 @@ public class Son3DragController : MonoBehaviour, IInteractable
     [SerializeField] private Collider interactionCollider;
     [SerializeField] private WorkSon3TrayController tray;
 
+    [Header("Дополнительный поворот в лотке")]
+    [Tooltip(
+        "Необязательный дочерний объект, чей запечённый " +
+        "localRotation нужно обнулять только в лотке."
+    )]
+    [SerializeField]
+    private Transform trayChildRotationReset;
+
+    [Tooltip(
+        "Имя дочернего объекта для автопоиска, если ссылка выше не назначена."
+    )]
+    [SerializeField]
+    private string trayChildRotationResetObjectName =
+        "son_ypravlenie";
+
     [Header("Автопоиск")]
     [SerializeField]
     private string colliderObjectName =
@@ -32,6 +47,7 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private bool interactionAvailable;
     private bool transitionInProgress;
     private bool placedInTray;
+    private bool trayRotationResetActive;
 
     private bool scriptControlsTransform;
     private Transform currentSnapPoint;
@@ -41,6 +57,12 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private Vector3 originalLocalPosition;
     private Quaternion originalLocalRotation;
     private Vector3 originalLocalScale;
+
+    private Quaternion
+        originalTrayChildLocalRotation;
+
+    private bool
+        originalTrayChildRotationCaptured;
 
     private bool originalTransformCaptured;
     private bool returnToOriginalEnabled;
@@ -82,8 +104,10 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private void Awake()
     {
         FindReferences();
+        FindTrayChildRotationReset();
         CacheVisuals();
         CaptureOriginalTransform();
+        CaptureTrayChildRotation();
 
         SetRenderersEnabled(true);
         SetAlpha(1f);
@@ -93,6 +117,7 @@ public class Son3DragController : MonoBehaviour, IInteractable
     private void Reset()
     {
         FindReferences();
+        FindTrayChildRotationReset();
     }
 
     private void OnDisable()
@@ -118,6 +143,8 @@ public class Son3DragController : MonoBehaviour, IInteractable
             transform.localRotation = Quaternion.identity;
             transform.localScale = controlledLocalScale;
 
+            ResetTrayChildRotation();
+
             return;
         }
 
@@ -128,6 +155,17 @@ public class Son3DragController : MonoBehaviour, IInteractable
         );
 
         transform.localScale = controlledLocalScale;
+
+        if (trayRotationResetActive)
+        {
+            transform.localRotation =
+                Quaternion.identity;
+
+            controlledWorldRotation =
+                transform.rotation;
+
+            ResetTrayChildRotation();
+        }
     }
 
     public void PrepareForPlayer(
@@ -158,6 +196,7 @@ public class Son3DragController : MonoBehaviour, IInteractable
         scriptControlsTransform = true;
         transitionInProgress = false;
         placedInTray = false;
+        trayRotationResetActive = false;
 
         SetRenderersEnabled(true);
         SetAlpha(1f);
@@ -215,10 +254,68 @@ public class Son3DragController : MonoBehaviour, IInteractable
             true;
     }
 
+    private void CaptureTrayChildRotation()
+    {
+        if (trayChildRotationReset == null ||
+            originalTrayChildRotationCaptured)
+        {
+            return;
+        }
+
+        originalTrayChildLocalRotation =
+            trayChildRotationReset.localRotation;
+
+        originalTrayChildRotationCaptured =
+            true;
+    }
+
+    private void ResetTrayChildRotation()
+    {
+        if (trayChildRotationReset == null)
+            return;
+
+        trayChildRotationReset.localRotation =
+            Quaternion.identity;
+    }
+
+    private void RestoreTrayChildRotation()
+    {
+        if (trayChildRotationReset == null ||
+            !originalTrayChildRotationCaptured)
+        {
+            return;
+        }
+
+        trayChildRotationReset.localRotation =
+            originalTrayChildLocalRotation;
+    }
+
+    private void BeginTrayRotationReset()
+    {
+        FindTrayChildRotationReset();
+        CaptureTrayChildRotation();
+
+        trayRotationResetActive = true;
+
+        // Сбрасываем оба поворота сразу при клике,
+        // ещё до начала исчезновения SON-3.
+        transform.localRotation =
+            Quaternion.identity;
+
+        ResetTrayChildRotation();
+
+        // Иначе обычная ветка LateUpdate вернула бы
+        // старый запечённый мировой поворот корня.
+        controlledWorldRotation =
+            transform.rotation;
+    }
+
     private IEnumerator MoveToTrayRoutine()
     {
         transitionInProgress = true;
         SetInteractionAvailable(false);
+
+        BeginTrayRotationReset();
 
         Vector3 startScale =
             controlledLocalScale;
@@ -250,6 +347,9 @@ public class Son3DragController : MonoBehaviour, IInteractable
 
         if (!placedSuccessfully)
         {
+            trayRotationResetActive = false;
+            RestoreTrayChildRotation();
+
             // Возвращаем SON-3, если лоток не найден.
             controlledLocalScale =
                 hiddenScale;
@@ -378,6 +478,9 @@ public class Son3DragController : MonoBehaviour, IInteractable
         transform.localRotation =
             originalLocalRotation;
 
+        trayRotationResetActive = false;
+        RestoreTrayChildRotation();
+
         currentSnapPoint = null;
         placedInTray = false;
 
@@ -428,6 +531,7 @@ public class Son3DragController : MonoBehaviour, IInteractable
         if (snapPoint == null)
             return;
 
+        trayRotationResetActive = true;
         currentSnapPoint = snapPoint;
         placedInTray = true;
 
@@ -441,6 +545,8 @@ public class Son3DragController : MonoBehaviour, IInteractable
 
         transform.localRotation =
             Quaternion.identity;
+
+        ResetTrayChildRotation();
 
         Vector3 parentScale =
             snapPoint.lossyScale;
@@ -709,6 +815,39 @@ public class Son3DragController : MonoBehaviour, IInteractable
         {
             interactionCollider =
                 colliders[0];
+        }
+    }
+
+    private void FindTrayChildRotationReset()
+    {
+        if (trayChildRotationReset != null ||
+            string.IsNullOrEmpty(
+                trayChildRotationResetObjectName
+            ))
+        {
+            return;
+        }
+
+        Transform[] transforms =
+            GetComponentsInChildren<Transform>(
+                true
+            );
+
+        for (int i = 0;
+             i < transforms.Length;
+             i++)
+        {
+            if (transforms[i] == transform)
+                continue;
+
+            if (transforms[i].name ==
+                trayChildRotationResetObjectName)
+            {
+                trayChildRotationReset =
+                    transforms[i];
+
+                return;
+            }
         }
     }
 
