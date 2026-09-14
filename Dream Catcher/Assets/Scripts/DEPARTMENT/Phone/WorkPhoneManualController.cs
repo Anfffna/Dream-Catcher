@@ -4,137 +4,111 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class WorkPhoneManualController :
-    MonoBehaviour
+public class WorkPhoneManualController : MonoBehaviour
 {
-    // =====================================================
-    // ВАРИАНТ ОТВЕТА ВНУТРИ ТЕЛЕФОННОГО РАЗГОВОРА
-    // =====================================================
+    public enum PhoneChoiceRole
+    {
+        Action = 0,
+        Question = 1,
+        EndCall = 2
+    }
 
     [Serializable]
     public class PhoneChoiceData
     {
         [Header("Выбор")]
 
-        [Tooltip(
-            "Технический ID ответа. " +
-            "Например check_gray_coat или goodbye."
-        )]
+        [Tooltip("Постоянный ID варианта. Например ask_about_work или goodbye.")]
         [SerializeField]
         private string choiceId;
 
-
-        [Tooltip(
-            "Текст, который появится " +
-            "на глобальной вариативной плашке."
-        )]
+        [Tooltip("Текст на глобальной плашке.")]
         [SerializeField]
         private string buttonText;
 
-
         [Header("Диалог после выбора")]
 
-        [Tooltip(
-            "Реплики, которые проиграются " +
-            "после выбора этой плашки."
-        )]
         [SerializeField]
-        private List<DialogueManager.DialogueLine>
-            responseDialogue =
-                new List<
-                    DialogueManager.DialogueLine>();
-
+        private List<DialogueManager.DialogueLine> responseDialogue =
+            new List<DialogueManager.DialogueLine>();
 
         [Header("После ответа")]
 
-        [Tooltip(
-            "Если включено — после окончания " +
-            "Response Dialogue телефон " +
-            "автоматически кладётся обратно."
-        )]
+        [Tooltip("После реплик автоматически положить телефон.")]
         [SerializeField]
-        private bool hangUpAfterResponse =
-            true;
+        private bool hangUpAfterResponse = true;
 
+        [Header("Назначение варианта")]
 
-        public string ChoiceId =>
-            choiceId;
+        [Tooltip(
+            "Action — сюжетное действие. " +
+            "Question — запоминаемый вопрос. " +
+            "EndCall — завершение звонка без зачёта вопроса.")]
+        [SerializeField]
+        private PhoneChoiceRole role = PhoneChoiceRole.Action;
 
-        public string ButtonText =>
-            buttonText;
+        [SerializeField]
+        private bool initiallyAvailable = true;
 
-        public List<DialogueManager.DialogueLine>
-            ResponseDialogue =>
-                responseDialogue;
+        [Tooltip("Разрешать повтор уже заданного вопроса.")]
+        [SerializeField]
+        private bool allowRepeatQuestion;
 
-        public bool HangUpAfterResponse =>
-            hangUpAfterResponse;
+        public string ChoiceId => choiceId;
+        public string ButtonText => buttonText;
+
+        public List<DialogueManager.DialogueLine> ResponseDialogue =>
+            responseDialogue;
+
+        public bool HangUpAfterResponse => hangUpAfterResponse;
+        public PhoneChoiceRole Role => role;
+        public bool InitiallyAvailable => initiallyAvailable;
+        public bool AllowRepeatQuestion => allowRepeatQuestion;
 
         public bool HasButton =>
-            !string.IsNullOrWhiteSpace(
-                buttonText
-            );
+            !string.IsNullOrWhiteSpace(buttonText);
     }
-
-
-    // =====================================================
-    // ОДИН ВАРИАНТ ТЕЛЕФОННОГО РАЗГОВОРА
-    // =====================================================
 
     [Serializable]
     public class PhoneCallData
     {
         [Header("Первый диалог")]
 
-        [Tooltip(
-            "Разговор сразу после того, " +
-            "как контакт взял трубку."
-        )]
         [SerializeField]
-        private List<DialogueManager.DialogueLine>
-            openingDialogue =
-                new List<
-                    DialogueManager.DialogueLine>();
-
+        private List<DialogueManager.DialogueLine> openingDialogue =
+            new List<DialogueManager.DialogueLine>();
 
         [Header("Вариативный диалог")]
 
-        [Tooltip(
-            "Показывать ли после Opening Dialogue " +
-            "две глобальные плашки выбора."
-        )]
         [SerializeField]
         private bool useChoices;
 
-
-        [Tooltip(
-            "Первая вариативная плашка."
-        )]
         [SerializeField]
-        private PhoneChoiceData firstChoice =
-            new PhoneChoiceData();
+        private PhoneChoiceData firstChoice = new PhoneChoiceData();
 
-
-        [Tooltip(
-            "Вторая вариативная плашка."
-        )]
         [SerializeField]
-        private PhoneChoiceData secondChoice =
-            new PhoneChoiceData();
+        private PhoneChoiceData secondChoice = new PhoneChoiceData();
 
+        [Header("Дополнительные варианты")]
 
-        public List<DialogueManager.DialogueLine>
-            OpeningDialogue =>
-                openingDialogue;
+        [Tooltip("Варианты после первых двух. Отображаются страницами.")]
+        [SerializeField]
+        private List<PhoneChoiceData> additionalChoices =
+            new List<PhoneChoiceData>();
 
+        public List<DialogueManager.DialogueLine> OpeningDialogue =>
+            openingDialogue;
 
-        public PhoneChoiceData FirstChoice =>
-            firstChoice;
+        public PhoneChoiceData FirstChoice => firstChoice;
+        public PhoneChoiceData SecondChoice => secondChoice;
 
+        public List<PhoneChoiceData> AdditionalChoices =>
+            additionalChoices;
 
-        public PhoneChoiceData SecondChoice =>
-            secondChoice;
+        public bool ChoicesEnabled => useChoices;
 
+        public int ChoiceCount =>
+            useChoices ? 2 + (additionalChoices?.Count ?? 0) : 0;
 
         public bool HasChoices
         {
@@ -143,23 +117,19 @@ public class WorkPhoneManualController :
                 if (!useChoices)
                     return false;
 
-                bool firstExists =
-                    firstChoice != null &&
-                    firstChoice.HasButton;
+                for (int i = 0; i < ChoiceCount; i++)
+                {
+                    PhoneChoiceData choice = GetChoice(i);
 
-                bool secondExists =
-                    secondChoice != null &&
-                    secondChoice.HasButton;
+                    if (choice != null && choice.HasButton)
+                        return true;
+                }
 
-                return
-                    firstExists ||
-                    secondExists;
+                return false;
             }
         }
 
-
-        public PhoneChoiceData GetChoice(
-            int index)
+        public PhoneChoiceData GetChoice(int index)
         {
             if (!useChoices)
                 return null;
@@ -170,647 +140,383 @@ public class WorkPhoneManualController :
             if (index == 1)
                 return secondChoice;
 
-            return null;
+            int additionalIndex = index - 2;
+
+            if (additionalChoices == null ||
+                additionalIndex < 0 ||
+                additionalIndex >= additionalChoices.Count)
+            {
+                return null;
+            }
+
+            return additionalChoices[additionalIndex];
         }
     }
-
-
-    // =====================================================
-    // ОСОБЫЙ СЦЕНАРИЙ КОНТАКТА
-    // =====================================================
 
     [Serializable]
     public class PhoneCallScenario
     {
-        [Tooltip(
-            "Технический ID особой ситуации. " +
-            "Например woman_gray_coat."
-        )]
+        [Tooltip("Постоянный ID особого разговора.")]
         [SerializeField]
         private string scenarioId;
 
-
         [SerializeField]
-        private PhoneCallData callData =
-            new PhoneCallData();
+        private PhoneCallData callData = new PhoneCallData();
 
-
-        public string ScenarioId =>
-            scenarioId;
-
-
-        public PhoneCallData CallData =>
-            callData;
+        public string ScenarioId => scenarioId;
+        public PhoneCallData CallData => callData;
     }
-
-
-    // =====================================================
-    // КОНТАКТ
-    // =====================================================
 
     [Serializable]
     public class PhoneContact
     {
         [Header("Контакт")]
 
-        [Tooltip(
-            "Постоянный технический ID. " +
-            "Например boss или security."
-        )]
         [SerializeField]
         private string contactId;
 
-
-        [Tooltip(
-            "Объект имени контакта " +
-            "на экране телефона."
-        )]
         [SerializeField]
         private GameObject screenObject;
 
-
         [Header("Голос")]
 
-        [Tooltip(
-            "Зацикленная голосовая дорожка " +
-            "этого контакта."
-        )]
         [SerializeField]
         private AudioClip voiceClip;
 
-
         [Header("Обычный звонок")]
 
-        [Tooltip(
-            "Разговор, который используется, " +
-            "если для контакта сейчас " +
-            "не активирован особый сценарий."
-        )]
         [SerializeField]
-        private PhoneCallData defaultCall =
-            new PhoneCallData();
-
+        private PhoneCallData defaultCall = new PhoneCallData();
 
         [Header("Особые ситуации")]
 
-        [Tooltip(
-            "Сюжетные варианты разговора " +
-            "для этого же контакта."
-        )]
         [SerializeField]
-        private List<PhoneCallScenario>
-            scenarios =
-                new List<PhoneCallScenario>();
+        private List<PhoneCallScenario> scenarios =
+            new List<PhoneCallScenario>();
 
+        [Header("Когда больше нет доступных вопросов")]
 
-        public string ContactId =>
-            contactId;
-
-
-        public GameObject ScreenObject =>
-            screenObject;
-
-
-        public AudioClip VoiceClip =>
-            voiceClip;
-
-
-        public PhoneCallData ResolveCall(
-            string activeScenarioId)
-        {
-            if (!string.IsNullOrEmpty(
-                    activeScenarioId) &&
-                scenarios != null)
-            {
-                for (int i = 0;
-                     i < scenarios.Count;
-                     i++)
+        [SerializeField]
+        private List<DialogueManager.DialogueLine>
+            noAvailableQuestionsDialogue =
+                new List<DialogueManager.DialogueLine>
                 {
-                    PhoneCallScenario scenario =
-                        scenarios[i];
-
-                    if (scenario == null)
-                        continue;
-
-
-                    if (scenario.ScenarioId ==
-                        activeScenarioId)
+                    new DialogueManager.DialogueLine
                     {
-                        return
-                            scenario.CallData;
+                        text = "Не стоит его больше беспокоить.",
+                        useAudio = false
                     }
-                }
-            }
+                };
 
+        public string ContactId => contactId;
+        public GameObject ScreenObject => screenObject;
+        public AudioClip VoiceClip => voiceClip;
+
+        public List<DialogueManager.DialogueLine>
+            NoAvailableQuestionsDialogue =>
+                noAvailableQuestionsDialogue;
+
+        public PhoneCallData ResolveCall(string activeScenarioId)
+        {
+            if (TryGetScenarioCall(activeScenarioId, out PhoneCallData call))
+                return call;
 
             return defaultCall;
         }
+
+        public bool HasScenario(string id)
+        {
+            return TryGetScenarioCall(id, out _);
+        }
+
+        public bool TryGetScenarioCall(string id, out PhoneCallData call)
+        {
+            call = null;
+
+            if (string.IsNullOrEmpty(id) || scenarios == null)
+                return false;
+
+            for (int i = 0; i < scenarios.Count; i++)
+            {
+                PhoneCallScenario scenario = scenarios[i];
+
+                if (scenario == null || scenario.ScenarioId != id)
+                    continue;
+
+                call = scenario.CallData;
+                return true;
+            }
+
+            return false;
+        }
     }
-
-
-    // =====================================================
-    // ОСНОВНОЙ ТЕЛЕФОН
-    // =====================================================
 
     [Header("Основной телефон")]
 
-    [Tooltip(
-        "Существующий WorkPhonePenaltyController " +
-        "на этом же телефоне."
-    )]
     [SerializeField]
-    private WorkPhonePenaltyController
-        phoneController;
-
-
-    // =====================================================
-    // PHONE CANVAS
-    // =====================================================
+    private WorkPhonePenaltyController phoneController;
 
     [Header("Phone Canvas")]
 
     [SerializeField]
     private GameObject phoneCanvas;
 
-
     [SerializeField]
     private Button leftButton;
-
 
     [SerializeField]
     private Button rightButton;
 
-
     [SerializeField]
     private Button callButton;
-
 
     [SerializeField]
     private Button hangUpButton;
 
-
-    // =====================================================
-    // ГЛОБАЛЬНЫЙ ВАРИАТИВНЫЙ ДИАЛОГ
-    // =====================================================
-
     [Header("Глобальный вариативный диалог")]
 
-    [Tooltip(
-        "Глобальный DialogueChoiceController. " +
-        "Если пусто — найдётся автоматически."
-    )]
     [SerializeField]
-    private DialogueChoiceController
-        choiceController;
-
-
-    // =====================================================
-    // DIALOGUE MANAGER
-    // =====================================================
+    private DialogueChoiceController choiceController;
 
     [Header("Dialogue Manager")]
 
-    [Tooltip(
-        "Глобальный DialogueManager. " +
-        "Если пусто — найдётся автоматически."
-    )]
     [SerializeField]
     private DialogueManager dialogueManager;
 
-
-    // =====================================================
-    // PHONE SFX
-    // =====================================================
-
     [Header("Звук телефона")]
 
-    [Tooltip(
-        "Отдельный AudioSource " +
-        "для включения телефона и гудков."
-    )]
     [SerializeField]
     private AudioSource phoneSfxAudioSource;
 
-
-    [Tooltip(
-        "Звук включения телефона " +
-        "после TakePhone."
-    )]
     [SerializeField]
     private AudioClip phonePowerOnClip;
 
-
-    [Tooltip(
-        "Зацикленный гудок исходящего вызова."
-    )]
     [SerializeField]
     private AudioClip dialToneClip;
 
-
-    [Tooltip(
-        "Минимальное время до ответа."
-    )]
     [SerializeField]
-    private float minimumAnswerDelay =
-        1.2f;
+    private float minimumAnswerDelay = 1.2f;
 
-
-    [Tooltip(
-        "Максимальное время до ответа."
-    )]
     [SerializeField]
-    private float maximumAnswerDelay =
-        3.8f;
+    private float maximumAnswerDelay = 3.8f;
 
     [Header("Звук кнопок телефона")]
 
-    [Tooltip(
-    "AudioSource только для звука " +
-    "нажатия физических кнопок телефона."
-    )]
     [SerializeField]
     private AudioSource phoneButtonAudioSource;
 
-
-    [Tooltip(
-        "Звук нажатия кнопки телефона."
-    )]
     [SerializeField]
     private AudioClip phoneButtonClickClip;
 
-    // =====================================================
-    // VOICE
-    // =====================================================
-
     [Header("Голос контактов")]
 
-    [Tooltip(
-        "Один AudioSource для голосов " +
-        "всех телефонных контактов."
-    )]
     [SerializeField]
-    private AudioSource
-        contactVoiceAudioSource;
-
-
-    // =====================================================
-    // CONTACTS
-    // =====================================================
+    private AudioSource contactVoiceAudioSource;
 
     [Header("Контакты")]
 
     [SerializeField]
-    private List<PhoneContact> contacts =
-        new List<PhoneContact>();
+    private List<PhoneContact> contacts = new List<PhoneContact>();
 
+    [Header("Текст уже заданного вопроса")]
 
-    // =====================================================
-    // EVENTS
-    // =====================================================
+    [SerializeField]
+    private Color askedQuestionTextColor =
+        new Color(0.55f, 0.55f, 0.55f, 1f);
 
-    /*
-     * contactId
-     * scenarioId
-     * choiceId
-     *
-     * Например:
-     * security / woman_gray_coat / check_gray_coat
-     *
-     * Будущая сюжетная система женщины
-     * сможет подписаться на это событие.
-     */
-    public event Action<
-        string,
-        string,
-        string>
-            PhoneChoiceResolved;
+    // Старые события сохранены.
+    public event Action<string, string, string> PhoneChoiceResolved;
+    public event Action<string, string> PhoneCallCancelled;
 
+    // Ответ завершён. Телефон ещё может находиться в руке.
+    public event Action<string, string, string> PhoneChoiceCommitted;
 
-    /*
-     * Вызывается, если игрок уже
-     * установил звонок, но просто
-     * положил трубку без выбора.
-     *
-     * contactId
-     * scenarioId
-     */
-    public event Action<
-        string,
-        string>
-            PhoneCallCancelled;
+    // Исходящий звонок завершён, телефон возвращён.
+    public event Action<string, string> PhoneCallEnded;
 
+    public static bool AnyManualPhoneOpen { get; private set; }
 
-    // =====================================================
-    // GLOBAL STATE
-    // =====================================================
+    public bool IsPhoneOpen => phoneOpen;
 
-    public static bool AnyManualPhoneOpen
-    {
-        get;
-        private set;
-    }
+    public bool WantsPhoneColliderInteractable => CanStartManualUse;
 
-
-    // =====================================================
-    // PUBLIC STATE
-    // =====================================================
-
-    public bool IsPhoneOpen =>
-        phoneOpen;
-
-
-    /*
-     * 3D Collider телефона нужен
-     * только когда телефон лежит
-     * на столе и его можно взять.
-     *
-     * Когда телефон уже в руке,
-     * используются UI-кнопки,
-     * поэтому Collider больше
-     * не нужен как Interactable.
-     */
-    public bool WantsPhoneColliderInteractable =>
-        CanStartManualUse;
-
+    public bool HasPriorityIncomingCall =>
+        phoneController != null &&
+        phoneController.PenaltyCallPendingOrActive;
 
     public bool CanStartManualUse
     {
         get
         {
-            if (phoneOpen ||
-                sequenceBusy)
+            if (!isActiveAndEnabled || phoneOpen || sequenceBusy)
+                return false;
+
+            if (WorkSessionManager.Instance == null ||
+                !WorkSessionManager.Instance.IsSeated)
             {
                 return false;
             }
 
-
-            // Ручной телефон доступен
-            // только во время работы
-            // за столом.
-            if (WorkSessionManager.Instance ==
-                    null ||
-                !WorkSessionManager.Instance
-                    .IsSeated)
-            {
+            if (DialogueManager.AnyDialogueActive)
                 return false;
-            }
 
-
-            if (DialogueManager
-                .AnyDialogueActive)
-            {
+            if (DialogueChoiceController.BlockWorldInteraction)
                 return false;
-            }
 
-
-            if (DialogueChoiceController
-                .AnyChoiceOpen)
-            {
+            if (ClientQuestionDialogueController.AnyQuestionDialogueOpen)
                 return false;
-            }
 
-
-            // Старую систему двух
-            // вопросов клиента не ломаем.
-            if (ClientQuestionDialogueController
-                .AnyQuestionDialogueOpen)
-            {
+            if (HasPriorityIncomingCall)
                 return false;
-            }
-
-
-            // Входящий штрафной звонок
-            // всегда имеет приоритет.
-            if (phoneController != null &&
-                phoneController
-                    .PenaltyCallPendingOrActive)
-            {
-                return false;
-            }
-
 
             return true;
         }
     }
 
-
-    // =====================================================
-    // RUNTIME
-    // =====================================================
-
     private int selectedContactIndex;
-
 
     private bool phoneOpen;
     private bool sequenceBusy;
     private bool outgoingCallActive;
-
+    private bool ownsPhoneDialogue;
 
     private Coroutine sequenceCoroutine;
 
-
     private PhoneContact currentContact;
-
     private PhoneCallData currentCallData;
-
     private string currentScenarioId;
-
-
     private bool currentCallChoiceResolved;
 
-
-    private AudioSource
-        previousDefaultVoiceSource;
-
+    private AudioSource previousDefaultVoiceSource;
     private bool voiceOverrideActive;
 
+    private readonly Dictionary<string, string> activeScenarios =
+        new Dictionary<string, string>();
 
-    /*
-     * contactId -> scenarioId
-     *
-     * Например:
-     *
-     * security -> woman_gray_coat
-     */
+    private readonly List<DialogueManager.DialogueLine> choiceOpeningPrefix =
+        new List<DialogueManager.DialogueLine>();
+
+    private readonly List<DialogueChoiceController.ChoiceOption>
+        displayedChoices =
+            new List<DialogueChoiceController.ChoiceOption>(8);
+
+    private readonly HashSet<
+        (string contact, string scenario, string question)>
+        askedQuestions =
+            new HashSet<(string, string, string)>();
+
     private readonly Dictionary<
-        string,
-        string>
-            activeScenarios =
-                new Dictionary<
-                    string,
-                    string>();
+        (string contact, string scenario, string question), bool>
+        questionAvailability =
+            new Dictionary<(string, string, string), bool>();
 
-    private readonly List<
-        DialogueManager.DialogueLine>
-            choiceOpeningPrefix =
-                new List<
-                    DialogueManager.DialogueLine>();
-
-    // =====================================================
-    // UNITY
-    // =====================================================
+    private UnityEngine.Object scenarioOverrideOwner;
+    private string overriddenContactId;
+    private string overriddenScenarioId;
+    private string previousScenarioId;
 
     private void Awake()
     {
         FindReferences();
-
         AddButtonListeners();
-
         HidePhoneUIImmediately();
     }
-
 
     private void OnEnable()
     {
         FindReferences();
     }
 
-
     private void OnDisable()
     {
         if (sequenceCoroutine != null)
         {
-            StopCoroutine(
-                sequenceCoroutine
-            );
-
+            StopCoroutine(sequenceCoroutine);
             sequenceCoroutine = null;
         }
 
-
         StopPhoneSfx();
 
-
         if (choiceController != null)
-        {
-            choiceController
-                .HideChoices(this);
-        }
+            choiceController.HideChoices(this);
 
-
+        HideOwnedPhoneDialogue();
         RestoreDialogueVoice();
 
         if (phoneOpen && phoneController != null)
             phoneController.AbortPhoneMotion();
 
         phoneOpen = false;
-
         sequenceBusy = false;
-
         outgoingCallActive = false;
-
         currentContact = null;
-
         currentCallData = null;
-
         currentScenarioId = null;
-
         currentCallChoiceResolved = false;
-
-
         AnyManualPhoneOpen = false;
-
 
         HidePhoneUIImmediately();
     }
-
 
     private void OnDestroy()
     {
         RemoveButtonListeners();
     }
 
-
-    // =====================================================
-    // ОТКРЫТИЕ ТЕЛЕФОНА
-    // =====================================================
-
     public bool TryOpenPhone()
     {
         FindReferences();
 
-
         if (!CanStartManualUse)
             return false;
 
-
-        if (phoneController == null || !phoneController.CanUseCameraMotion())
+        if (phoneController == null ||
+            !phoneController.CanUseCameraMotion())
+        {
             return false;
-
+        }
 
         if (sequenceCoroutine != null)
             return false;
 
-
         phoneOpen = true;
-
         sequenceBusy = true;
-
+        outgoingCallActive = false;
         AnyManualPhoneOpen = true;
-
-
         selectedContactIndex = 0;
 
-
         currentContact = null;
-
         currentCallData = null;
-
         currentScenarioId = null;
-
         currentCallChoiceResolved = false;
 
+        SetPhoneButtons(false, false, false);
 
-        SetPhoneButtons(
-            false,
-            false,
-            false
-        );
-
-
-        sequenceCoroutine =
-            StartCoroutine(
-                OpenPhoneRoutine()
-            );
-
-
+        sequenceCoroutine = StartCoroutine(OpenPhoneRoutine());
         return true;
     }
 
     private void PlayPhoneButtonClick()
     {
-        if (phoneButtonAudioSource == null ||
-            phoneButtonClickClip == null)
-        {
+        if (phoneButtonAudioSource == null || phoneButtonClickClip == null)
             return;
-        }
 
-
-        phoneButtonAudioSource.PlayOneShot(
-            phoneButtonClickClip
-        );
+        phoneButtonAudioSource.PlayOneShot(phoneButtonClickClip);
     }
 
     private IEnumerator OpenPhoneRoutine()
     {
-        FindReferences();
+        yield return null;
 
+        FindReferences();
 
         if (phoneController == null)
         {
             FinishForcedClose();
-
             yield break;
         }
 
-
-        // -------------------------------------------------
-        // TAKE PHONE
-        // -------------------------------------------------
-
-        yield return
-        phoneController
-            .PlayManualTakeAnimation();
+        yield return phoneController.PlayManualTakeAnimation();
 
         if (!phoneController.LastAnimationSucceeded)
         {
@@ -818,154 +524,71 @@ public class WorkPhoneManualController :
             yield break;
         }
 
+        PlayPowerOnSound();
         yield return null;
 
-        phoneController
-            .PreparePhoneForCameraHold();
-
-        phoneController
-            .AttachPhoneForManualUse();
-
-
-        // -------------------------------------------------
-        // PHONE UI
-        // -------------------------------------------------
+        phoneController.PreparePhoneForCameraHold();
+        phoneController.AttachPhoneForManualUse();
 
         ShowSelectedContact();
 
-
         if (phoneCanvas != null)
-        {
             phoneCanvas.SetActive(true);
-        }
-
-
-        // Звук включения появляется
-        // только ПОСЛЕ TakePhone.
-        PlayPowerOnSound();
-
 
         sequenceBusy = false;
-
-
-        SetPhoneButtons(
-            true,
-            true,
-            true
-        );
-
-
         sequenceCoroutine = null;
+        SetPhoneButtons(true, true, true);
     }
 
     private IEnumerator PlayOpeningDialogueRoutine()
     {
-        if (currentCallData == null ||
-            currentCallData.OpeningDialogue ==
-                null ||
-            currentCallData.OpeningDialogue.Count ==
-                0 ||
-            dialogueManager == null)
-        {
+        if (currentCallData == null || dialogueManager == null)
             yield break;
-        }
 
+        List<DialogueManager.DialogueLine> lines =
+            currentCallData.OpeningDialogue;
 
-        List<DialogueManager.DialogueLine>
-            lines =
-                currentCallData
-                    .OpeningDialogue;
-
-
-        bool needsChoices =
-            currentCallData.HasChoices &&
-            choiceController != null;
-
-
-        // =====================================================
-        // ОБЫЧНЫЙ ДИАЛОГ БЕЗ ВАРИАНТОВ
-        // =====================================================
-
-        if (!needsChoices)
-        {
-            while (DialogueManager
-                .AnyDialogueActive)
-            {
-                yield return null;
-            }
-
-
-            dialogueManager.StartDialogue(
-                lines,
-                false
-            );
-
-
-            while (dialogueManager != null &&
-                   dialogueManager.DialogueActive)
-            {
-                yield return null;
-            }
-
-
-            yield break;
-        }
-
-
-        // =====================================================
-        // ДИАЛОГ С ДВУМЯ ВАРИАНТАМИ
-        // =====================================================
-
-        int finalIndex =
-            FindLastValidDialogueLineIndex(
-                lines
-            );
-
+        int finalIndex = FindLastValidDialogueLineIndex(lines);
 
         if (finalIndex < 0)
             yield break;
 
+        bool needsChoices =
+            HasAvailableChoices(
+                currentContact, currentScenarioId, currentCallData) &&
+            choiceController != null;
 
-        choiceOpeningPrefix.Clear();
+        while (DialogueManager.AnyDialogueActive)
+            yield return null;
 
+        ownsPhoneDialogue = true;
 
-        /*
-         * Все реплики ДО последней
-         * проигрываем как обычный диалог.
-         */
-        for (int i = 0;
-             i < finalIndex;
-             i++)
+        if (!needsChoices)
         {
-            if (lines[i] != null)
-            {
-                choiceOpeningPrefix.Add(
-                    lines[i]
-                );
-            }
-        }
+            dialogueManager.StartDialogue(lines, false);
 
-
-        if (choiceOpeningPrefix.Count > 0)
-        {
-            while (DialogueManager
-                .AnyDialogueActive)
+            while (dialogueManager != null &&
+                   dialogueManager.DialogueActive)
             {
                 yield return null;
             }
 
+            HideOwnedPhoneDialogue();
+            yield break;
+        }
 
-            /*
-             * true:
-             * после окончания этого списка
-             * DialoguePanel остаётся видимой.
-             */
+        choiceOpeningPrefix.Clear();
+
+        for (int i = 0; i < finalIndex; i++)
+        {
+            if (lines[i] != null)
+                choiceOpeningPrefix.Add(lines[i]);
+        }
+
+        if (choiceOpeningPrefix.Count > 0)
+        {
             dialogueManager.StartDialogue(
-                choiceOpeningPrefix,
-                false,
-                true
-            );
-
+                choiceOpeningPrefix, false, true);
 
             while (dialogueManager != null &&
                    dialogueManager.DialogueActive)
@@ -974,591 +597,367 @@ public class WorkPhoneManualController :
             }
         }
 
-
-        DialogueManager.DialogueLine
-            finalPrompt =
-                lines[finalIndex];
-
-
-        while (DialogueManager
-            .AnyDialogueActive)
-        {
+        while (DialogueManager.AnyDialogueActive)
             yield return null;
-        }
 
+        if (dialogueManager == null)
+            yield break;
 
-        /*
-         * ПОСЛЕДНЯЯ реплика становится
-         * настоящим ChoicePrompt.
-         *
-         * Она:
-         * - печатается полностью;
-         * - остаётся на DialoguePanel;
-         * - не реагирует на LMB;
-         * - не реагирует на Space.
-         */
-        dialogueManager.ShowChoicePrompt(
-            finalPrompt,
-            false
-        );
-
+        dialogueManager.ShowChoicePrompt(lines[finalIndex], false);
 
         while (dialogueManager != null &&
                dialogueManager.DialogueActive &&
-               !dialogueManager
-                   .ChoicePromptReady)
+               !dialogueManager.ChoicePromptReady)
         {
             yield return null;
         }
     }
 
-
     private int FindLastValidDialogueLineIndex(
-        List<DialogueManager.DialogueLine>
-            lines)
+        List<DialogueManager.DialogueLine> lines)
     {
         if (lines == null)
             return -1;
 
-
-        for (int i = lines.Count - 1;
-             i >= 0;
-             i--)
+        for (int i = lines.Count - 1; i >= 0; i--)
         {
             if (lines[i] != null)
-            {
                 return i;
-            }
         }
-
 
         return -1;
     }
 
-    // =====================================================
-    // CONTACT NAVIGATION
-    // =====================================================
-
     private void PreviousContact()
     {
-        if (!CanNavigateContacts())
+        if (!CanNavigateContacts() || contacts == null || contacts.Count == 0)
             return;
-
-
-        if (contacts == null ||
-            contacts.Count == 0)
-        {
-            return;
-        }
 
         PlayPhoneButtonClick();
         selectedContactIndex--;
 
-
         if (selectedContactIndex < 0)
-        {
-            selectedContactIndex =
-                contacts.Count - 1;
-        }
-
+            selectedContactIndex = contacts.Count - 1;
 
         ShowSelectedContact();
     }
 
-
     private void NextContact()
     {
-        if (!CanNavigateContacts())
+        if (!CanNavigateContacts() || contacts == null || contacts.Count == 0)
             return;
-
-
-        if (contacts == null ||
-            contacts.Count == 0)
-        {
-            return;
-        }
 
         PlayPhoneButtonClick();
         selectedContactIndex++;
 
-
-        if (selectedContactIndex >=
-            contacts.Count)
-        {
+        if (selectedContactIndex >= contacts.Count)
             selectedContactIndex = 0;
-        }
-
 
         ShowSelectedContact();
     }
 
-
     private bool CanNavigateContacts()
     {
-        return
-            phoneOpen &&
+        return phoneOpen &&
             !sequenceBusy &&
-            !outgoingCallActive;
+            !outgoingCallActive &&
+            !DialogueManager.AnyDialogueActive &&
+            !DialogueChoiceController.AnyChoiceOpen;
     }
-
 
     private void ShowSelectedContact()
     {
         if (contacts == null)
             return;
 
-
-        for (int i = 0;
-             i < contacts.Count;
-             i++)
+        for (int i = 0; i < contacts.Count; i++)
         {
-            PhoneContact contact =
-                contacts[i];
+            PhoneContact contact = contacts[i];
 
-
-            if (contact == null ||
-                contact.ScreenObject == null)
-            {
+            if (contact == null || contact.ScreenObject == null)
                 continue;
-            }
 
-
-            contact.ScreenObject
-                .SetActive(
-                    i ==
-                    selectedContactIndex
-                );
+            contact.ScreenObject.SetActive(i == selectedContactIndex);
         }
     }
 
-
-    private PhoneContact
-        GetSelectedContact()
+    private PhoneContact GetSelectedContact()
     {
-        if (contacts == null ||
-            contacts.Count == 0)
-        {
+        if (contacts == null || contacts.Count == 0)
             return null;
-        }
-
 
         if (selectedContactIndex < 0 ||
-            selectedContactIndex >=
-                contacts.Count)
+            selectedContactIndex >= contacts.Count)
         {
             selectedContactIndex = 0;
         }
 
-
-        return contacts[
-            selectedContactIndex
-        ];
+        return contacts[selectedContactIndex];
     }
-
-
-    // =====================================================
-    // OUTGOING CALL
-    // =====================================================
 
     private void CallSelectedContact()
     {
-        if (!phoneOpen ||
-            sequenceBusy ||
-            outgoingCallActive)
-        {
+        if (!CanNavigateContacts())
             return;
-        }
-
 
         FindReferences();
 
+        PhoneContact contact = GetSelectedContact();
 
-        PhoneContact contact =
-            GetSelectedContact();
-
-
-        if (contact == null)
+        if (contact == null || phoneController == null)
             return;
 
+        string scenario = GetActiveScenarioId(contact.ContactId);
+        PhoneCallData call = contact.ResolveCall(scenario);
+
         PlayPhoneButtonClick();
-        currentContact =
-            contact;
 
-
-        currentScenarioId =
-            GetActiveScenarioId(
-                contact.ContactId
-            );
-
-
-        currentCallData =
-            contact.ResolveCall(
-                currentScenarioId
-            );
-
-
-        currentCallChoiceResolved =
-            false;
-
-
-        sequenceBusy = true;
-
-        outgoingCallActive = true;
-
-
-        SetPhoneButtons(
-            false,
-            false,
-            false
-        );
-
-
-        if (choiceController != null)
+        if (!CanCallContact(contact, scenario, call))
         {
-            choiceController
-                .HideChoices(this);
+            sequenceBusy = true;
+            SetPhoneButtons(false, false, false);
+
+            sequenceCoroutine =
+                StartCoroutine(ShowUnavailableCallRoutine(contact));
+
+            return;
         }
 
+        if (!ValidateCallConfiguration(contact, scenario, call))
+            return;
+
+        currentContact = contact;
+        currentScenarioId = scenario;
+        currentCallData = call;
+        currentCallChoiceResolved = false;
+
+        sequenceBusy = true;
+        outgoingCallActive = true;
+
+        SetPhoneButtons(false, false, false);
+
+        if (choiceController != null)
+            choiceController.HideChoices(this);
 
         sequenceCoroutine =
-            StartCoroutine(
-                CallContactRoutine(
-                    contact
-                )
-            );
+            StartCoroutine(CallContactRoutine(contact));
     }
 
-
-    private IEnumerator CallContactRoutine(
-        PhoneContact contact)
+    private IEnumerator CallContactRoutine(PhoneContact contact)
     {
-        // -------------------------------------------------
-        // ГУДОК
-        // -------------------------------------------------
+        yield return null;
 
         PlayDialTone();
 
-
-        float minimum =
-            Mathf.Min(
-                minimumAnswerDelay,
-                maximumAnswerDelay
-            );
-
-
-        float maximum =
-            Mathf.Max(
-                minimumAnswerDelay,
-                maximumAnswerDelay
-            );
-
-
-        float answerDelay =
-            UnityEngine.Random.Range(
-                minimum,
-                maximum
-            );
-
-
-        yield return
-            new WaitForSecondsRealtime(
-                answerDelay
-            );
-
-
-        // Человек ответил:
-        // гудок обрывается резко.
-        StopPhoneSfx();
-
-
-        // -------------------------------------------------
-        // VOICE
-        // -------------------------------------------------
-
-        ConfigureContactVoice(
-            contact
-        );
-
-
-        // -------------------------------------------------
-        // OPENING DIALOGUE
-        // -------------------------------------------------
-
-        if (currentCallData != null &&
-            currentCallData
-                .OpeningDialogue != null &&
-            currentCallData
-                .OpeningDialogue.Count > 0 &&
-            dialogueManager != null)
+        if (phoneController == null)
         {
-            while (DialogueManager
-                .AnyDialogueActive)
-            {
-                yield return null;
-            }
-
-
-            yield return StartCoroutine(
-                PlayOpeningDialogueRoutine()
-            );
-
-            // Если это ChoicePrompt — НЕ ждём закрытия.
-            // Он должен жить до выбора игрока.
-            if (!dialogueManager.ChoicePromptReady)
-            {
-                while (dialogueManager != null &&
-                       dialogueManager.DialogueActive)
-                {
-                    yield return null;
-                }
-            }
+            FinishForcedClose();
+            yield break;
         }
 
+        yield return phoneController.PlayManualCallEarAnimation();
+
+        if (!phoneController.LastAnimationSucceeded)
+        {
+            FinishForcedClose();
+            yield break;
+        }
+
+        float minimum = Mathf.Min(minimumAnswerDelay, maximumAnswerDelay);
+        float maximum = Mathf.Max(minimumAnswerDelay, maximumAnswerDelay);
+        float answerDelay = UnityEngine.Random.Range(minimum, maximum);
+
+        yield return new WaitForSecondsRealtime(answerDelay);
+
+        StopPhoneSfx();
+        ConfigureContactVoice(contact);
+
+        bool needsChoices = HasAvailableChoices(
+            currentContact, currentScenarioId, currentCallData);
+
+        yield return PlayOpeningDialogueRoutine();
+
+        if (!phoneOpen)
+            yield break;
+
+        // При меню выбора последняя реплика должна существовать
+        // как готовый ChoicePrompt.
+        if (needsChoices &&
+            (dialogueManager == null ||
+             !dialogueManager.DialogueActive ||
+             !dialogueManager.ChoicePromptReady))
+        {
+            Debug.LogError(
+                "Телефон: не удалось подготовить последнюю реплику " +
+                "перед вариантами ответа.", this);
+
+            FinishForcedClose();
+            yield break;
+        }
 
         sequenceBusy = false;
-
-
-        /*
-         * После ответа уже нельзя
-         * листать контакты и начинать
-         * второй звонок.
-         *
-         * Красная трубка доступна.
-         */
-        SetPhoneButtons(
-            false,
-            false,
-            true
-        );
-
-
-        // -------------------------------------------------
-        // TWO CHOICES
-        // -------------------------------------------------
-
-        ShowCurrentChoices();
-
-
         sequenceCoroutine = null;
+
+        SetPhoneButtons(false, false, true);
+        ShowCurrentChoices();
     }
-
-
-    // =====================================================
-    // GLOBAL TWO-CHOICE UI
-    // =====================================================
 
     private void ShowCurrentChoices()
     {
-        if (currentCallData == null ||
-            !currentCallData.HasChoices)
+        if (!phoneOpen || !outgoingCallActive ||
+            currentContact == null ||
+            currentCallData == null ||
+            !currentCallData.ChoicesEnabled)
         {
             return;
         }
 
-
         FindReferences();
-
 
         if (choiceController == null)
             return;
 
+        displayedChoices.Clear();
 
-        PhoneChoiceData first =
-            currentCallData
-                .FirstChoice;
+        for (int i = 0; i < currentCallData.ChoiceCount; i++)
+        {
+            PhoneChoiceData choice = currentCallData.GetChoice(i);
 
+            if (!IsChoiceAvailable(currentContact, currentScenarioId, choice))
+                continue;
 
-        PhoneChoiceData second =
-            currentCallData
-                .SecondChoice;
+            bool asked =
+                choice.Role == PhoneChoiceRole.Question &&
+                WasQuestionAsked(
+                    currentContact.ContactId,
+                    currentScenarioId,
+                    choice.ChoiceId);
 
+            displayedChoices.Add(
+                new DialogueChoiceController.ChoiceOption
+                {
+                    Index = i,
+                    Text = choice.ButtonText,
+                    Interactable = IsChoiceSelectable(
+                        currentContact, currentScenarioId, choice),
+                    OverrideTextColor = asked,
+                    TextColor = askedQuestionTextColor
+                });
+        }
 
-        string firstText =
-            first != null
-                ? first.ButtonText
-                : "";
+        if (displayedChoices.Count == 0)
+        {
+            choiceController.HideChoices(this);
+            return;
+        }
 
-
-        string secondText =
-            second != null
-                ? second.ButtonText
-                : "";
-
-
-        choiceController.ShowChoices(
-            this,
-            firstText,
-            secondText,
-            HandleDialogueChoice
-        );
+        if (!choiceController.ShowOptions(
+                this, displayedChoices, HandleDialogueChoice))
+        {
+            Debug.LogError(
+                "Телефон: не удалось показать варианты ответа. " +
+                "Проверь ссылки и кнопки страниц.", this);
+        }
     }
 
-
-    private void HandleDialogueChoice(
-        int index)
+    private void HandleDialogueChoice(int index)
     {
-        if (!phoneOpen ||
-            sequenceBusy ||
-            currentCallData == null)
-        {
+        if (!phoneOpen || sequenceBusy || currentCallData == null)
             return;
-        }
 
+        PhoneChoiceData choice = currentCallData.GetChoice(index);
 
-        PhoneChoiceData choice =
-            currentCallData
-                .GetChoice(index);
-
-
-        if (choice == null ||
-            !choice.HasButton)
-        {
+        if (!IsChoiceSelectable(currentContact, currentScenarioId, choice))
             return;
-        }
-
 
         sequenceBusy = true;
+        SetPhoneButtons(false, false, false);
 
-
-        SetPhoneButtons(
-            false,
-            false,
-            false
-        );
-
-
-        sequenceCoroutine =
-            StartCoroutine(
-                PlayChoiceRoutine(
-                    choice
-                )
-            );
+        sequenceCoroutine = StartCoroutine(PlayChoiceRoutine(choice));
     }
 
-
-    private IEnumerator PlayChoiceRoutine(
-        PhoneChoiceData choice)
+    private IEnumerator PlayChoiceRoutine(PhoneChoiceData choice)
     {
-        // -------------------------------------------------
-        // RESPONSE DIALOGUE
-        // -------------------------------------------------
+        yield return null;
 
-        if (choice.ResponseDialogue != null &&
-            choice.ResponseDialogue.Count > 0 &&
-            dialogueManager != null)
+        bool shouldEndCall = ShouldEndPhoneCall(choice);
+
+        if (dialogueManager != null &&
+            FindLastValidDialogueLineIndex(choice.ResponseDialogue) >= 0)
         {
-            while (DialogueManager
-                .AnyDialogueActive)
-            {
+            while (DialogueManager.AnyDialogueActive)
                 yield return null;
-            }
 
+            ownsPhoneDialogue = true;
 
             dialogueManager.StartDialogue(
                 choice.ResponseDialogue,
-                false
-            );
-
+                false,
+                !shouldEndCall);
 
             while (dialogueManager != null &&
-                   dialogueManager
-                       .DialogueActive)
+                   dialogueManager.DialogueActive)
             {
                 yield return null;
             }
+
+            if (shouldEndCall)
+                HideOwnedPhoneDialogue();
         }
 
-
         string resolvedContactId =
-            currentContact != null
-                ? currentContact.ContactId
-                : null;
+            currentContact != null ? currentContact.ContactId : null;
 
+        string resolvedScenarioId = currentScenarioId;
+        string resolvedChoiceId = choice.ChoiceId;
 
-        string resolvedScenarioId =
-            currentScenarioId;
+        // Этот старый флаг означает наличие выбранного варианта.
+        // История вопросов хранится отдельно.
+        currentCallChoiceResolved = true;
 
+        CommitPhoneChoice(choice);
 
-        string resolvedChoiceId =
-            choice.ChoiceId;
+        if (!isActiveAndEnabled || !phoneOpen)
+            yield break;
 
-
-        currentCallChoiceResolved =
-            true;
-
-
-        // -------------------------------------------------
-        // AUTO HANG UP
-        // -------------------------------------------------
-
-        if (choice.HangUpAfterResponse)
+        if (shouldEndCall)
         {
-            /*
-             * Сначала полностью кладём телефон.
-             *
-             * И только ПОСЛЕ PutPhone
-             * сюжет получает результат выбора.
-             *
-             * Для женщины это важно:
-             * задержание начнётся уже после звонка.
-             */
-            yield return
-                ClosePhoneRoutine(
-                    false
-                );
-
+            yield return ClosePhoneRoutine(false);
 
             PhoneChoiceResolved?.Invoke(
                 resolvedContactId,
                 resolvedScenarioId,
-                resolvedChoiceId
-            );
-
-
-            sequenceCoroutine = null;
+                resolvedChoiceId);
 
             yield break;
         }
 
-
-        // -------------------------------------------------
-        // CALL CONTINUES
-        // -------------------------------------------------
-
         PhoneChoiceResolved?.Invoke(
             resolvedContactId,
             resolvedScenarioId,
-            resolvedChoiceId
-        );
+            resolvedChoiceId);
 
+        if (!isActiveAndEnabled || !phoneOpen)
+            yield break;
 
         sequenceBusy = false;
-
-
-        SetPhoneButtons(
-            false,
-            false,
-            true
-        );
-
-
-        // Если разговор продолжается,
-        // возвращаем те же две плашки.
-        ShowCurrentChoices();
-
-
         sequenceCoroutine = null;
+
+        SetPhoneButtons(false, false, true);
+        ShowCurrentChoices();
     }
-
-
-    // =====================================================
-    // RED PHONE BUTTON
-    // =====================================================
 
     private void HangUpPressed()
     {
-        if (!phoneOpen ||
-            sequenceBusy)
+        if (!phoneOpen || sequenceBusy)
+            return;
+
+        if (DialogueManager.AnyDialogueActive && !ownsPhoneDialogue)
+            return;
+
+        if (DialogueChoiceController.AnyChoiceOpen &&
+            (choiceController == null ||
+             !choiceController.IsOwnedBy(this)))
         {
             return;
         }
@@ -1566,691 +965,675 @@ public class WorkPhoneManualController :
         PlayPhoneButtonClick();
         sequenceBusy = true;
 
-
         if (choiceController != null)
-        {
-            choiceController
-                .HideChoices(this);
-        }
+            choiceController.HideChoices(this);
 
-
-        SetPhoneButtons(
-            false,
-            false,
-            false
-        );
-
+        SetPhoneButtons(false, false, false);
 
         sequenceCoroutine =
-            StartCoroutine(
-                ClosePhoneRoutine(
-                    true
-                )
-            );
+            StartCoroutine(ClosePhoneRoutine(true));
     }
 
-
-    private IEnumerator ClosePhoneRoutine(
-        bool notifyCancellation)
+    private IEnumerator ClosePhoneRoutine(bool notifyCancellation)
     {
+        yield return null;
+
         string cancelledContactId =
-            currentContact != null
-                ? currentContact.ContactId
-                : null;
+            currentContact != null ? currentContact.ContactId : null;
 
+        string cancelledScenarioId = currentScenarioId;
+        bool hadActiveCall = outgoingCallActive;
+        bool choiceWasResolved = currentCallChoiceResolved;
 
-        string cancelledScenarioId =
-            currentScenarioId;
-
-
-        bool hadActiveCall =
-            outgoingCallActive;
-
-
-        bool choiceWasResolved =
-            currentCallChoiceResolved;
-
-
+        HideOwnedPhoneDialogue();
         StopPhoneSfx();
 
-
         if (choiceController != null)
-        {
-            choiceController
-                .HideChoices(this);
-        }
-
+            choiceController.HideChoices(this);
 
         RestoreDialogueVoice();
 
-
         if (phoneCanvas != null)
-        {
             phoneCanvas.SetActive(false);
-        }
-
 
         outgoingCallActive = false;
 
-
         if (phoneController != null)
         {
-            // Метод сохранён. Плавный выход из привязки задаётся PutPhone.
-            phoneController
-                .DetachPhoneForManualUse();
+            phoneController.DetachPhoneForManualUse();
 
+            yield return phoneController.PlayManualPutAnimation();
 
-            // Затем Animator выполняет PutPhone.
-            yield return
-                phoneController
-                    .PlayManualPutAnimation();
             if (!phoneController.LastAnimationSucceeded)
                 phoneController.AbortPhoneMotion();
         }
 
-
         phoneOpen = false;
-
         sequenceBusy = false;
-
         AnyManualPhoneOpen = false;
 
-
         currentContact = null;
-
         currentCallData = null;
-
         currentScenarioId = null;
-
         currentCallChoiceResolved = false;
-
-
         sequenceCoroutine = null;
 
-
-        /*
-         * Игрок уже дозвонился,
-         * но просто положил трубку
-         * без вариативного решения.
-         */
-        if (notifyCancellation &&
-            hadActiveCall &&
-            !choiceWasResolved)
+        if (notifyCancellation && hadActiveCall && !choiceWasResolved)
         {
             PhoneCallCancelled?.Invoke(
-                cancelledContactId,
-                cancelledScenarioId
-            );
+                cancelledContactId, cancelledScenarioId);
+        }
+
+        if (hadActiveCall)
+        {
+            PhoneCallEnded?.Invoke(
+                cancelledContactId, cancelledScenarioId);
         }
     }
-
 
     private void FinishForcedClose()
     {
         StopPhoneSfx();
 
-
         if (choiceController != null)
-        {
-            choiceController
-                .HideChoices(this);
-        }
+            choiceController.HideChoices(this);
 
-
+        HideOwnedPhoneDialogue();
         RestoreDialogueVoice();
 
-
         if (phoneController != null)
-        {
-            phoneController
-                .AbortPhoneMotion();
-        }
-
+            phoneController.AbortPhoneMotion();
 
         HidePhoneUIImmediately();
 
-
         phoneOpen = false;
-
         sequenceBusy = false;
-
         outgoingCallActive = false;
 
-
         currentContact = null;
-
         currentCallData = null;
-
         currentScenarioId = null;
-
         currentCallChoiceResolved = false;
 
-
         AnyManualPhoneOpen = false;
-
-
         sequenceCoroutine = null;
     }
 
-
-    // =====================================================
-    // ACTIVE SCENARIOS
-    // =====================================================
-
-    public bool SetContactScenario(
-        string contactId,
-        string scenarioId)
+    private void HideOwnedPhoneDialogue()
     {
-        if (string.IsNullOrWhiteSpace(
-                contactId) ||
-            string.IsNullOrWhiteSpace(
-                scenarioId))
+        if (!ownsPhoneDialogue)
+            return;
+
+        if (dialogueManager != null)
+            dialogueManager.HidePersistentDialogue();
+
+        ownsPhoneDialogue = false;
+    }
+
+    // =====================================================
+    // ДОСТУПНОСТЬ И ИСТОРИЯ ВОПРОСОВ
+    // =====================================================
+
+    private static (string, string, string) QuestionKey(
+        string contactId, string scenarioId, string choiceId)
+    {
+        return (
+            contactId ?? "",
+            scenarioId ?? "",
+            choiceId ?? "");
+    }
+
+    public bool WasQuestionAsked(
+        string contactId, string scenarioId, string choiceId)
+    {
+        return askedQuestions.Contains(
+            QuestionKey(contactId, scenarioId, choiceId));
+    }
+
+    public void SetQuestionAvailable(
+        string contactId,
+        string scenarioId,
+        string choiceId,
+        bool available)
+    {
+        if (string.IsNullOrWhiteSpace(contactId) ||
+            string.IsNullOrWhiteSpace(choiceId))
         {
+            return;
+        }
+
+        questionAvailability[
+            QuestionKey(contactId, scenarioId, choiceId)] = available;
+
+        RefreshChoicesIfNeeded(contactId, scenarioId);
+    }
+
+    public void ResetAskedQuestion(
+        string contactId, string scenarioId, string choiceId)
+    {
+        askedQuestions.Remove(
+            QuestionKey(contactId, scenarioId, choiceId));
+
+        RefreshChoicesIfNeeded(contactId, scenarioId);
+    }
+
+    private void RefreshChoicesIfNeeded(
+        string contactId, string scenarioId)
+    {
+        if (phoneOpen && outgoingCallActive && !sequenceBusy &&
+            currentContact != null &&
+            currentContact.ContactId == contactId &&
+            (currentScenarioId ?? "") == (scenarioId ?? ""))
+        {
+            ShowCurrentChoices();
+        }
+    }
+
+    private bool IsChoiceAvailable(
+        PhoneContact contact,
+        string scenarioId,
+        PhoneChoiceData choice)
+    {
+        if (contact == null || choice == null || !choice.HasButton)
+            return false;
+
+        var key = QuestionKey(
+            contact.ContactId, scenarioId, choice.ChoiceId);
+
+        if (questionAvailability.TryGetValue(key, out bool available))
+            return available;
+
+        return choice.InitiallyAvailable;
+    }
+
+    private bool IsChoiceSelectable(
+        PhoneContact contact,
+        string scenarioId,
+        PhoneChoiceData choice)
+    {
+        if (!IsChoiceAvailable(contact, scenarioId, choice))
+            return false;
+
+        if (choice.Role != PhoneChoiceRole.Question)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(choice.ChoiceId))
+            return false;
+
+        return choice.AllowRepeatQuestion ||
+            !WasQuestionAsked(
+                contact.ContactId, scenarioId, choice.ChoiceId);
+    }
+
+    private bool HasAvailableChoices(
+        PhoneContact contact,
+        string scenarioId,
+        PhoneCallData call)
+    {
+        if (call == null || !call.ChoicesEnabled)
+            return false;
+
+        for (int i = 0; i < call.ChoiceCount; i++)
+        {
+            if (IsChoiceAvailable(contact, scenarioId, call.GetChoice(i)))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool CanCallContact(
+        PhoneContact contact,
+        string scenarioId,
+        PhoneCallData call)
+    {
+        if (call == null || !call.ChoicesEnabled)
+            return true;
+
+        for (int i = 0; i < call.ChoiceCount; i++)
+        {
+            PhoneChoiceData choice = call.GetChoice(i);
+
+            if (choice == null || choice.Role == PhoneChoiceRole.EndCall)
+                continue;
+
+            if (IsChoiceSelectable(contact, scenarioId, choice))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool ValidateCallConfiguration(
+        PhoneContact contact,
+        string scenarioId,
+        PhoneCallData call)
+    {
+        if (call == null || !call.ChoicesEnabled)
+            return true;
+
+        int visibleCount = 0;
+
+        for (int i = 0; i < call.ChoiceCount; i++)
+        {
+            PhoneChoiceData choice = call.GetChoice(i);
+
+            if (!IsChoiceAvailable(contact, scenarioId, choice))
+                continue;
+
+            visibleCount++;
+
+            if (choice.Role == PhoneChoiceRole.Question &&
+                string.IsNullOrWhiteSpace(choice.ChoiceId))
+            {
+                Debug.LogError(
+                    "Телефон: у запоминаемого вопроса не заполнен Choice Id.",
+                    this);
+                return false;
+            }
+        }
+
+        if (visibleCount == 0)
+            return true;
+
+        if (dialogueManager == null ||
+            FindLastValidDialogueLineIndex(call.OpeningDialogue) < 0)
+        {
+            Debug.LogError(
+                "Телефон: для разговора с вариантами нужен DialogueManager " +
+                "и хотя бы одна реплика в Opening Dialogue.", this);
             return false;
         }
 
-
-        PhoneContact contact =
-            FindContact(
-                contactId
-            );
-
-
-        if (contact == null)
+        if (choiceController == null ||
+            !choiceController.CanDisplayOptionCount(visibleCount))
+        {
+            Debug.LogError(
+                "Телефон: проверь DialogueChoiceController, " +
+                "его тексты, кнопки и кнопки страниц.", this);
             return false;
-
-
-        activeScenarios[
-            contactId
-        ] =
-            scenarioId;
-
+        }
 
         return true;
     }
 
-
-    public void ClearContactScenario(
-        string contactId)
+    private IEnumerator ShowUnavailableCallRoutine(PhoneContact contact)
     {
-        if (string.IsNullOrWhiteSpace(
-                contactId))
+        yield return null;
+
+        while (DialogueManager.AnyDialogueActive)
+            yield return null;
+
+        List<DialogueManager.DialogueLine> lines =
+            contact.NoAvailableQuestionsDialogue;
+
+        if (dialogueManager != null &&
+            FindLastValidDialogueLineIndex(lines) >= 0)
         {
-            return;
+            ownsPhoneDialogue = true;
+            dialogueManager.StartDialogue(lines, false);
+
+            while (dialogueManager != null &&
+                   dialogueManager.DialogueActive)
+            {
+                yield return null;
+            }
+
+            HideOwnedPhoneDialogue();
         }
 
+        sequenceBusy = false;
+        sequenceCoroutine = null;
 
-        activeScenarios.Remove(
-            contactId
-        );
+        if (phoneOpen)
+            SetPhoneButtons(true, true, true);
     }
 
-
-    private string GetActiveScenarioId(
-        string contactId)
+    private bool ShouldEndPhoneCall(PhoneChoiceData choice)
     {
-        if (string.IsNullOrWhiteSpace(
-                contactId))
+        return choice.HangUpAfterResponse ||
+            choice.Role == PhoneChoiceRole.EndCall;
+    }
+
+    private void CommitPhoneChoice(PhoneChoiceData choice)
+    {
+        if (currentContact == null || choice == null)
+            return;
+
+        string contactId = currentContact.ContactId;
+        string scenarioId = currentScenarioId;
+
+        if (choice.Role == PhoneChoiceRole.Question &&
+            !string.IsNullOrWhiteSpace(choice.ChoiceId))
         {
+            askedQuestions.Add(
+                QuestionKey(contactId, scenarioId, choice.ChoiceId));
+        }
+
+        PhoneChoiceCommitted?.Invoke(
+            contactId, scenarioId, choice.ChoiceId);
+    }
+
+    // =====================================================
+    // ОСОБЫЕ СЦЕНАРИИ
+    // =====================================================
+
+    public bool SetContactScenario(string contactId, string scenarioId)
+    {
+        if (string.IsNullOrWhiteSpace(contactId) ||
+            string.IsNullOrWhiteSpace(scenarioId))
+        {
+            return false;
+        }
+
+        PhoneContact contact = FindContact(contactId);
+
+        if (contact == null)
+            return false;
+
+        activeScenarios[contactId] = scenarioId;
+        return true;
+    }
+
+    public void ClearContactScenario(string contactId)
+    {
+        if (string.IsNullOrWhiteSpace(contactId))
+            return;
+
+        activeScenarios.Remove(contactId);
+    }
+
+    private string GetActiveScenarioId(string contactId)
+    {
+        if (string.IsNullOrWhiteSpace(contactId))
             return null;
-        }
 
-
-        string scenarioId;
-
-
-        if (activeScenarios.TryGetValue(
-                contactId,
-                out scenarioId))
-        {
+        if (activeScenarios.TryGetValue(contactId, out string scenarioId))
             return scenarioId;
-        }
-
 
         return null;
     }
 
-
-    private PhoneContact FindContact(
-        string contactId)
+    private PhoneContact FindContact(string contactId)
     {
         if (contacts == null)
             return null;
 
-
-        for (int i = 0;
-             i < contacts.Count;
-             i++)
+        for (int i = 0; i < contacts.Count; i++)
         {
-            PhoneContact contact =
-                contacts[i];
+            PhoneContact contact = contacts[i];
 
-
-            if (contact == null)
-                continue;
-
-
-            if (contact.ContactId ==
-                contactId)
-            {
+            if (contact != null && contact.ContactId == contactId)
                 return contact;
-            }
         }
-
 
         return null;
     }
 
-
-    // =====================================================
-    // CONTACT VOICE
-    // =====================================================
-
-    private void ConfigureContactVoice(
-        PhoneContact contact)
+    public bool HasScenarioChoice(
+        string contactId, string scenarioId, string choiceId)
     {
-        if (dialogueManager == null ||
-            contactVoiceAudioSource == null)
+        PhoneContact contact = FindContact(contactId);
+
+        if (contact == null ||
+            !contact.TryGetScenarioCall(scenarioId, out PhoneCallData call) ||
+            call == null ||
+            !call.ChoicesEnabled)
         {
-            return;
+            return false;
         }
 
+        for (int i = 0; i < call.ChoiceCount; i++)
+        {
+            PhoneChoiceData choice = call.GetChoice(i);
 
-        /*
-         * Запоминаем предыдущий
-         * default voice только один раз
-         * за текущий ручной телефон.
-         */
+            if (choice != null &&
+                choice.HasButton &&
+                choice.ChoiceId == choiceId &&
+                choice.Role != PhoneChoiceRole.EndCall)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryBeginScenarioOverride(
+        UnityEngine.Object owner,
+        string contactId,
+        string scenarioId)
+    {
+        if (owner == null || scenarioOverrideOwner != null ||
+            phoneOpen || sequenceBusy)
+        {
+            return false;
+        }
+
+        PhoneContact contact = FindContact(contactId);
+
+        if (contact == null || !contact.HasScenario(scenarioId))
+            return false;
+
+        string previous = GetActiveScenarioId(contactId);
+
+        if (!SetContactScenario(contactId, scenarioId))
+            return false;
+
+        scenarioOverrideOwner = owner;
+        overriddenContactId = contactId;
+        overriddenScenarioId = scenarioId;
+        previousScenarioId = previous;
+
+        return true;
+    }
+
+    public void EndScenarioOverride(UnityEngine.Object owner)
+    {
+        if (owner == null || scenarioOverrideOwner != owner)
+            return;
+
+        if (GetActiveScenarioId(overriddenContactId) ==
+            overriddenScenarioId)
+        {
+            if (string.IsNullOrEmpty(previousScenarioId))
+                activeScenarios.Remove(overriddenContactId);
+            else
+                activeScenarios[overriddenContactId] = previousScenarioId;
+        }
+
+        scenarioOverrideOwner = null;
+        overriddenContactId = null;
+        overriddenScenarioId = null;
+        previousScenarioId = null;
+    }
+
+    // =====================================================
+    // ГОЛОС
+    // =====================================================
+
+    private void ConfigureContactVoice(PhoneContact contact)
+    {
+        if (dialogueManager == null || contactVoiceAudioSource == null)
+            return;
+
         if (!voiceOverrideActive)
         {
             previousDefaultVoiceSource =
-                dialogueManager
-                    .defaultVoiceAudioSource;
-
+                dialogueManager.defaultVoiceAudioSource;
 
             voiceOverrideActive = true;
         }
 
-
-        dialogueManager
-            .ResetVoiceAudioSource(
-                contactVoiceAudioSource
-            );
-
+        dialogueManager.ResetVoiceAudioSource(contactVoiceAudioSource);
 
         contactVoiceAudioSource.clip =
-            contact != null
-                ? contact.VoiceClip
-                : null;
+            contact != null ? contact.VoiceClip : null;
 
-
-        dialogueManager
-            .defaultVoiceAudioSource =
-                contactVoiceAudioSource;
+        dialogueManager.defaultVoiceAudioSource = contactVoiceAudioSource;
     }
-
 
     private void RestoreDialogueVoice()
     {
         if (!voiceOverrideActive)
             return;
 
-
         if (dialogueManager != null)
         {
-            dialogueManager
-                .ResetVoiceAudioSource(
-                    contactVoiceAudioSource
-                );
-
-
-            dialogueManager
-                .defaultVoiceAudioSource =
-                    previousDefaultVoiceSource;
+            dialogueManager.ResetVoiceAudioSource(contactVoiceAudioSource);
+            dialogueManager.defaultVoiceAudioSource =
+                previousDefaultVoiceSource;
         }
 
-
-        previousDefaultVoiceSource =
-            null;
-
-
-        voiceOverrideActive =
-            false;
+        previousDefaultVoiceSource = null;
+        voiceOverrideActive = false;
     }
 
-
     // =====================================================
-    // PHONE SFX
+    // ЗВУКИ
     // =====================================================
 
     private void PlayPowerOnSound()
     {
-        if (phoneSfxAudioSource == null ||
-            phonePowerOnClip == null)
-        {
+        if (phoneSfxAudioSource == null || phonePowerOnClip == null)
             return;
-        }
-
 
         phoneSfxAudioSource.Stop();
-
-        phoneSfxAudioSource.loop =
-            false;
-
-
-        phoneSfxAudioSource.PlayOneShot(
-            phonePowerOnClip
-        );
+        phoneSfxAudioSource.loop = false;
+        phoneSfxAudioSource.PlayOneShot(phonePowerOnClip);
     }
-
 
     private void PlayDialTone()
     {
-        if (phoneSfxAudioSource == null ||
-            dialToneClip == null)
-        {
+        if (phoneSfxAudioSource == null || dialToneClip == null)
             return;
-        }
-
 
         phoneSfxAudioSource.Stop();
-
-
-        phoneSfxAudioSource.clip =
-            dialToneClip;
-
-
-        phoneSfxAudioSource.loop =
-            true;
-
-
+        phoneSfxAudioSource.clip = dialToneClip;
+        phoneSfxAudioSource.loop = true;
         phoneSfxAudioSource.Play();
     }
-
 
     private void StopPhoneSfx()
     {
         if (phoneSfxAudioSource == null)
             return;
 
-
         phoneSfxAudioSource.Stop();
-
-        phoneSfxAudioSource.loop =
-            false;
+        phoneSfxAudioSource.loop = false;
     }
 
-
     // =====================================================
-    // PHONE BUTTONS
+    // КНОПКИ
     // =====================================================
 
     private void AddButtonListeners()
     {
         if (leftButton != null)
         {
-            leftButton.onClick
-                .RemoveListener(
-                    PreviousContact
-                );
-
-            leftButton.onClick
-                .AddListener(
-                    PreviousContact
-                );
+            leftButton.onClick.RemoveListener(PreviousContact);
+            leftButton.onClick.AddListener(PreviousContact);
         }
-
 
         if (rightButton != null)
         {
-            rightButton.onClick
-                .RemoveListener(
-                    NextContact
-                );
-
-            rightButton.onClick
-                .AddListener(
-                    NextContact
-                );
+            rightButton.onClick.RemoveListener(NextContact);
+            rightButton.onClick.AddListener(NextContact);
         }
-
 
         if (callButton != null)
         {
-            callButton.onClick
-                .RemoveListener(
-                    CallSelectedContact
-                );
-
-            callButton.onClick
-                .AddListener(
-                    CallSelectedContact
-                );
+            callButton.onClick.RemoveListener(CallSelectedContact);
+            callButton.onClick.AddListener(CallSelectedContact);
         }
-
 
         if (hangUpButton != null)
         {
-            hangUpButton.onClick
-                .RemoveListener(
-                    HangUpPressed
-                );
-
-            hangUpButton.onClick
-                .AddListener(
-                    HangUpPressed
-                );
+            hangUpButton.onClick.RemoveListener(HangUpPressed);
+            hangUpButton.onClick.AddListener(HangUpPressed);
         }
     }
-
 
     private void RemoveButtonListeners()
     {
         if (leftButton != null)
-        {
-            leftButton.onClick
-                .RemoveListener(
-                    PreviousContact
-                );
-        }
-
+            leftButton.onClick.RemoveListener(PreviousContact);
 
         if (rightButton != null)
-        {
-            rightButton.onClick
-                .RemoveListener(
-                    NextContact
-                );
-        }
-
+            rightButton.onClick.RemoveListener(NextContact);
 
         if (callButton != null)
-        {
-            callButton.onClick
-                .RemoveListener(
-                    CallSelectedContact
-                );
-        }
-
+            callButton.onClick.RemoveListener(CallSelectedContact);
 
         if (hangUpButton != null)
-        {
-            hangUpButton.onClick
-                .RemoveListener(
-                    HangUpPressed
-                );
-        }
+            hangUpButton.onClick.RemoveListener(HangUpPressed);
     }
 
-
-    private void SetPhoneButtons(
-        bool navigation,
-        bool call,
-        bool hangUp)
+    private void SetPhoneButtons(bool navigation, bool call, bool hangUp)
     {
         if (leftButton != null)
-        {
-            leftButton.interactable =
-                navigation;
-        }
-
+            leftButton.interactable = navigation;
 
         if (rightButton != null)
-        {
-            rightButton.interactable =
-                navigation;
-        }
-
+            rightButton.interactable = navigation;
 
         if (callButton != null)
-        {
-            callButton.interactable =
-                call;
-        }
-
+            callButton.interactable = call;
 
         if (hangUpButton != null)
-        {
-            hangUpButton.interactable =
-                hangUp;
-        }
+            hangUpButton.interactable = hangUp;
     }
-
-
-    // =====================================================
-    // INITIAL UI
-    // =====================================================
 
     private void HidePhoneUIImmediately()
     {
         if (phoneCanvas != null)
-        {
             phoneCanvas.SetActive(false);
-        }
-
 
         if (contacts != null)
         {
-            for (int i = 0;
-                 i < contacts.Count;
-                 i++)
+            for (int i = 0; i < contacts.Count; i++)
             {
-                PhoneContact contact =
-                    contacts[i];
+                PhoneContact contact = contacts[i];
 
-
-                if (contact != null &&
-                    contact.ScreenObject != null)
-                {
-                    contact.ScreenObject
-                        .SetActive(false);
-                }
+                if (contact != null && contact.ScreenObject != null)
+                    contact.ScreenObject.SetActive(false);
             }
         }
 
-
         if (choiceController != null)
-        {
-            choiceController
-                .HideChoices(this);
-        }
+            choiceController.HideChoices(this);
     }
-
-
-    // =====================================================
-    // REFERENCES
-    // =====================================================
 
     private void FindReferences()
     {
-        // -------------------------------------------------
-        // PHONE
-        // -------------------------------------------------
-
         if (phoneController == null)
-        {
-            phoneController =
-                GetComponent<
-                    WorkPhonePenaltyController>();
-        }
-
-
-        // -------------------------------------------------
-        // DIALOGUE MANAGER
-        // -------------------------------------------------
+            phoneController = GetComponent<WorkPhonePenaltyController>();
 
         if (dialogueManager == null)
         {
-            GameObject dialogueObject =
-                GameObject.Find(
-                    "DialogueManager"
-                );
-
+            GameObject dialogueObject = GameObject.Find("DialogueManager");
 
             if (dialogueObject != null)
-            {
-                dialogueManager =
-                    dialogueObject
-                        .GetComponent<
-                            DialogueManager>();
-            }
+                dialogueManager = dialogueObject.GetComponent<DialogueManager>();
         }
-
 
         if (dialogueManager == null)
         {
-            dialogueManager =
-                FindFirstObjectByType<
-                    DialogueManager>(
-                        FindObjectsInactive
-                            .Include
-                    );
+            dialogueManager = FindFirstObjectByType<DialogueManager>(
+                FindObjectsInactive.Include);
         }
 
-
-        // -------------------------------------------------
-        // GLOBAL DIALOGUE CHOICE
-        // -------------------------------------------------
-
-        /*
-         * Никакого Instance.
-         *
-         * Глобальный объект живёт
-         * в persistent-группе.
-         *
-         * Ищем только если ссылка
-         * ещё отсутствует, после чего
-         * сохраняем её.
-         */
         if (choiceController == null)
         {
-            choiceController =
-                FindFirstObjectByType<
-                    DialogueChoiceController>(
-                        FindObjectsInactive
-                            .Include
-                    );
+            choiceController = FindFirstObjectByType<DialogueChoiceController>(
+                FindObjectsInactive.Include);
         }
     }
 
-
-    // =====================================================
-    // INSPECTOR
-    // =====================================================
-
     private void OnValidate()
     {
-        minimumAnswerDelay =
-            Mathf.Max(
-                0f,
-                minimumAnswerDelay
-            );
-
-
-        maximumAnswerDelay =
-            Mathf.Max(
-                minimumAnswerDelay,
-                maximumAnswerDelay
-            );
+        minimumAnswerDelay = Mathf.Max(0f, minimumAnswerDelay);
+        maximumAnswerDelay = Mathf.Max(
+            minimumAnswerDelay, maximumAnswerDelay);
     }
 }

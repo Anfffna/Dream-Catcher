@@ -3,12 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ClientNPCController :
-    MonoBehaviour,
-    IInteractable
+public class ClientNPCController : MonoBehaviour, IInteractable
 {
-    public static ClientNPCController
-    CurrentActiveClient
+    public static ClientNPCController CurrentActiveClient
     {
         get;
         private set;
@@ -21,47 +18,38 @@ public class ClientNPCController :
         FirstDialogueRunning,
         WaitingForDirectionTab,
         QuestionDialogueReady,
-
         GiveSon3DialogueReady,
         GiveSon3DialogueRunning,
-
         WaitingForSon3Return,
-
         FinalDialogueRunning,
         TakeSon3AnimationRunning,
-        Completed
+        Completed,
+
+        // Добавлено в конец, чтобы сохранить значения старых состояний.
+        WaitingForSpecialFinal
     }
 
     [Header("Данные клиента")]
 
-    [Tooltip("Карточка этого конкретного человека.")]
     [SerializeField]
     private VisitorCaseData visitorData;
 
-    [Tooltip("Индекс выбранного варианта дела. Для первого варианта используется 0.")]
     [SerializeField]
     private int activeVariantIndex;
 
-    [Tooltip("Панель информации на экране направления.")]
     [SerializeField]
-    private ClientInfoPanelController
-        clientInfoPanel;
+    private ClientInfoPanelController clientInfoPanel;
 
     [Header("Вариативный диалог")]
 
-    [Tooltip("Контроллер двух вопросов клиента.")]
     [SerializeField]
-    private ClientQuestionDialogueController
-        questionDialogueController;
+    private ClientQuestionDialogueController questionDialogueController;
 
-    [Tooltip("Навигация двух вкладок монитора.")]
     [SerializeField]
-    private ComputerInterfaceNavigation
-        computerNavigation;
+    private ComputerInterfaceNavigation computerNavigation;
 
     [Header("Голос клиента")]
 
-    [Tooltip("AudioSource на NPC для воспроизведения его голоса.")]
     [SerializeField]
     private AudioSource voiceAudioSource;
 
@@ -71,48 +59,29 @@ public class ClientNPCController :
     private Animator animator;
 
     [SerializeField]
-    private string approachTriggerName =
-        "Podhodit";
+    private string approachTriggerName = "Podhodit";
 
     [SerializeField]
-    private string giveSon3TriggerName =
-        "Give_SON3";
+    private string giveSon3TriggerName = "Give_SON3";
 
-    [Tooltip("Триггер финальной анимации, в которой клиент забирает СОН-3.")]
     [SerializeField]
-    private string takeSon3TriggerName =
-    "Take_SON3";
+    private string takeSon3TriggerName = "Take_SON3";
 
-    [Tooltip("Максимальное время ожидания запуска финальной анимации.")]
     [SerializeField]
-    private float takeSon3StartTimeout =
-        2f;
+    private float takeSon3StartTimeout = 2f;
 
-    [Tooltip(
-    "Максимальное время ожидания " +
-    "реального запуска Give_SON3."
-    )]
     [SerializeField]
-    private float giveSon3StartTimeout =
-    2f;
+    private float giveSon3StartTimeout = 2f;
 
-    [Tooltip(
-        "Момент Give_SON3, после которого " +
-        "SON-3 уже гарантированно находится " +
-        "в руке клиента."
-    )]
     [Range(0f, 1f)]
     [SerializeField]
-    private float giveSon3ReadyNormalizedTime =
-        0.9f;
+    private float giveSon3ReadyNormalizedTime = 0.9f;
 
     [SerializeField]
     private int animatorLayerIndex;
 
-    [Tooltip("Максимальное время ожидания входа в анимацию подхода.")]
     [SerializeField]
-    private float approachStartTimeout =
-        5f;
+    private float approachStartTimeout = 5f;
 
     [Header("SON-3")]
 
@@ -120,8 +89,7 @@ public class ClientNPCController :
     private Son3DragController son3;
 
     [SerializeField]
-    private WorkSon3TrayController
-        son3Tray;
+    private WorkSon3TrayController son3Tray;
 
     [SerializeField]
     private Transform workItemsRoot;
@@ -132,16 +100,13 @@ public class ClientNPCController :
     private Collider interactionCollider;
 
     [SerializeField]
-    private string defaultLayerName =
-        "Default";
+    private string defaultLayerName = "Default";
 
     [SerializeField]
-    private string interactableLayerName =
-        "Interactable";
+    private string interactableLayerName = "Interactable";
 
     [SerializeField]
-    private string clientColliderObjectName =
-        "ClientInteractionCollider";
+    private string clientColliderObjectName = "ClientInteractionCollider";
 
     [Header("Диалог")]
 
@@ -149,15 +114,13 @@ public class ClientNPCController :
     private DialogueManager dialogueManager;
 
     [SerializeField]
-    private string dialogueManagerObjectName =
-        "DialogueManager";
+    private string dialogueManagerObjectName = "DialogueManager";
 
     [Header("Текущее состояние")]
 
     [SerializeField]
     private ClientDialogueStage dialogueStage =
-        ClientDialogueStage
-            .WaitingForApproach;
+        ClientDialogueStage.WaitingForApproach;
 
     [SerializeField]
     private bool approachStarted;
@@ -173,11 +136,10 @@ public class ClientNPCController :
 
     private bool directionSubmitted;
     private bool waitingForSon3Return;
-    private DirectionDecision submittedDecision =
-    DirectionDecision.None;
 
-    private VisitorCaseData.VisitorCaseVariant
-        activeVariant;
+    private DirectionDecision submittedDecision = DirectionDecision.None;
+
+    private VisitorCaseData.VisitorCaseVariant activeVariant;
 
     private Coroutine approachCoroutine;
     private Coroutine dialogueCoroutine;
@@ -185,33 +147,45 @@ public class ClientNPCController :
     private Coroutine giveSon3Coroutine;
     private bool giveSon3AnimationReady;
 
-    private readonly HashSet<UnityEngine.Object>
-    finalCompletionBlockers =
+    private readonly HashSet<UnityEngine.Object> finalCompletionBlockers =
         new HashSet<UnityEngine.Object>();
 
-    public bool IsFinished =>
-        dialogueStage ==
-            ClientDialogueStage.Completed;
+    private Coroutine finalContinuationCoroutine;
+    private bool finalContinuationStarted;
 
-    public DialogueManager DialogueManagerReference =>
-    dialogueManager;
+    private readonly List<DialogueManager.DialogueLine>
+        finalDialogueChoicePrefix =
+            new List<DialogueManager.DialogueLine>();
+
+    public bool IsFinished =>
+        dialogueStage == ClientDialogueStage.Completed;
+
+    public DialogueManager DialogueManagerReference => dialogueManager;
 
     public ClientQuestionDialogueController
-        QuestionDialogueControllerReference =>
-            questionDialogueController;
+        QuestionDialogueControllerReference => questionDialogueController;
 
     public bool IsFinalDialogueRunning =>
-        dialogueStage ==
-            ClientDialogueStage.FinalDialogueRunning;
+        dialogueStage == ClientDialogueStage.FinalDialogueRunning;
 
-    public DirectionDecision SubmittedDecision =>
-        submittedDecision;
+    public DirectionDecision SubmittedDecision => submittedDecision;
 
+    public event Action<ClientNPCController> FinalDialogueStarted;
+    public event Action<ClientNPCController> ClientFinished;
+
+    // Кто-то из сюжетных компонентов может попросить,
+    // чтобы последняя реплика Final Dialogue стала ChoicePrompt.
+    public event Func<ClientNPCController, bool>
+        FinalDialogueChoiceRequested;
+
+    // Последняя реплика полностью допечаталась
+    // и готова к показу внешних плашек.
     public event Action<ClientNPCController>
-    FinalDialogueStarted;
+        FinalDialogueChoicePromptReady;
 
-    public event Action<ClientNPCController>
-        ClientFinished;
+    // Обычная финальная последовательность завершилась,
+    // но очередь ещё не получила ClientFinished.
+    public event Action<ClientNPCController> FinalSequenceFinishing;
 
     private void Awake()
     {
@@ -233,83 +207,58 @@ public class ClientNPCController :
 
     private void OnDisable()
     {
+        StopFinalContinuation();
         UnsubscribeFromComputerNavigation();
 
         if (approachCoroutine != null)
         {
-            StopCoroutine(
-                approachCoroutine
-            );
-
+            StopCoroutine(approachCoroutine);
             approachCoroutine = null;
         }
 
         if (dialogueCoroutine != null)
         {
-            StopCoroutine(
-                dialogueCoroutine
-            );
-
+            StopCoroutine(dialogueCoroutine);
             dialogueCoroutine = null;
         }
 
         if (giveSon3Coroutine != null)
         {
-            StopCoroutine(
-                giveSon3Coroutine
-            );
-
-            giveSon3Coroutine =
-                null;
+            StopCoroutine(giveSon3Coroutine);
+            giveSon3Coroutine = null;
         }
 
         if (takeSon3Coroutine != null)
         {
-            StopCoroutine(
-                takeSon3Coroutine
-            );
-
+            StopCoroutine(takeSon3Coroutine);
             takeSon3Coroutine = null;
         }
 
         if (questionDialogueController != null &&
             questionDialogueController.IsOpen)
         {
-            questionDialogueController
-                .CloseDialogue();
+            questionDialogueController.CloseDialogue();
         }
 
         dialogueInteractionLocked = false;
 
         if (son3 != null)
-        {
-            son3.ReturnedToOriginalPlace -=
-                HandleSon3Returned;
-        }
+            son3.ReturnedToOriginalPlace -= HandleSon3Returned;
 
         if (CurrentActiveClient == this)
-        {
             CurrentActiveClient = null;
-        }
     }
 
     public void Initialize(
         VisitorCaseData newVisitorData,
         int newVariantIndex,
-        ClientInfoPanelController
-            newClientInfoPanel)
+        ClientInfoPanelController newClientInfoPanel)
     {
-        visitorData =
-            newVisitorData;
-
-        activeVariantIndex =
-            newVariantIndex;
+        visitorData = newVisitorData;
+        activeVariantIndex = newVariantIndex;
 
         if (newClientInfoPanel != null)
-        {
-            clientInfoPanel =
-                newClientInfoPanel;
-        }
+            clientInfoPanel = newClientInfoPanel;
 
         ResetRuntimeStateForNewClient();
         ApplyClientData();
@@ -331,77 +280,47 @@ public class ClientNPCController :
         }
 
         CurrentActiveClient = this;
-        if (SessionStatsManager.Instance != null)
-        {
-            SessionStatsManager.Instance
-                .TrackClient(this);
-        }
-        approachStarted = true;
 
-        dialogueStage =
-            ClientDialogueStage
-                .WaitingForApproach;
+        if (SessionStatsManager.Instance != null)
+            SessionStatsManager.Instance.TrackClient(this);
+
+        approachStarted = true;
+        dialogueStage = ClientDialogueStage.WaitingForApproach;
 
         SetInteractionAvailable(false);
 
-        animator.ResetTrigger(
-            approachTriggerName
-        );
-
-        animator.SetTrigger(
-            approachTriggerName
-        );
+        animator.ResetTrigger(approachTriggerName);
+        animator.SetTrigger(approachTriggerName);
 
         if (approachCoroutine != null)
-        {
-            StopCoroutine(
-                approachCoroutine
-            );
-        }
+            StopCoroutine(approachCoroutine);
 
         approachCoroutine =
-            StartCoroutine(
-                WaitForApproachToFinish()
-            );
+            StartCoroutine(WaitForApproachToFinish());
     }
 
     public void Interact()
     {
-        if (!interactionAvailable ||
-            dialogueInteractionLocked)
-        {
+        if (!interactionAvailable || dialogueInteractionLocked)
             return;
-        }
 
-        if (DialogueManager
-            .AnyDialogueActive)
-        {
+        if (DialogueManager.AnyDialogueActive)
             return;
-        }
 
-        if (dialogueStage ==
-            ClientDialogueStage
-                .FirstDialogueReady)
+        if (dialogueStage == ClientDialogueStage.FirstDialogueReady)
         {
             StartFirstDialogue();
             return;
         }
 
-        if (dialogueStage ==
-            ClientDialogueStage
-                .QuestionDialogueReady)
+        if (dialogueStage == ClientDialogueStage.QuestionDialogueReady)
         {
             ToggleQuestionDialogue();
             return;
         }
 
-        if (dialogueStage ==
-            ClientDialogueStage
-                .GiveSon3DialogueReady)
-        {
+        if (dialogueStage == ClientDialogueStage.GiveSon3DialogueReady)
             StartGiveSon3Dialogue();
-            return;
-        }
     }
 
     public void ApplyClientInformation()
@@ -413,46 +332,32 @@ public class ClientNPCController :
             return;
         }
 
-        clientInfoPanel.ShowClient(
-            visitorData,
-            activeVariant
-        );
+        clientInfoPanel.ShowClient(visitorData, activeVariant);
     }
 
     public void UnlockQuestionDialogue()
     {
         directionTabOpened = true;
-
         TryUnlockQuestionDialogue();
     }
 
-    public void SetInteractionAvailable(
-        bool available)
+    public void SetInteractionAvailable(bool available)
     {
         FindInteractionReferences();
-
-        interactionAvailable =
-            available;
+        interactionAvailable = available;
 
         if (interactionCollider == null)
             return;
 
         string layerName =
-            available
-                ? interactableLayerName
-                : defaultLayerName;
+            available ? interactableLayerName : defaultLayerName;
 
-        int targetLayer =
-            LayerMask.NameToLayer(
-                layerName
-            );
+        int targetLayer = LayerMask.NameToLayer(layerName);
 
         if (targetLayer < 0)
             return;
 
-        interactionCollider
-            .gameObject.layer =
-            targetLayer;
+        interactionCollider.gameObject.layer = targetLayer;
     }
 
     public void MakeInteractable()
@@ -467,55 +372,34 @@ public class ClientNPCController :
 
     private IEnumerator WaitForApproachToFinish()
     {
-        int approachStateHash =
-            Animator.StringToHash(
-                approachTriggerName
-            );
+        int approachStateHash = Animator.StringToHash(approachTriggerName);
 
         float elapsed = 0f;
-        bool enteredApproachState =
-            false;
+        bool enteredApproachState = false;
 
-        while (elapsed <
-               approachStartTimeout)
+        while (elapsed < approachStartTimeout)
         {
             AnimatorStateInfo currentState =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             AnimatorStateInfo nextState =
-                animator
-                    .GetNextAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetNextAnimatorStateInfo(animatorLayerIndex);
 
             bool currentIsApproach =
-                currentState.shortNameHash ==
-                    approachStateHash ||
-                currentState.IsName(
-                    approachTriggerName
-                );
+                currentState.shortNameHash == approachStateHash ||
+                currentState.IsName(approachTriggerName);
 
             bool nextIsApproach =
-                nextState.shortNameHash ==
-                    approachStateHash ||
-                nextState.IsName(
-                    approachTriggerName
-                );
+                nextState.shortNameHash == approachStateHash ||
+                nextState.IsName(approachTriggerName);
 
-            if (currentIsApproach ||
-                nextIsApproach)
+            if (currentIsApproach || nextIsApproach)
             {
-                enteredApproachState =
-                    true;
-
+                enteredApproachState = true;
                 break;
             }
 
             elapsed += Time.deltaTime;
-
             yield return null;
         }
 
@@ -528,17 +412,11 @@ public class ClientNPCController :
         while (true)
         {
             AnimatorStateInfo stateInfo =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             bool isApproachState =
-                stateInfo.shortNameHash ==
-                    approachStateHash ||
-                stateInfo.IsName(
-                    approachTriggerName
-                );
+                stateInfo.shortNameHash == approachStateHash ||
+                stateInfo.IsName(approachTriggerName);
 
             if (isApproachState)
                 break;
@@ -549,56 +427,38 @@ public class ClientNPCController :
         while (true)
         {
             AnimatorStateInfo stateInfo =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             bool isApproachState =
-                stateInfo.shortNameHash ==
-                    approachStateHash ||
-                stateInfo.IsName(
-                    approachTriggerName
-                );
+                stateInfo.shortNameHash == approachStateHash ||
+                stateInfo.IsName(approachTriggerName);
 
             bool isTransitioning =
-                animator.IsInTransition(
-                    animatorLayerIndex
-                );
+                animator.IsInTransition(animatorLayerIndex);
 
             if (isApproachState &&
-                stateInfo.normalizedTime >=
-                    1f &&
+                stateInfo.normalizedTime >= 1f &&
                 !isTransitioning)
             {
                 break;
             }
 
-            if (!isApproachState &&
-                !isTransitioning)
-            {
+            if (!isApproachState && !isTransitioning)
                 break;
-            }
 
             yield return null;
         }
 
-        dialogueStage =
-            ClientDialogueStage
-                .FirstDialogueReady;
-
+        dialogueStage = ClientDialogueStage.FirstDialogueReady;
         SetInteractionAvailable(true);
-
         approachCoroutine = null;
     }
 
     private void StartFirstDialogue()
     {
         if (activeVariant == null ||
-            activeVariant.FirstDialogue ==
-                null ||
-            activeVariant.FirstDialogue
-                .Count == 0)
+            activeVariant.FirstDialogue == null ||
+            activeVariant.FirstDialogue.Count == 0)
         {
             return;
         }
@@ -608,240 +468,127 @@ public class ClientNPCController :
         if (dialogueManager == null)
             return;
 
-        dialogueInteractionLocked =
-            true;
-
-        dialogueStage =
-            ClientDialogueStage
-                .FirstDialogueRunning;
+        dialogueInteractionLocked = true;
+        dialogueStage = ClientDialogueStage.FirstDialogueRunning;
 
         SetInteractionAvailable(false);
-
         ApplyVoiceSettings();
 
-        dialogueManager.StartDialogue(
-            activeVariant.FirstDialogue,
-            false
-        );
+        dialogueManager.StartDialogue(activeVariant.FirstDialogue, false);
 
-        if (!dialogueManager
-            .DialogueActive)
+        if (!dialogueManager.DialogueActive)
         {
-            dialogueInteractionLocked =
-                false;
-
-            dialogueStage =
-                ClientDialogueStage
-                    .FirstDialogueReady;
-
+            dialogueInteractionLocked = false;
+            dialogueStage = ClientDialogueStage.FirstDialogueReady;
             SetInteractionAvailable(true);
-
             return;
         }
 
         if (dialogueCoroutine != null)
-        {
-            StopCoroutine(
-                dialogueCoroutine
-            );
-        }
+            StopCoroutine(dialogueCoroutine);
 
         dialogueCoroutine =
-            StartCoroutine(
-                WaitForFirstDialogueToFinish()
-            );
+            StartCoroutine(WaitForFirstDialogueToFinish());
     }
 
-    private IEnumerator
-    WaitForFirstDialogueToFinish()
+    private IEnumerator WaitForFirstDialogueToFinish()
     {
-        bool giveSon3Triggered =
-            false;
+        bool giveSon3Triggered = false;
 
-
-        while (dialogueManager != null &&
-               dialogueManager.DialogueActive)
+        while (dialogueManager != null && dialogueManager.DialogueActive)
         {
             bool shouldGiveSon3 =
                 activeVariant != null &&
-                activeVariant
-                    .GiveSon3DuringFirstDialogue;
+                activeVariant.GiveSon3DuringFirstDialogue;
 
             int giveSon3Index =
                 activeVariant != null
-                    ? activeVariant
-                        .GiveSon3DialogueIndex
+                    ? activeVariant.GiveSon3DialogueIndex
                     : -1;
 
-
-            // =====================================================
-            // ЗАПУСК GIVE_SON3
-            // =====================================================
-
-            // Используем >=, а не ==.
-            //
-            // Даже если из-за быстрого переключения
-            // нужный индекс был пройден между кадрами,
-            // анимация всё равно будет запущена.
             if (shouldGiveSon3 &&
                 !giveSon3Triggered &&
                 giveSon3Index >= 0 &&
-                dialogueManager
-                    .CurrentLineIndex >=
-                        giveSon3Index)
+                dialogueManager.CurrentLineIndex >= giveSon3Index)
             {
                 giveSon3Triggered = true;
-
                 StartGiveSon3Animation();
             }
-
 
             yield return null;
         }
 
-
-        // =====================================================
-        // ЗАЩИТА ОТ ПОЛНОГО СКИПА
-        // =====================================================
-
         bool needsSon3 =
             activeVariant != null &&
-            activeVariant
-                .GiveSon3DuringFirstDialogue;
+            activeVariant.GiveSon3DuringFirstDialogue;
 
-
-        // Если каким-то образом весь диалог закончился
-        // раньше, чем наша корутина увидела нужную
-        // реплику, всё равно запускаем передачу.
-        if (needsSon3 &&
-            !giveSon3Triggered)
+        if (needsSon3 && !giveSon3Triggered)
         {
             giveSon3Triggered = true;
-
             StartGiveSon3Animation();
         }
 
-
-        // =====================================================
-        // ЖДЁМ НЕ ВРЕМЯ, А РЕАЛЬНУЮ АНИМАЦИЮ
-        // =====================================================
-
-        if (needsSon3 &&
-            giveSon3Triggered)
+        if (needsSon3 && giveSon3Triggered)
         {
-            while (!giveSon3AnimationReady &&
-                   giveSon3Coroutine != null)
-            {
+            while (!giveSon3AnimationReady && giveSon3Coroutine != null)
                 yield return null;
-            }
         }
-
-
-        // =====================================================
-        // ТОЛЬКО ТЕПЕРЬ ОТДАЁМ SON-3 ИГРОКУ
-        // =====================================================
 
         if (needsSon3 &&
             giveSon3AnimationReady &&
             son3 != null &&
             son3Tray != null)
         {
-            son3.PrepareForPlayer(
-                workItemsRoot,
-                son3Tray
-            );
-
+            son3.PrepareForPlayer(workItemsRoot, son3Tray);
             son3Tray.EnablePlacement();
         }
 
-
-        dialogueStage =
-            ClientDialogueStage
-                .WaitingForDirectionTab;
-
+        dialogueStage = ClientDialogueStage.WaitingForDirectionTab;
         SetInteractionAvailable(false);
 
-
         yield return null;
-
         RestoreWorkStateAfterDialogue();
 
-
         yield return null;
-
         RestoreWorkStateAfterDialogue();
 
-
-        dialogueInteractionLocked =
-            false;
-
-        dialogueCoroutine =
-            null;
+        dialogueInteractionLocked = false;
+        dialogueCoroutine = null;
 
         TryUnlockQuestionDialogue();
     }
 
     private void StartGiveSon3Animation()
     {
-        if (giveSon3AnimationReady)
+        if (giveSon3AnimationReady ||
+            giveSon3Coroutine != null ||
+            animator == null)
+        {
             return;
+        }
 
-        if (giveSon3Coroutine != null)
-            return;
-
-        if (animator == null)
-            return;
-
-
-        animator.ResetTrigger(
-            giveSon3TriggerName
-        );
-
-        animator.SetTrigger(
-            giveSon3TriggerName
-        );
-
+        animator.ResetTrigger(giveSon3TriggerName);
+        animator.SetTrigger(giveSon3TriggerName);
 
         giveSon3Coroutine =
-            StartCoroutine(
-                WaitForGiveSon3Ready()
-            );
+            StartCoroutine(WaitForGiveSon3Ready());
     }
-
 
     private IEnumerator WaitForGiveSon3Ready()
     {
-        int stateHash =
-            Animator.StringToHash(
-                giveSon3TriggerName
-            );
-
-
-        // =====================================================
-        // ЖДЁМ РЕАЛЬНОГО ВХОДА В GIVE_SON3
-        // =====================================================
+        int stateHash = Animator.StringToHash(giveSon3TriggerName);
 
         float elapsed = 0f;
         bool enteredState = false;
 
-
-        while (elapsed <
-               giveSon3StartTimeout)
+        while (elapsed < giveSon3StartTimeout)
         {
             AnimatorStateInfo stateInfo =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
-
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             bool isGiveSon3State =
-                stateInfo.shortNameHash ==
-                    stateHash ||
-                stateInfo.IsName(
-                    giveSon3TriggerName
-                );
-
+                stateInfo.shortNameHash == stateHash ||
+                stateInfo.IsName(giveSon3TriggerName);
 
             if (isGiveSon3State)
             {
@@ -849,208 +596,129 @@ public class ClientNPCController :
                 break;
             }
 
-
-            elapsed +=
-                Time.deltaTime;
-
+            elapsed += Time.deltaTime;
             yield return null;
         }
-
 
         if (!enteredState)
         {
             Debug.LogError(
-                "ClientNPCController: NPC \"" +
-                gameObject.name +
-                "\" не вошёл в состояние " +
-                giveSon3TriggerName +
-                "."
-            );
+                "ClientNPCController: NPC \"" + gameObject.name +
+                "\" не вошёл в состояние " + giveSon3TriggerName + ".");
 
-            giveSon3Coroutine =
-                null;
-
+            giveSon3Coroutine = null;
             yield break;
         }
-
-
-        // =====================================================
-        // ЖДЁМ МОМЕНТА, КОГДА SON-3 УЖЕ В РУКЕ
-        // =====================================================
 
         while (true)
         {
             AnimatorStateInfo stateInfo =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
-
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             bool isGiveSon3State =
-                stateInfo.shortNameHash ==
-                    stateHash ||
-                stateInfo.IsName(
-                    giveSon3TriggerName
-                );
-
+                stateInfo.shortNameHash == stateHash ||
+                stateInfo.IsName(giveSon3TriggerName);
 
             if (isGiveSon3State &&
-                stateInfo.normalizedTime >=
-                    giveSon3ReadyNormalizedTime)
+                stateInfo.normalizedTime >= giveSon3ReadyNormalizedTime)
             {
                 break;
             }
 
-
-            // Если состояние уже полностью закончилось,
-            // значит нужный момент тем более был пройден.
             if (!isGiveSon3State &&
-                !animator.IsInTransition(
-                    animatorLayerIndex
-                ))
+                !animator.IsInTransition(animatorLayerIndex))
             {
                 break;
             }
-
 
             yield return null;
         }
 
-
-        giveSon3AnimationReady =
-            true;
-
-        giveSon3Coroutine =
-            null;
+        giveSon3AnimationReady = true;
+        giveSon3Coroutine = null;
     }
 
     private void ToggleQuestionDialogue()
     {
-        if (questionDialogueController ==
-            null)
-        {
+        if (questionDialogueController == null)
             return;
-        }
 
-        if (questionDialogueController
-            .IsOpen)
+        if (questionDialogueController.IsOpen)
         {
-            questionDialogueController
-                .CloseDialogue();
-
+            questionDialogueController.CloseDialogue();
             return;
         }
 
         ApplyVoiceSettings();
-
-        questionDialogueController
-            .OpenDialogue();
+        questionDialogueController.OpenDialogue();
     }
 
     private void HandleElectronicDirectionOpened()
     {
         directionTabOpened = true;
-
         TryUnlockQuestionDialogue();
     }
 
     private void TryUnlockQuestionDialogue()
     {
-        // Если вкладка уже реально открыта,
-        // но событие по какой-либо причине
-        // было пропущено, синхронизируемся
-        // с фактическим состоянием компьютера.
         if (!directionTabOpened &&
             computerNavigation != null &&
-            computerNavigation
-                .IsElectronicDirectionSelected)
+            computerNavigation.IsElectronicDirectionSelected)
         {
             directionTabOpened = true;
         }
 
         if (!directionTabOpened ||
-            dialogueStage !=
-            ClientDialogueStage
-                .WaitingForDirectionTab)
+            dialogueStage != ClientDialogueStage.WaitingForDirectionTab)
         {
             return;
         }
 
-        dialogueStage =
-            ClientDialogueStage
-                .QuestionDialogueReady;
-
+        dialogueStage = ClientDialogueStage.QuestionDialogueReady;
         SetInteractionAvailable(true);
     }
 
-    public void NotifyDirectionSubmitted(
-        DirectionDecision decision)
+    public void NotifyDirectionSubmitted(DirectionDecision decision)
     {
         if (directionSubmitted)
             return;
-        submittedDecision =
-            decision;
 
+        submittedDecision = decision;
         directionSubmitted = true;
         waitingForSon3Return = false;
 
         if (questionDialogueController != null &&
             questionDialogueController.IsOpen)
         {
-            questionDialogueController
-                .CloseDialogue();
+            questionDialogueController.CloseDialogue();
         }
 
-        dialogueStage =
-            ClientDialogueStage
-                .GiveSon3DialogueReady;
-
+        dialogueStage = ClientDialogueStage.GiveSon3DialogueReady;
         SetInteractionAvailable(true);
     }
 
-    public void BlockFinalCompletion(
-    UnityEngine.Object source)
+    public void BlockFinalCompletion(UnityEngine.Object source)
     {
-        if (source == null)
-            return;
-
-        finalCompletionBlockers.Add(
-            source
-        );
+        if (source != null)
+            finalCompletionBlockers.Add(source);
     }
 
-
-    public void ReleaseFinalCompletion(
-        UnityEngine.Object source)
+    public void ReleaseFinalCompletion(UnityEngine.Object source)
     {
-        if (source == null)
-            return;
-
-        finalCompletionBlockers.Remove(
-            source
-        );
+        if (source != null)
+            finalCompletionBlockers.Remove(source);
     }
-
 
     private bool IsFinalCompletionBlocked()
     {
-        finalCompletionBlockers.RemoveWhere(
-            blocker =>
-                blocker == null
-        );
-
-        return
-            finalCompletionBlockers.Count > 0;
+        finalCompletionBlockers.RemoveWhere(blocker => blocker == null);
+        return finalCompletionBlockers.Count > 0;
     }
 
     private void StartGiveSon3Dialogue()
     {
-        if (!directionSubmitted ||
-            activeVariant == null)
-        {
+        if (!directionSubmitted || activeVariant == null)
             return;
-        }
 
         FindDialogueManagerByExactName();
 
@@ -1064,85 +732,54 @@ public class ClientNPCController :
             return;
         }
 
-        dialogueInteractionLocked =
-            true;
-
-        dialogueStage =
-            ClientDialogueStage
-                .GiveSon3DialogueRunning;
+        dialogueInteractionLocked = true;
+        dialogueStage = ClientDialogueStage.GiveSon3DialogueRunning;
 
         SetInteractionAvailable(false);
-
         ApplyVoiceSettings();
 
-        dialogueManager.StartDialogue(
-            activeVariant.GiveSon3Dialogue,
-            false
-        );
+        dialogueManager.StartDialogue(activeVariant.GiveSon3Dialogue, false);
 
         if (!dialogueManager.DialogueActive)
         {
-            dialogueInteractionLocked =
-                false;
-
+            dialogueInteractionLocked = false;
             BeginWaitingForSon3Return();
-
             return;
         }
 
         if (dialogueCoroutine != null)
-        {
-            StopCoroutine(
-                dialogueCoroutine
-            );
-        }
+            StopCoroutine(dialogueCoroutine);
 
         dialogueCoroutine =
-            StartCoroutine(
-                WaitForGiveSon3DialogueToFinish()
-            );
+            StartCoroutine(WaitForGiveSon3DialogueToFinish());
     }
 
-    private IEnumerator
-    WaitForGiveSon3DialogueToFinish()
+    private IEnumerator WaitForGiveSon3DialogueToFinish()
     {
-        while (dialogueManager != null &&
-               dialogueManager.DialogueActive)
-        {
+        while (dialogueManager != null && dialogueManager.DialogueActive)
             yield return null;
-        }
 
-        dialogueInteractionLocked =
-            false;
-
-        dialogueCoroutine =
-            null;
+        dialogueInteractionLocked = false;
 
         yield return null;
 
         RestoreWorkStateAfterDialogue();
-
+        dialogueCoroutine = null;
         BeginWaitingForSon3Return();
     }
 
     private void BeginWaitingForSon3Return()
     {
         waitingForSon3Return = true;
-
-        dialogueStage =
-            ClientDialogueStage
-                .WaitingForSon3Return;
+        dialogueStage = ClientDialogueStage.WaitingForSon3Return;
 
         SetInteractionAvailable(false);
 
         if (son3 == null)
             return;
 
-        son3.ReturnedToOriginalPlace -=
-            HandleSon3Returned;
-
-        son3.ReturnedToOriginalPlace +=
-            HandleSon3Returned;
+        son3.ReturnedToOriginalPlace -= HandleSon3Returned;
+        son3.ReturnedToOriginalPlace += HandleSon3Returned;
 
         son3.EnableReturnToOriginalPlace();
     }
@@ -1152,16 +789,37 @@ public class ClientNPCController :
         if (!waitingForSon3Return)
             return;
 
-        waitingForSon3Return =
-            false;
+        waitingForSon3Return = false;
 
         if (son3 != null)
-        {
-            son3.ReturnedToOriginalPlace -=
-                HandleSon3Returned;
-        }
+            son3.ReturnedToOriginalPlace -= HandleSon3Returned;
 
         StartFinalDialogue();
+    }
+
+    private bool ShouldUseFinalDialogueChoice()
+    {
+        if (FinalDialogueChoiceRequested == null)
+            return false;
+
+        Delegate[] handlers =
+            FinalDialogueChoiceRequested
+                .GetInvocationList();
+
+        for (int i = 0; i < handlers.Length; i++)
+        {
+            Func<ClientNPCController, bool> handler =
+                handlers[i] as
+                    Func<ClientNPCController, bool>;
+
+            if (handler != null &&
+                handler(this))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void StartFinalDialogue()
@@ -1180,14 +838,11 @@ public class ClientNPCController :
             questionDialogueController
                 .PersonalQuestionAsked;
 
-
         List<DialogueManager.DialogueLine>
             resolvedFinalDialogue =
                 activeVariant.ResolveFinalDialogue(
                     personalQuestionAsked,
-                    submittedDecision
-                );
-
+                    submittedDecision);
 
         if (resolvedFinalDialogue == null ||
             resolvedFinalDialogue.Count == 0)
@@ -1196,85 +851,228 @@ public class ClientNPCController :
             return;
         }
 
-        dialogueInteractionLocked =
-            true;
-
+        dialogueInteractionLocked = true;
         dialogueStage =
-            ClientDialogueStage
-                .FinalDialogueRunning;
+            ClientDialogueStage.FinalDialogueRunning;
 
         SetInteractionAvailable(false);
-
         ApplyVoiceSettings();
 
-        dialogueManager.StartDialogue(
-            resolvedFinalDialogue,
-            false
-        );
 
+        // =====================================================
+        // ОСОБЫЙ FINAL DIALOGUE С ВЫБОРОМ
+        // =====================================================
 
-        if (!dialogueManager.DialogueActive)
+        if (ShouldUseFinalDialogueChoice())
         {
-            dialogueInteractionLocked =
-                false;
+            if (dialogueCoroutine != null)
+                StopCoroutine(dialogueCoroutine);
 
-            CompleteFinalDialogue();
+            dialogueCoroutine =
+                StartCoroutine(
+                    WaitForFinalDialogueChoiceToFinish(
+                        resolvedFinalDialogue));
+
+            /*
+             * StartCoroutine выполняется сразу
+             * до первого yield, поэтому к этому
+             * моменту первая часть диалога
+             * уже запущена.
+             */
+            FinalDialogueStarted?.Invoke(this);
 
             return;
         }
 
 
         // =====================================================
-        // СОБЫТИЕ: ФИНАЛЬНЫЙ ДИАЛОГ РЕАЛЬНО НАЧАЛСЯ
+        // ОБЫЧНЫЙ FINAL DIALOGUE — СТАРОЕ ПОВЕДЕНИЕ
         // =====================================================
 
-        FinalDialogueStarted?.Invoke(
-            this
-        );
+        dialogueManager.StartDialogue(
+            resolvedFinalDialogue,
+            false);
+
+        if (!dialogueManager.DialogueActive)
+        {
+            dialogueInteractionLocked = false;
+            CompleteFinalDialogue();
+            return;
+        }
+
+        FinalDialogueStarted?.Invoke(this);
 
         if (dialogueCoroutine != null)
-        {
-            StopCoroutine(
-                dialogueCoroutine
-            );
-        }
+            StopCoroutine(dialogueCoroutine);
 
         dialogueCoroutine =
             StartCoroutine(
-                WaitForFinalDialogueToFinish()
-            );
+                WaitForFinalDialogueToFinish());
     }
 
     private IEnumerator
-    WaitForFinalDialogueToFinish()
+    WaitForFinalDialogueChoiceToFinish(
+        List<DialogueManager.DialogueLine> lines)
     {
+        int finalIndex = -1;
+
+        for (int i = lines.Count - 1;
+             i >= 0;
+             i--)
+        {
+            if (lines[i] != null)
+            {
+                finalIndex = i;
+                break;
+            }
+        }
+
+        if (finalIndex < 0)
+        {
+            dialogueInteractionLocked = false;
+            dialogueCoroutine = null;
+
+            CompleteFinalDialogue();
+            yield break;
+        }
+
+
+        // =====================================================
+        // ВСЕ РЕПЛИКИ ДО ПОСЛЕДНЕЙ
+        // =====================================================
+
+        finalDialogueChoicePrefix.Clear();
+
+        for (int i = 0;
+             i < finalIndex;
+             i++)
+        {
+            if (lines[i] != null)
+            {
+                finalDialogueChoicePrefix.Add(
+                    lines[i]);
+            }
+        }
+
+        if (finalDialogueChoicePrefix.Count > 0)
+        {
+            /*
+             * keepLastLineVisible = true:
+             * панель не пропадает между
+             * предпоследней и последней репликой.
+             */
+            dialogueManager.StartDialogue(
+                finalDialogueChoicePrefix,
+                false,
+                true);
+
+            while (dialogueManager != null &&
+                   dialogueManager.DialogueActive)
+            {
+                yield return null;
+            }
+        }
+
+
+        if (dialogueManager == null)
+        {
+            dialogueInteractionLocked = false;
+            dialogueCoroutine = null;
+
+            CompleteFinalDialogue();
+            yield break;
+        }
+
+
+        // =====================================================
+        // ПОСЛЕДНЯЯ РЕПЛИКА
+        // =====================================================
+
+        /*
+         * Используем УЖЕ существующий
+         * ChoicePrompt DialogueManager.
+         *
+         * Поэтому последняя реплика:
+         * - нормально печатается;
+         * - не закрывается LMB;
+         * - остаётся на экране;
+         * - ждёт внешние плашки.
+         */
+        dialogueManager.ShowChoicePrompt(
+            lines[finalIndex],
+            false);
+
+        while (dialogueManager != null &&
+               dialogueManager.DialogueActive &&
+               !dialogueManager.ChoicePromptReady)
+        {
+            yield return null;
+        }
+
+        if (dialogueManager == null)
+        {
+            dialogueInteractionLocked = false;
+            dialogueCoroutine = null;
+
+            CompleteFinalDialogue();
+            yield break;
+        }
+
+
+        // Последняя строка полностью готова.
+        FinalDialogueChoicePromptReady?.Invoke(this);
+
+
+        // Теперь ждём клика по одной из плашек.
+        // DialogueChoiceController сам вызовет
+        // FinishChoicePrompt().
         while (dialogueManager != null &&
                dialogueManager.DialogueActive)
         {
             yield return null;
         }
 
-        dialogueInteractionLocked =
-            false;
 
-        dialogueCoroutine =
-            null;
+        dialogueInteractionLocked = false;
 
         yield return null;
 
         RestoreWorkStateAfterDialogue();
 
+
         /*
-         * Если особая ситуация клиента
-         * ещё выполняет свою анимацию,
-         * не запускаем финальную Take_SON3
-         * раньше времени.
+         * Здесь как раз будет стоять
+         * ClientPhoneRequestController.
+         *
+         * Поэтому Take_SON3 НЕ начнётся,
+         * пока женщина ждёт звонка/охрану.
          */
         while (IsFinalCompletionBlocked())
-        {
             yield return null;
-        }
 
+
+        dialogueCoroutine = null;
+
+        CompleteFinalDialogue();
+    }
+
+    private IEnumerator WaitForFinalDialogueToFinish()
+    {
+        while (dialogueManager != null && dialogueManager.DialogueActive)
+            yield return null;
+
+        dialogueInteractionLocked = false;
+
+        yield return null;
+
+        RestoreWorkStateAfterDialogue();
+
+        // Старые события, например передача жетона,
+        // по-прежнему могут задерживать Take_SON3.
+        while (IsFinalCompletionBlocked())
+            yield return null;
+
+        dialogueCoroutine = null;
         CompleteFinalDialogue();
     }
 
@@ -1288,116 +1086,69 @@ public class ClientNPCController :
             return;
         }
 
-        dialogueStage =
-            ClientDialogueStage
-                .TakeSon3AnimationRunning;
+        dialogueStage = ClientDialogueStage.TakeSon3AnimationRunning;
 
-        animator.ResetTrigger(
-            takeSon3TriggerName
-        );
-
-        animator.SetTrigger(
-            takeSon3TriggerName
-        );
+        animator.ResetTrigger(takeSon3TriggerName);
+        animator.SetTrigger(takeSon3TriggerName);
 
         if (takeSon3Coroutine != null)
-        {
-            StopCoroutine(
-                takeSon3Coroutine
-            );
-        }
+            StopCoroutine(takeSon3Coroutine);
 
         takeSon3Coroutine =
-            StartCoroutine(
-                WaitForTakeSon3AnimationToFinish()
-            );
+            StartCoroutine(WaitForTakeSon3AnimationToFinish());
     }
 
-    private IEnumerator
-    WaitForTakeSon3AnimationToFinish()
+    private IEnumerator WaitForTakeSon3AnimationToFinish()
     {
-        int stateHash =
-            Animator.StringToHash(
-                takeSon3TriggerName
-            );
+        int stateHash = Animator.StringToHash(takeSon3TriggerName);
 
         float elapsed = 0f;
         bool enteredState = false;
 
-        // Ждём, пока Animator действительно
-        // запустит состояние Take_SON3.
-        while (elapsed <
-               takeSon3StartTimeout)
+        while (elapsed < takeSon3StartTimeout)
         {
             AnimatorStateInfo currentState =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             AnimatorStateInfo nextState =
-                animator
-                    .GetNextAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetNextAnimatorStateInfo(animatorLayerIndex);
 
             bool currentMatches =
-                currentState.shortNameHash ==
-                    stateHash ||
-                currentState.IsName(
-                    takeSon3TriggerName
-                );
+                currentState.shortNameHash == stateHash ||
+                currentState.IsName(takeSon3TriggerName);
 
             bool nextMatches =
-                nextState.shortNameHash ==
-                    stateHash ||
-                nextState.IsName(
-                    takeSon3TriggerName
-                );
+                nextState.shortNameHash == stateHash ||
+                nextState.IsName(takeSon3TriggerName);
 
-            if (currentMatches ||
-                nextMatches)
+            if (currentMatches || nextMatches)
             {
                 enteredState = true;
                 break;
             }
 
-            elapsed +=
-                Time.deltaTime;
-
+            elapsed += Time.deltaTime;
             yield return null;
         }
 
-        // Не оставляем клиента навечно
-        // зависшим из-за ошибки Animator.
         if (!enteredState)
         {
             takeSon3Coroutine = null;
-
             FinishClient();
             yield break;
         }
 
-        // Ждём полного окончания анимации.
         while (true)
         {
             AnimatorStateInfo stateInfo =
-                animator
-                    .GetCurrentAnimatorStateInfo(
-                        animatorLayerIndex
-                    );
+                animator.GetCurrentAnimatorStateInfo(animatorLayerIndex);
 
             bool isTakeSon3State =
-                stateInfo.shortNameHash ==
-                    stateHash ||
-                stateInfo.IsName(
-                    takeSon3TriggerName
-                );
+                stateInfo.shortNameHash == stateHash ||
+                stateInfo.IsName(takeSon3TriggerName);
 
             bool isTransitioning =
-                animator.IsInTransition(
-                    animatorLayerIndex
-                );
+                animator.IsInTransition(animatorLayerIndex);
 
             if (isTakeSon3State &&
                 stateInfo.normalizedTime >= 1f &&
@@ -1406,30 +1157,87 @@ public class ClientNPCController :
                 break;
             }
 
-            if (!isTakeSon3State &&
-                !isTransitioning)
-            {
+            if (!isTakeSon3State && !isTransitioning)
                 break;
-            }
 
             yield return null;
         }
 
         takeSon3Coroutine = null;
-
         FinishClient();
     }
 
     private void FinishClient()
     {
-        dialogueStage =
-            ClientDialogueStage.Completed;
+        if (IsFinished || finalContinuationStarted)
+            return;
+
+        finalContinuationStarted = true;
+        dialogueStage = ClientDialogueStage.WaitingForSpecialFinal;
 
         SetInteractionAvailable(false);
 
-        ClientFinished?.Invoke(
-            this
-        );
+        // Подписчик ставит свой блокировщик синхронно.
+        FinalSequenceFinishing?.Invoke(this);
+
+        if (!isActiveAndEnabled)
+            return;
+
+        if (!IsFinalCompletionBlocked())
+        {
+            CompleteFinalContinuation();
+            return;
+        }
+
+        finalContinuationCoroutine =
+            StartCoroutine(WaitForFinalContinuation());
+    }
+
+    private IEnumerator WaitForFinalContinuation()
+    {
+        while (IsFinalCompletionBlocked())
+            yield return null;
+
+        CompleteFinalContinuation();
+    }
+
+    private void CompleteFinalContinuation()
+    {
+        finalContinuationCoroutine = null;
+        finalContinuationStarted = false;
+
+        FinishClientImmediately();
+    }
+
+    private void FinishClientImmediately()
+    {
+        if (IsFinished)
+            return;
+
+        dialogueStage = ClientDialogueStage.Completed;
+        SetInteractionAvailable(false);
+        ClientFinished?.Invoke(this);
+    }
+
+    private void StopFinalContinuation()
+    {
+        if (finalContinuationCoroutine != null)
+        {
+            StopCoroutine(finalContinuationCoroutine);
+            finalContinuationCoroutine = null;
+        }
+
+        finalContinuationStarted = false;
+    }
+
+    public void RestoreClientDialogueVoice()
+    {
+        ApplyVoiceSettings();
+    }
+
+    public void RestoreWorkControlAfterSpecialDialogue()
+    {
+        RestoreWorkStateAfterDialogue();
     }
 
     private void ApplyClientData()
@@ -1440,74 +1248,60 @@ public class ClientNPCController :
             return;
         }
 
-        activeVariant =
-            visitorData.GetVariant(
-                activeVariantIndex
-            );
+        activeVariant = visitorData.GetVariant(activeVariantIndex);
 
         ApplyClientInformation();
         ApplyVoiceSettings();
 
-        if (questionDialogueController !=
-            null)
-        {
-            questionDialogueController
-                .Configure(
-                    activeVariant
-                );
-        }
+        if (questionDialogueController != null)
+            questionDialogueController.Configure(activeVariant);
     }
 
     private void ApplyVoiceSettings()
     {
-        if (dialogueManager == null ||
-            voiceAudioSource == null)
-        {
+        if (dialogueManager == null || voiceAudioSource == null)
             return;
-        }
 
-        if (visitorData != null &&
-            visitorData.VoiceClip != null)
-        {
-            voiceAudioSource.clip =
-                visitorData.VoiceClip;
-        }
+        if (visitorData != null && visitorData.VoiceClip != null)
+            voiceAudioSource.clip = visitorData.VoiceClip;
 
-        dialogueManager
-            .defaultVoiceAudioSource =
-            voiceAudioSource;
+        dialogueManager.defaultVoiceAudioSource = voiceAudioSource;
     }
 
     private void ResetRuntimeStateForNewClient()
     {
-        if (giveSon3Coroutine != null)
-        {
-            StopCoroutine(
-                giveSon3Coroutine
-            );
+        StopFinalContinuation();
 
-            giveSon3Coroutine =
-                null;
+        if (approachCoroutine != null)
+        {
+            StopCoroutine(approachCoroutine);
+            approachCoroutine = null;
         }
 
-        giveSon3AnimationReady =
-            false;
+        if (dialogueCoroutine != null)
+        {
+            StopCoroutine(dialogueCoroutine);
+            dialogueCoroutine = null;
+        }
+
+        if (giveSon3Coroutine != null)
+        {
+            StopCoroutine(giveSon3Coroutine);
+            giveSon3Coroutine = null;
+        }
+
+        giveSon3AnimationReady = false;
 
         if (takeSon3Coroutine != null)
         {
-            StopCoroutine(
-                takeSon3Coroutine
-            );
-
+            StopCoroutine(takeSon3Coroutine);
             takeSon3Coroutine = null;
         }
 
-        if (questionDialogueController !=
-            null &&
+        if (questionDialogueController != null &&
             questionDialogueController.IsOpen)
         {
-            questionDialogueController
-                .CloseDialogue();
+            questionDialogueController.CloseDialogue();
         }
 
         approachStarted = false;
@@ -1515,51 +1309,30 @@ public class ClientNPCController :
         dialogueInteractionLocked = false;
         directionTabOpened = false;
         directionSubmitted = false;
-
-        submittedDecision =
-            DirectionDecision.None;
-
+        submittedDecision = DirectionDecision.None;
         waitingForSon3Return = false;
 
         finalCompletionBlockers.Clear();
 
         if (son3 != null)
-        {
-            son3.ReturnedToOriginalPlace -=
-                HandleSon3Returned;
-        }
+            son3.ReturnedToOriginalPlace -= HandleSon3Returned;
 
-        dialogueStage =
-            ClientDialogueStage
-                .WaitingForApproach;
-
+        dialogueStage = ClientDialogueStage.WaitingForApproach;
         SetInteractionAvailable(false);
     }
 
     private void RestoreWorkStateAfterDialogue()
     {
-        WorkSessionManager workSession =
-            WorkSessionManager.Instance;
+        WorkSessionManager workSession = WorkSessionManager.Instance;
 
-        if (workSession == null ||
-            !workSession.IsSeated)
-        {
+        if (workSession == null || !workSession.IsSeated)
             return;
-        }
 
-        if (workSession.seatController !=
-            null)
-        {
-            workSession.seatController
-                .RestoreWorkControlAfterPause();
-        }
+        if (workSession.seatController != null)
+            workSession.seatController.RestoreWorkControlAfterPause();
 
-        if (workSession.cursorController !=
-            null)
-        {
-            workSession.cursorController
-                .ShowWorkCursor();
-        }
+        if (workSession.cursorController != null)
+            workSession.cursorController.ShowWorkCursor();
     }
 
     private void FindReferences()
@@ -1578,176 +1351,100 @@ public class ClientNPCController :
         if (animator != null)
             return;
 
-        animator =
-            GetComponent<Animator>();
+        animator = GetComponent<Animator>();
 
         if (animator == null)
-        {
-            animator =
-                GetComponentInChildren
-                    <Animator>(true);
-        }
+            animator = GetComponentInChildren<Animator>(true);
     }
 
     private void FindInteractionReferences()
     {
-        // =====================================================
-        // SON-3
-        // =====================================================
-
-        // SON-3 ищем только если ссылка вообще отсутствует.
-        //
-        // После передачи игроку SON-3 специально
-        // перестаёт быть дочерним объектом NPC,
-        // поэтому проверять IsChildOf здесь НЕЛЬЗЯ.
         if (son3 == null)
-        {
-            son3 =
-                GetComponentInChildren
-                    <Son3DragController>(
-                        true
-                    );
-        }
-
-
-        // =====================================================
-        // COLLIDER NPC
-        // =====================================================
+            son3 = GetComponentInChildren<Son3DragController>(true);
 
         if (interactionCollider != null)
             return;
 
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
 
-        Collider[] colliders =
-            GetComponentsInChildren
-                <Collider>(true);
-
-
-        // Сначала ищем точный
-        // ClientInteractionCollider.
-        for (int i = 0;
-             i < colliders.Length;
-             i++)
+        for (int i = 0; i < colliders.Length; i++)
         {
-            if (colliders[i] == null)
-                continue;
-
-            if (colliders[i].gameObject.name ==
-                clientColliderObjectName)
+            if (colliders[i] != null &&
+                colliders[i].gameObject.name == clientColliderObjectName)
             {
-                interactionCollider =
-                    colliders[i];
-
+                interactionCollider = colliders[i];
                 return;
             }
         }
 
-
-        // Запасной поиск.
-        for (int i = 0;
-             i < colliders.Length;
-             i++)
+        for (int i = 0; i < colliders.Length; i++)
         {
-            Collider currentCollider =
-                colliders[i];
+            Collider currentCollider = colliders[i];
 
             if (currentCollider == null)
                 continue;
 
-
-            // Collider SON-3 нельзя принять
-            // за Collider самого NPC.
             if (son3 != null &&
-                currentCollider.transform
-                    .IsChildOf(
-                        son3.transform
-                    ))
+                currentCollider.transform.IsChildOf(son3.transform))
             {
                 continue;
             }
 
-
-            interactionCollider =
-                currentCollider;
-
+            interactionCollider = currentCollider;
             return;
         }
     }
 
     private void FindSon3Tray()
     {
-        if (son3Tray != null)
-            return;
-
-        son3Tray =
-            FindFirstObjectByType
-                <WorkSon3TrayController>(
-                    FindObjectsInactive.Include
-                );
+        if (son3Tray == null)
+        {
+            son3Tray = FindFirstObjectByType<WorkSon3TrayController>(
+                FindObjectsInactive.Include);
+        }
     }
 
     private void FindDialogueManagerByExactName()
     {
         if (dialogueManager != null &&
-            dialogueManager.gameObject.name ==
-            dialogueManagerObjectName)
+            dialogueManager.gameObject.name == dialogueManagerObjectName)
         {
             return;
         }
 
         dialogueManager = null;
 
-        GameObject dialogueManagerObject =
-            GameObject.Find(
-                dialogueManagerObjectName
-            );
+        GameObject dialogueObject =
+            GameObject.Find(dialogueManagerObjectName);
 
-        if (dialogueManagerObject != null)
-        {
-            dialogueManager =
-                dialogueManagerObject
-                    .GetComponent
-                        <DialogueManager>();
-        }
+        if (dialogueObject != null)
+            dialogueManager = dialogueObject.GetComponent<DialogueManager>();
 
         if (dialogueManager == null)
         {
-            dialogueManager =
-                FindFirstObjectByType
-                    <DialogueManager>(
-                        FindObjectsInactive
-                            .Include
-                    );
+            dialogueManager = FindFirstObjectByType<DialogueManager>(
+                FindObjectsInactive.Include);
         }
     }
 
     private void FindQuestionDialogueController()
     {
-        if (questionDialogueController !=
-            null)
+        if (questionDialogueController == null)
         {
-            return;
+            questionDialogueController =
+                FindFirstObjectByType<ClientQuestionDialogueController>(
+                    FindObjectsInactive.Include);
         }
-
-        questionDialogueController =
-            FindFirstObjectByType
-                <ClientQuestionDialogueController>(
-                    FindObjectsInactive
-                        .Include
-                );
     }
 
     private void FindComputerNavigation()
     {
-        if (computerNavigation != null)
-            return;
-
-        computerNavigation =
-            FindFirstObjectByType
-                <ComputerInterfaceNavigation>(
-                    FindObjectsInactive
-                        .Include
-                );
+        if (computerNavigation == null)
+        {
+            computerNavigation =
+                FindFirstObjectByType<ComputerInterfaceNavigation>(
+                    FindObjectsInactive.Include);
+        }
     }
 
     private void FindVoiceAudioSource()
@@ -1755,15 +1452,10 @@ public class ClientNPCController :
         if (voiceAudioSource != null)
             return;
 
-        voiceAudioSource =
-            GetComponent<AudioSource>();
+        voiceAudioSource = GetComponent<AudioSource>();
 
         if (voiceAudioSource == null)
-        {
-            voiceAudioSource =
-                GetComponentInChildren
-                    <AudioSource>(true);
-        }
+            voiceAudioSource = GetComponentInChildren<AudioSource>(true);
     }
 
     private void SubscribeToComputerNavigation()
@@ -1771,22 +1463,19 @@ public class ClientNPCController :
         if (computerNavigation == null)
             return;
 
-        computerNavigation
-            .ElectronicDirectionOpened -=
+        computerNavigation.ElectronicDirectionOpened -=
             HandleElectronicDirectionOpened;
 
-        computerNavigation
-            .ElectronicDirectionOpened +=
+        computerNavigation.ElectronicDirectionOpened +=
             HandleElectronicDirectionOpened;
     }
 
     private void UnsubscribeFromComputerNavigation()
     {
-        if (computerNavigation == null)
-            return;
-
-        computerNavigation
-            .ElectronicDirectionOpened -=
-            HandleElectronicDirectionOpened;
+        if (computerNavigation != null)
+        {
+            computerNavigation.ElectronicDirectionOpened -=
+                HandleElectronicDirectionOpened;
+        }
     }
 }

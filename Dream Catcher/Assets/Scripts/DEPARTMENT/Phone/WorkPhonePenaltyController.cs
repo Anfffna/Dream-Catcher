@@ -108,6 +108,8 @@ public class WorkPhonePenaltyController :
     private const string PutPhoneTrigger =
         "PutPhone";
 
+    private const string CallEarTrigger = "CallEar";
+
     private const float AnimationTimeout =
         10f;
 
@@ -688,12 +690,19 @@ public class WorkPhonePenaltyController :
     }
 
 
+    public IEnumerator PlayManualCallEarAnimation()
+    {
+        yield return PlayTriggeredAnimation(CallEarTrigger);
+    }
+
     public IEnumerator PlayManualPutAnimation()
     {
-        yield return
-            PlayTriggeredAnimation(
-                PutPhoneTrigger
-            );
+        FindReferences();
+        // A call finishes at the ear; browsing contacts finishes at the face.
+        bool atEar = cameraFollow != null &&
+            cameraFollow.IsStableState(cameraFollow.HoldEarState);
+        yield return PlayTriggeredAnimation(
+            atEar ? NoCallBossTrigger : PutPhoneTrigger);
     }
 
 
@@ -718,7 +727,7 @@ public class WorkPhonePenaltyController :
         string targetState;
         if (triggerName == TakePhoneTrigger)
             targetState = cameraFollow.HoldFaceState;
-        else if (triggerName == CallBossTrigger)
+        else if (triggerName == CallBossTrigger || triggerName == CallEarTrigger)
             targetState = cameraFollow.HoldEarState;
         else
             targetState = cameraFollow.IdleState;
@@ -759,7 +768,7 @@ public class WorkPhonePenaltyController :
         while (elapsed < AnimationTimeout);
 
         Debug.LogError("[Phone] После " + triggerName + " не достигнуто " + targetState +
-            ". Проверь Conditions, Has Exit Time и имена состояний. UI/диалог не откроется поверх незавершённого подъёма.", this);
+            ". Проверь переходы, Conditions, Has Exit Time и имена состояний.", this);
         AbortPhoneMotion();
     }
 

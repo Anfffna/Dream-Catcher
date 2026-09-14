@@ -31,6 +31,7 @@ public sealed class PhoneCameraFollow : MonoBehaviour
     private int originalSibling;
     private int idleHash, takeFaceHash, holdFaceHash, putFaceHash;
     private int takeEarHash, holdEarHash, putEarHash;
+    private static readonly int CallEarHash = Animator.StringToHash("CallEar");
     private bool initialized;
     private bool hierarchySupported;
     private bool reportedError;
@@ -147,7 +148,8 @@ public sealed class PhoneCameraFollow : MonoBehaviour
     private float StateWeight(AnimatorStateInfo state)
     {
         int hash = state.shortNameHash;
-        if (hash == holdFaceHash || hash == holdEarHash) return 1f;
+        // Both ends of CallEar are already held relative to the camera.
+        if (hash == holdFaceHash || hash == holdEarHash || hash == CallEarHash) return 1f;
         float t = Mathf.Clamp01(state.normalizedTime);
         // Нулевая скорость коррекции на обоих концах клипа.
         float smooth = t * t * (3f - 2f * t);
@@ -212,7 +214,8 @@ public sealed class PhoneCameraFollow : MonoBehaviour
 
     public void ResetToDesk()
     {
-        if (!initialized) return;
+        // Не включаем/не вычисляем Animator выключаемого или уничтожаемого объекта.
+        if (!initialized || !gameObject.activeInHierarchy) return;
         ResetCarrier();
         if (animator == null || animator.runtimeAnimatorController == null || !HasState(idleState)) return;
         animator.enabled = true;
@@ -220,6 +223,15 @@ public sealed class PhoneCameraFollow : MonoBehaviour
         animator.ResetTrigger("PutPhone");
         animator.ResetTrigger("CallBoss");
         animator.ResetTrigger("NoCallBoss");
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+        {
+            if (parameter.nameHash == CallEarHash &&
+                parameter.type == AnimatorControllerParameterType.Trigger)
+            {
+                animator.ResetTrigger(CallEarHash);
+                break;
+            }
+        }
         animator.Play(Animator.StringToHash(animator.GetLayerName(0) + "." + idleState), 0, 0f);
         if (gameObject.activeInHierarchy) animator.Update(0f);
         if (preservePhoneScale) transform.localScale = initialPhoneScale;
@@ -259,4 +271,10 @@ public sealed class PhoneCameraFollow : MonoBehaviour
     {
         ResetCarrier();
     }
+
+    // Не меняем иерархию в OnDestroy: Phone уже может уничтожаться.
+    // Runtime-родитель принадлежит той же сцене и удаляется вместе с ней.
+    // При отдельном Destroy(Phone) пустой родитель остаётся до выгрузки сцены;
+    // при взятии/возврате телефона новые родители не создаются.
+
 }
